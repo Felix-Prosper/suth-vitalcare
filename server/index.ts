@@ -43,7 +43,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Setup Multer — temp folder (files moved after sharp processing)
 import fs from "fs";
-const uploadDir = path.join(__dirname, "../public/uploads");
+// ใช้ /uploads ที่ root แทน /public/uploads เพื่อให้รอดจาก vite build
+const uploadDir = path.join(__dirname, "../uploads");
 const tempDir = path.join(uploadDir, "temp");
 if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 // Ensure sub-folders exist
