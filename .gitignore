@@ -5,3 +5,7 @@ coverage/
 .DS_Store
 *.log
 !.env.example
+
+# User-generated uploads (runtime files, not tracked in git)
+uploads/
+public/uploads/

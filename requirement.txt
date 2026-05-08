@@ -1,5 +1,3 @@
-อีเมลที่ใช้:projectline1413@gmail.com
-รหัสผ่าน:projectall1413
 
 Cloudflare:https://dash.cloudflare.com/a37f135dc1842c03ed3edcc3d0036fe5/turnstile
 MySQL:อยู่ในไฟล์Zipชื่อDB.sql
