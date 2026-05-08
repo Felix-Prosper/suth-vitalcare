@@ -1,0 +1,311 @@
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Sarabun", sans-serif;
+  --font-serif: var(--font-sans); 
+  
+  --color-primary: #1d9e75;
+  --color-primary-dark: #127555;
+  --color-primary-light: #e8f8f2;
+  --color-primary-hover: #198763;
+  
+  --color-surface: #ffffff;
+  --color-bg: #f8fbfa;
+  --color-text-main: #000000;
+  --color-text-muted: #666666;
+  --color-border: #e5e7eb;
+}
+
+/* ── 2. Unified Base Components ── */
+@utility btn-global-primary {
+  @apply inline-flex items-center justify-center font-medium transition-all duration-300;
+  font-family: var(--font-sans);
+  background-color: var(--vp-primary) !important;
+  color: white !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid transparent !important;
+}
+.btn-global-primary:hover:not(:disabled) {
+  background-color: var(--vp-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(29, 158, 117, 0.2);
+}
+.btn-global-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@utility btn-global-danger {
+  @apply inline-flex items-center justify-center font-medium transition-all duration-300;
+  font-family: var(--font-sans);
+  background-color: #ef4444 !important;
+  color: white !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid transparent !important;
+}
+.btn-global-danger:hover:not(:disabled) {
+  background-color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+.btn-global-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@utility btn-global-orange {
+  @apply inline-flex items-center justify-center font-medium transition-all duration-300;
+  font-family: var(--font-sans);
+  background-color: #f97316 !important;
+  color: white !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid transparent !important;
+}
+.btn-global-orange:hover:not(:disabled) {
+  background-color: #ea580c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
+}
+.btn-global-orange:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@utility btn-global-outline {
+  @apply inline-flex items-center justify-center font-medium transition-all duration-300;
+  background-color: transparent;
+  color: var(--vp-text);
+  border: 1px solid var(--vp-border);
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+}
+.btn-global-outline:hover:not(:disabled) {
+  border-color: var(--vp-primary);
+  color: var(--vp-primary);
+  background-color: var(--color-primary-light);
+}
+
+@utility card-global {
+  background-color: var(--vp-surface);
+  border: 1px solid var(--vp-border);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+.card-global:hover { box-shadow: 0 6px 24px rgba(0, 0, 0, 0.06); }
+
+@utility input-global {
+  @apply w-full outline-none transition-all duration-200;
+  border: 1.5px solid var(--vp-border);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.95rem;
+  color: var(--vp-text);
+  background-color: var(--vp-surface);
+}
+.input-global:focus {
+  border-color: var(--vp-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+@layer base {
+
+  :root {
+    --vp-primary: #1d9e75;
+    --vp-primary-dark: #127555;
+    --vp-surface: #ffffff;
+    --vp-bg: #f8fbfa;
+    --vp-text: #1f2937;
+    --vp-muted: #6b7280;
+    --vp-border: #e5e7eb;
+  }
+
+  /* ── GLOBALLY ENFORCE CONSISTENCY ── */
+  * {
+    font-family: var(--font-sans) !important;
+  }
+
+  /* ── 1. Unified Typography & UX Scaling ── */
+  /* Mobile/Tablet baseline: Larger text & spacing for easy reading/touching */
+  html {
+    font-size: 16px; 
+  }
+
+  /* Desktop baseline: Slightly smaller relative units to fit more information compactly */
+  @media (min-width: 1024px) {
+    html {
+      font-size: 14.5px;
+    }
+  }
+
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: var(--font-sans);
+    background-color: var(--vp-bg);
+    color: var(--vp-text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  button, input, select, textarea, span, p, label, div, option, a {
+    font-family: inherit;
+  }
+
+  /* Universal Headings Strategy */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-sans) !important;
+    color: var(--vp-text);
+    line-height: 1.35;
+    font-weight: 700;
+  }
+
+  h1 { font-size: clamp(2rem, 5vw, 2.75rem); } /* Dynamic sizing: mobile to PC */
+  h2 { font-size: clamp(1.5rem, 4vw, 2rem); }
+  h3 { font-size: clamp(1.2rem, 3vw, 1.5rem); }
+}
+
+@layer components {
+  /* Other components can go here */
+}
+
+/* ── 3. Mobile-First Optimization & Responsiveness ── */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.animate-pulse, .animate-spin, .animate-bounce, .card-skeleton {
+  will-change: transform, opacity;
+}
+
+@media (max-width: 1024px) {
+  /* Global Touch Target Standardization (Anti-Fat Finger)
+     Apple & Google UX standards recommend min 44-48px height for touch elements. */
+  button, 
+  .btn, 
+  .btn-global-primary, 
+  .btn-global-outline, 
+  select, 
+  input[type="text"], 
+  input[type="email"], 
+  input[type="password"], 
+  input[type="number"], 
+  .list-opt {
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Simplify heavy box-shadow calculations on mobile screens to save GPU/battery */
+  .shadow-lg, .shadow-xl, .shadow-2xl, .drop-shadow-lg, .drop-shadow-xl, .card-global {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
+    filter: none !important;
+  }
+  
+  /* Reduce padding on mobile devices for more breathing room */
+  .card-global {
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+  }
+}
+
+/* ── 4. Unified Premium SweetAlert2 (Standardize Globally) ── */
+div:where(.swal2-container) .swal2-popup {
+  border-radius: 20px !important;
+  padding: 1.5rem !important;
+  font-family: var(--font-sans) !important;
+  box-shadow: none !important; /* เอาเงากล่องออก */
+  border: 1.5px solid var(--vp-border) !important;
+}
+
+div:where(.swal2-container) .swal2-title {
+  font-family: var(--font-sans) !important;
+  font-size: 1.4rem !important;
+  font-weight: 700 !important;
+  color: var(--vp-text) !important;
+  padding-top: 0.5rem !important;
+}
+
+div:where(.swal2-container) .swal2-html-container {
+  font-family: var(--font-sans) !important;
+  font-size: 1rem !important;
+  color: var(--vp-muted) !important;
+  line-height: 1.6 !important;
+}
+
+/* Standardize Buttons in SweetAlert */
+div:where(.swal2-container) button:where(.swal2-confirm) {
+  @apply btn-global-primary;
+  border-radius: 12px !important;
+  padding: 0.8rem 2rem !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+div:where(.swal2-container) button:where(.swal2-confirm).premium-swal-confirm-danger {
+  @apply btn-global-danger;
+}
+
+div:where(.swal2-container) button:where(.swal2-cancel) {
+  @apply btn-global-outline;
+  border-radius: 12px !important;
+  padding: 0.8rem 2rem !important;
+  font-weight: 600 !important;
+}
+
+div:where(.swal2-container) .swal2-actions {
+  gap: 12px !important;
+  margin-top: 1.5rem !important;
+}
+
+/* ── 5. AI Typing/Thinking Animation ── */
+.typing-loader {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: middle;
+}
+.typing-dot {
+  width: 7px;
+  height: 7px;
+  background-color: currentColor;
+  border-radius: 50%;
+  opacity: 0.7;
+  animation: typing-jump 1.4s infinite ease-in-out both;
+}
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing-jump {
+  0%, 80%, 100% { 
+    transform: translateY(0);
+    opacity: 0.3;
+  }
+  40% { 
+    transform: translateY(-5px);
+    opacity: 1;
+  }
+}
+
+/* ── 6. Global Premium Scrollbar ── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent; 
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+  /* Creates a 'floating' illusion by adding a border matching the page background */
+  border: 2px solid #f8fbfa;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; 
+}
+
+/* Modern Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}

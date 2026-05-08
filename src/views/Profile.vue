@@ -1,0 +1,1399 @@
+<template>
+  <div class="app-wrap" :class="{ 'is-desktop': !isMobileScreen }">
+    <input type="file" ref="fileInput" @change="handleFileChange" accept="image/*" style="display: none" />
+
+    <div class="mobile-hero-section" v-if="isMobileScreen">
+      <div v-if="user" class="hero-profile">
+        <div class="avatar-wrap">
+            <div class="avatar" :class="{ 'skeleton': !user }">
+              <img v-if="user?.picture_url" :src="user.picture_url" alt="avatar" class="avatar-img" loading="lazy" />
+              <span v-else-if="user">{{ initials }}</span>
+            </div>
+        </div>
+        <div class="hero-info">
+          <div class="hero-name">{{ user.fname_th }} {{ user.lname_th }}</div>
+        </div>
+        <div class="top-right">
+          <LogOut class="top-icon" @click="handleLogout" />
+        </div>
+      </div>
+    </div>
+
+    <div class="layout-container">
+      <aside class="nav-sidebar">
+        <div class="pc-profile-brief" v-if="!isMobileScreen && user">
+          <div class="pc-avatar" :class="{ 'skeleton': !user }">
+            <img v-if="user?.picture_url" :src="user.picture_url" alt="avatar" loading="lazy" />
+            <span v-else-if="user">{{ initials }}</span>
+          </div>
+          <div class="pc-brief-info">
+            <div class="pc-username">{{ user.fname_th }}</div>
+          </div>
+        </div>
+
+        <div class="menu-list" :class="{ 'mobile-grid': isMobileScreen }">
+          <div class="menu-header" v-if="isMobileScreen">
+            <div class="menu-title">รายการของฉัน</div>
+            <div class="menu-more pc-only">ดูทั้งหมด</div>
+          </div>
+          <div class="menu-items-container" :class="{ 'horizontal-scroll': isMobileScreen }">
+            <div class="menu-item mi-general" :class="{ 'active': !isMobileScreen && activeTab === 'general' }" @click="openTab('general')">
+              <div class="menu-icon-wrap m-blue"><User class="menu-icon" /></div>
+              <div class="menu-label">ข้อมูลของฉัน</div>
+            </div>
+            <div class="menu-item mi-contact" :class="{ 'active': !isMobileScreen && activeTab === 'contact' }" @click="openTab('contact')">
+              <div class="menu-icon-wrap m-orange"><Phone class="menu-icon" /></div>
+              <div class="menu-label">ข้อมูลติดต่อ</div>
+            </div>
+            <div class="menu-item mi-tanita" :class="{ 'active': !isMobileScreen && activeTab === 'tanita' }" @click="openTab('tanita')">
+              <div class="menu-icon-wrap m-green"><Activity class="menu-icon" /></div>
+              <div class="menu-label">ข้อมูลองค์ประกอบร่างกาย</div>
+            </div>
+            
+            <div class="menu-item mi-events" :class="{ 'active': !isMobileScreen && activeTab === 'events' }" @click="openTab('events')">
+              <div class="menu-icon-wrap m-red"><Calendar class="menu-icon" /></div>
+              <div class="menu-label">กิจกรรมที่สมัคร</div>
+            </div>
+            <div class="menu-item pc-only logout-item" @click="handleLogout" v-if="!isMobileScreen">
+              <div class="menu-icon-wrap m-slate"><LogOut class="menu-icon" /></div>
+              <div class="menu-label">ออกจากระบบ</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <Transition :name="isMobileScreen ? 'fade' : 'fade'">
+        <div v-if="activeTab" class="content-area" :class="{ 'is-full-page': isMobileScreen }">
+          <div class="content-card" :class="{ 'full-view': isMobileScreen }">
+            
+            <div class="card-header">
+              <div class="header-actions-left" v-if="isMobileScreen" @click="closeTab">
+                <button class="icon-btn-back">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+              </div>
+              <div class="header-titles">
+                <h2 class="card-title">{{ currentTabTitle }}</h2>
+                <p class="card-subtitle" v-if="!isMobileScreen">{{ currentTabSubtitle }}</p>
+              </div>
+              <div class="header-actions">
+                <button v-if="canEditTab && !editing" class="btn-text text-o" @click="startEdit">แก้ไข</button>
+                <button v-if="activeTab === 'tanita' && tanita" class="btn-text text-o" @click="openTanitaModal(true)">แก้ไข</button>
+              </div>
+            </div>
+
+            <!-- Stats Preview Bar -->
+            <div class="stats-preview-bar" v-if="activeTab === 'general'">
+              <div class="stat-item">
+                <div class="stat-label">น้ำหนัก</div>
+                <div class="stat-val">{{ latestWeight }} <small>กก.</small></div>
+              </div>
+              <div class="stat-divider"></div>
+              <div class="stat-item">
+                <div class="stat-label">ส่วนสูง</div>
+                <div class="stat-val">{{ latestHeight }} <small>ซม.</small></div>
+              </div>
+              <div class="stat-divider"></div>
+              <div class="stat-item">
+                <div class="stat-label">BMI</div>
+                <div class="stat-val-group">
+                  <div class="stat-val">{{ profileBMI }}</div>
+                  <div class="stat-badge" :style="bmiImage.badgeStyle" v-if="profileBMI !== '–'">
+                    {{ bmiImage.label }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-body">
+              <div v-if="activeTab === 'general'" class="tab-content general-tab">
+                <div class="profile-split-layout" :class="{ 'mobile-split': isMobileScreen }">
+                  <div class="profile-avatar-area">
+                    <div class="av-large" @click="triggerUpload" :class="{ 'skeleton': !user }">
+                      <img v-if="user?.picture_url" :src="user.picture_url" alt="avatar" loading="lazy" />
+                      <span v-else-if="user">{{ initials }}</span>
+                      <div class="av-edit-overlay" v-if="isMobileScreen">
+                        <Camera :size="24" />
+                      </div>
+                      <div class="uploading-overlay" v-if="isUploading">
+                        <Loader2 class="spin" :size="24" />
+                      </div>
+                    </div>
+                    <button class="btn-outline-sm mt-4" @click="triggerUpload" :disabled="isUploading" v-if="!isMobileScreen">
+                      <span v-if="!isUploading">เปลี่ยนรูปโปรไฟล์</span>
+                      <Loader2 v-else class="spin" :size="16" />
+                    </button>
+                  </div>
+
+                  <div class="profile-form-area">
+                    <div v-for="f in generalFields" :key="f.key" class="shopee-f-row" :class="{ 'editing-row': editing }">
+                      <div class="shopee-f-label" v-if="!editing">{{ f.label }}</div>
+                      <div class="shopee-f-val">
+                        <template v-if="!editing">
+                          <span v-if="f.key === 'birth_date'">{{ formatBE(form[f.key]) }}</span>
+                          <span v-else-if="f.key === 'nickname'">{{ String(form[f.key] || '').startsWith('D:') ? '...' : (form[f.key] || '–') }}</span>
+                          <span v-else>{{ getFieldLabel(f, form[f.key]) }}</span>
+                        </template>
+                        <template v-else-if="f.type === 'select'">
+                          <div class="pc-custom-sel">
+                            <CustomSelect 
+                              v-model="form[f.key]"
+                              :options="f.options"
+                              :label="editing ? f.label : ''"
+                            />
+                          </div>
+                        </template>
+                        <template v-else-if="f.type === 'date_be'">
+                          <div class="fi-date-be" :class="{'mobile-date-grid': isMobileScreen}">
+                            <div class="pc-custom-sel s-d"><CustomSelect v-model="form_be.day" :options="dayOptions" :label="editing ? 'วัน' : ''" /></div>
+                            <div class="pc-custom-sel s-m"><CustomSelect v-model="form_be.month" :options="monthOptions" :label="editing ? 'เดือน' : ''" /></div>
+                            <div class="pc-custom-sel s-y"><CustomSelect v-model="form_be.year" :options="yearOptions" :label="editing ? 'ปี' : ''" /></div>
+                          </div>
+                        </template>
+                        <div v-else class="floating-input-group">
+                          <input class="fi" :type="f.type || 'text'" v-model="form[f.key]" placeholder=" " />
+                          <label class="floating-label" v-if="editing">{{ f.label }}</label>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="shopee-f-row editing-row" v-if="editing && !isMobileScreen">
+                      <div class="shopee-f-val flex gap-3">
+                        <button class="btn-outline w-auto px-6" @click="cancelEdit">ยกเลิก</button>
+                        <button class="btn-primary w-auto px-8" @click="saveEdit" :disabled="isSubmitting">
+                          <Loader2 v-if="isSubmitting" class="spin mr-2" :size="16" />
+                          <span v-else>บันทึก</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="activeTab === 'contact'" class="tab-content">
+                <div class="shopee-f-row" v-for="f in contactFields" :key="f.key" :class="{ 'editing-row': editing }">
+                  <div class="shopee-f-label" v-if="!editing">{{ f.label }}</div>
+                  <div class="shopee-f-val">
+                    <span v-if="!editing">{{ f.key === 'underlying_disease' ? (form[f.key] || 'ไม่มีโรคประจำตัว') : (f.key === 'phone' ? formatPhone(form[f.key]) : (form[f.key] || '–')) }}</span>
+                    <template v-else-if="f.key === 'underlying_disease'">
+                      <div class="disease-selector">
+                        <div class="disease-btns">
+                          <button class="d-btn" :class="{active: underlyingDiseaseState === 'no'}" @click="setDisease('no')">ไม่มี</button>
+                          <button class="d-btn" :class="{active: underlyingDiseaseState === 'yes'}" @click="setDisease('yes')">มี</button>
+                        </div>
+                        <div v-if="underlyingDiseaseState === 'yes'" class="floating-input-group mt-2">
+                          <input class="fi" type="text" v-model="form[f.key]" placeholder=" " />
+                          <label class="floating-label" v-if="editing">ระบุโรคประจำตัว</label>
+                        </div>
+                      </div>
+                    </template>
+                    <div v-else-if="f.key === 'email'" class="floating-input-group">
+                      <input class="fi" type="email" v-model="form[f.key]" placeholder=" " />
+                      <label class="floating-label" v-if="editing">อีเมล</label>
+                    </div>
+                    <div v-else class="floating-input-group">
+                      <input class="fi" :type="f.type || 'text'" v-model="form[f.key]" placeholder=" " />
+                      <label class="floating-label" v-if="editing">{{ f.label }}</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="shopee-f-row editing-row" v-if="editing && !isMobileScreen">
+                  <div class="shopee-f-val flex gap-3">
+                    <button class="btn-outline w-auto px-6" @click="cancelEdit">ยกเลิก</button>
+                    <button class="btn-primary w-auto px-8" @click="saveEdit" :disabled="isSubmitting">
+                      <Loader2 v-if="isSubmitting" class="spin mr-2" :size="16" />
+                      <span v-else>บันทึก</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="activeTab === 'tanita'" class="tab-content">
+                <div v-if="tanita" class="tanita-wrap">
+                  <div class="tanita-header-row">
+                    <div class="tanita-date">อัปเดตล่าสุด: {{ formatDate(tanita.recorded_at) }}</div>
+                  </div>
+                  <div class="ai-insights-dashboard">
+                    <div class="ins-intro">
+                      <div class="ins-title">วิเคราะห์สุขภาพเชิงลึก</div>
+                      <div class="ins-sub">สรุปผลวิเคราะห์ที่กำหนดพฤติกรรมของคุณโดยเฉพาะเพื่อให้คุณเข้าใจและปรับรูปร่างได้ตรงจุด</div>
+                    </div>
+                    
+                    <div class="ins-grid">
+                      <div class="ins-card bg-orange" v-if="insightSweetSpot">
+                        <div class="ins-head">
+                          <Activity class="ins-ico" :size="20"/> 
+                          {{ insightSweetSpot.title }}
+                        </div>
+                        <div class="ins-val">{{ insightSweetSpot.value }}</div>
+                        <div class="ins-desc"><strong>สิ่งที่คุณรู้เพิ่ม:</strong> {{ insightSweetSpot.desc }}</div>
+                        <div class="ins-action"><strong>ประโยชน์:</strong> {{ insightSweetSpot.action }}</div>
+                      </div>
+
+                      <div class="ins-card bg-blue" v-if="insightProtein">
+                        <div class="ins-head">
+                          <HeartPulse class="ins-ico" :size="20"/>
+                          {{ insightProtein.title }}
+                        </div>
+                        <div class="ins-val">{{ insightProtein.value }}</div>
+                        <div class="ins-desc"><strong>สิ่งที่คุณรู้เพิ่ม:</strong> {{ insightProtein.desc }}</div>
+                        <div class="ins-action"><strong>ตัวเลขจริง:</strong> {{ insightProtein.action }}</div>
+                      </div>
+
+                      <div class="ins-card bg-purple" v-if="insightBodyType">
+                        <div class="ins-head">
+                          <Target class="ins-ico" :size="20"/>
+                          {{ insightBodyType.title }}
+                        </div>
+                        <div class="ins-val">{{ insightBodyType.value }}</div>
+                        <div class="ins-desc"><strong>สิ่งที่คุณรู้เพิ่ม:</strong> {{ insightBodyType.desc }}</div>
+                        <div class="ins-action"><strong>กลยุทธ์:</strong> {{ insightBodyType.action }}</div>
+                      </div>
+
+                      <div class="ins-card bg-red" v-if="insightVisceral">
+                        <div class="ins-head">
+                          <Stethoscope class="ins-ico" :size="20"/>
+                          {{ insightVisceral.title }}
+                        </div>
+                        <div class="ins-val" :class="{'text-red-600': insightVisceral.value.includes('เสี่ยง')}">{{ insightVisceral.value }}</div>
+                        <div class="ins-desc"><strong>สิ่งที่คุณรู้เพิ่ม:</strong> {{ insightVisceral.desc }}</div>
+                        <div class="ins-action"><strong>Action:</strong> {{ insightVisceral.action }}</div>
+                      </div>
+
+                      <div class="ins-card bg-teal" v-if="insightHydration">
+                        <div class="ins-head">
+                          <Droplets class="ins-ico" :size="20"/>
+                          {{ insightHydration.title }}
+                        </div>
+                        <div class="ins-val">{{ insightHydration.value }}</div>
+                        <div class="ins-desc"><strong>สิ่งที่คุณรู้เพิ่ม:</strong> {{ insightHydration.desc }}</div>
+                        <div class="ins-action"><strong>แนะนำ:</strong> {{ insightHydration.action }}</div>
+                      </div>
+
+                      <div class="ins-card bg-green" v-if="insightWeightGap">
+                        <div class="ins-head">
+                          <Scale class="ins-ico" :size="20"/>
+                          {{ insightWeightGap.title }}
+                        </div>
+                        <div class="ins-val">{{ insightWeightGap.value }}</div>
+                        <div class="ins-desc"><strong>สิ่งที่คุณรู้เพิ่ม:</strong> {{ insightWeightGap.desc }}</div>
+                        <div class="ins-action"><strong>แนวทาง:</strong> {{ insightWeightGap.action }}</div>
+                      </div>
+                    </div>
+                    
+                    <div class="ins-summary-card">
+                      <div class="is-title mb-6">สรุปเป้าหมายการจัดการรูปร่าง</div>
+                      <div class="is-list">
+                        <div class="is-item"><strong class="text-orange-600">เป้าหมายการกิน:</strong> {{ insightSweetSpot ? insightSweetSpot.value + ' / วัน' : '-' }}</div>
+                        <div class="is-item"><strong class="text-blue-600">เป้าหมายโปรตีน:</strong> {{ insightProtein ? insightProtein.value : '-' }}</div>
+                        <div class="is-item"><strong class="text-purple-600">เป้าหมายการออกกำลังกาย:</strong> 
+                          <span v-if="dashboardGoal === 'เพิ่มกล้ามเนื้อ'">เน้นสร้างกล้ามเนื้อ (Weight Training) 80% คาร์ดิโอ 20%</span>
+                          <span v-else-if="dashboardGoal === 'ลดน้ำหนัก'">เน้นคาร์ดิโอ (Cardio) 70% เวท 30% เพื่อเผาผลาญไขมัน</span>
+                          <span v-else>คาร์ดิโอ 50% เวท 50% เพื่อสุขภาพที่สมดุล</span>
+                        </div>
+                      </div>
+
+                      <div class="is-sim-controls mt-6 pt-4 border-t border-gray-100">
+                        <div class="is-sim-label text-[11px] text-gray-400 mb-2 font-medium">ลองจำลองเป้าหมายและกิจกรรม:</div>
+                        <div class="flex gap-3 flex-wrap">
+                          <div class="flex-1 min-width-[160px]">
+                            <CustomSelect 
+                              v-model="dashboardGoal" 
+                              :options="goalOptions" 
+                              label="เป้าหมาย"
+                              class="goal-mini-select"
+                            />
+                          </div>
+                          <div class="flex-1 min-width-[160px]">
+                            <CustomSelect 
+                              v-model="dashboardActivity" 
+                              :options="activityOptions" 
+                              label="กิจกรรม"
+                              class="goal-mini-select"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div class="reference-footer mt-4 pt-3 border-t border-gray-100 text-[10px] text-gray-400">
+                        <div>แหล่งอ้างอิงข้อมูลทางวิชาการ:</div>
+                        <ul class="list-disc ml-4 mt-1">
+                          <li>สูตรคำนวณ TDEE/BMR มาตรฐาน Mifflin-St Jeor และกรมอนามัย: <a href="https://www.ptpioneer.com/personal-training/tools/total-daily-energy-expenditure-calculator-tdee-calculator/#:~:text=as%20maintenance%20levels.-,How%20Is%20Total%20Daily%20Energy%20Expenditure%20Calculated?,%2D161%20(kcal%20/%20day)" target="_blank" class="underline hover:text-orange-500">PTPioneer</a></li>
+                          <li>เกณฑ์โปรตีนตามมาตรฐาน ACSM และ Thai RDA: <a href="https://www.ironman.com/news/protein-non-negotiable-macro#:~:text=The%20American%20College%20of%20Sports%20Medicine%20(ACSM),kg%20(0.55%2D0.64%20grams%20per%20pound)%20of%20body" target="_blank" class="underline hover:text-orange-500">Ironman.com</a></li>
+                          <li>เกณฑ์องค์ประกอบร่างกายและดัชนีมวลกาย: กรมอนามัย กระทรวงสาธารณสุข และมาตรฐาน ค่าองค์ประกอบของร่างกาย</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="bmi-zone mt-4">
+                    <img :src="bmiImage.src" :alt="bmiImage.label" class="bmi-img" />
+                    <div class="bmi-info-wrap">
+                      <div class="bmi-top-row">
+                        <div class="bmi-label" :style="{ color: bmiImage.color }">{{ bmiImage.label }}</div>
+                        <div class="bmi-val">BMI {{ profileBMI }}</div>
+                        <div class="bmi-ideal" v-if="idealWeight">
+                          เหมาะสม: <span class="text-o font-bold">{{ idealWeight }} kg</span>
+                        </div>
+                      </div>
+                      
+                      <div class="bmi-badge" :style="bmiImage.badgeStyle">{{ bmiImage.badge }}</div>
+                      
+                      <div class="bmi-scale-container">
+                        <div class="bmi-scale-line"></div>
+                        <div class="bmi-marker" :style="{ left: (bmiImage.dotIndex * 25) + '%' }"></div>
+                      </div>
+                      
+                      <div class="bmi-desc-box" :style="bmiImage.descStyle">{{ bmiImage.desc }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="empty-state">
+                  <Activity :size="48" class="text-gray-300 mb-3" />
+                  <span class="text-gray-500 mb-2">ยังไม่มีข้อมูลองค์ประกอบร่างกาย</span>
+                  <button class="btn-primary" @click="openTanitaModal(false)">+ เพิ่มข้อมูลสุขภาพ</button>
+                </div>
+              </div>
+           
+              <div v-if="activeTab === 'events'" class="tab-content">
+                <div v-if="registrations.length" class="events-grid-wrapper">
+                  <div class="flat-grid">
+                    <div 
+                      v-for="reg in registrations.slice(0, isMobileScreen ? 2 : 4)" 
+                      :key="reg.id"
+                      class="flat-card"
+                      @click="viewEvent(reg.event); closeTab()"
+                    >
+                      <div class="img-box">
+                        <img v-if="reg.event.poster" :src="reg.event.poster" :alt="reg.event.title" />
+                        <div v-else class="img-fallback">
+                          <ImageIcon :size="32" class="fallback-icon" />
+                        </div>
+                        
+                        <div class="dark-badge">
+                          {{ getActivityStatus(reg.event) === 'full' ? 'เต็มแล้ว' : getActivityStatus(reg.event) === 'closed' ? 'ปิดรับสมัคร' : 'กำลังเปิดรับ' }}
+                        </div>
+                        
+                        <button class="heart-btn" :class="{'active': favoriteIds.has(reg.event.id)}" @click.stop="toggleFavorite($event, reg.event.id)">
+                          <Heart :size="18" :fill="favoriteIds.has(reg.event.id) ? '#F05A23' : 'none'" />
+                        </button>
+                      </div>
+
+                      <div class="info-box">
+                        <h4 class="title">{{ reg.event.title }}</h4>
+                        
+                        <div class="meta-row text-primary">
+                          <Award :size="14" />
+                          <span>คะแนน: {{ getEventScore(reg.event.id).toLocaleString() }} คะแนน</span>
+                        </div>
+                        
+                        <div class="meta-row" v-if="hasGoal(reg.event)">
+                          <Target :size="14" /> 
+                          <span>เป้าหมาย: {{ formatGoalTarget(reg.event) }}</span>
+                        </div>
+
+                        <div class="meta-row">
+                          <Calendar :size="14" />
+                          <span>{{ formatEventRemaining(reg.event) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  
+                  <div class="flex justify-center mt-8">
+                    <button class="btn-outline-sm px-8" @click="router.push('/?section=mine')">ดูทั้งหมด</button>
+                  </div>
+                </div>
+                
+                <div v-else class="empty-state">
+                  <Calendar :size="48" class="text-gray-300 mb-3" />
+                  <span class="text-gray-500 mb-4">ยังไม่ได้สมัครกิจกรรมใด</span>
+                  <button class="btn-primary" @click="router.push('/'); closeTab()">ดูแคมเปญกิจกรรม</button>
+                </div>
+              </div>
+
+            </div>
+            
+           <div class="card-footer" v-if="editing && isMobileScreen">
+              <button class="btn-outline w-full" @click="cancelEdit">ยกเลิก</button>
+              <button class="btn-primary w-full" @click="saveEdit" :disabled="isSubmitting">
+                <Loader2 v-if="isSubmitting" class="spin mr-2" :size="18" />
+                <span v-else>บันทึกข้อมูล</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+
+    </div> <Teleport to="body"> <Transition name="modal-fade"> <div v-if="showTanitaModal" class="tn-overlay">
+          <div class="tn-sheet">
+
+            <div class="tn-header">
+              <div class="header-actions-left" v-if="isMobileScreen" @click="showTanitaModal = false">
+                <button class="icon-btn-back">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+              </div>
+              <div class="tn-title">{{ tanita ? 'แก้ไขข้อมูลสุขภาพ' : 'เพิ่มข้อมูลสุขภาพ' }}</div>
+              <button class="tn-close" v-if="!isMobileScreen" @click="showTanitaModal = false" aria-label="ปิด">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <div class="tn-mode-bar">
+              <button class="tn-mode-btn" :class="{ active: tanitaInputMethod === 'manual' }" @click="tanitaInputMethod = 'manual'">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                กรอกเอง
+              </button>
+              <button class="tn-mode-btn" :class="{ active: tanitaInputMethod === 'ai' }" @click="tanitaInputMethod = 'ai'">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                AI อ่านจากรูป
+              </button>
+            </div>
+
+            <div class="tn-body">
+
+              <div v-if="tanitaInputMethod === 'ai'" class="tn-ai-inline">
+                <div v-if="isAnalyzingTanita" class="tn-ai-loading">
+                  <Loader2 class="spin" :size="24" />
+                  <span>{{ tanitaLoadingMsg }}</span>
+                </div>
+                <div v-else>
+                  <input type="file" accept="image/*" id="tn-ai-upload" @change="handleTanitaImageUpload" style="display:none" />
+                  <label for="tn-ai-upload" class="tn-upload-trigger"
+                    :class="{ dragging: isTanitaDragging }"
+                    @dragover.prevent="isTanitaDragging = true"
+                    @dragleave.prevent="isTanitaDragging = false"
+                    @drop.prevent="handleTanitaDrop"
+                  >
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                    <span>{{ isTanitaDragging ? 'วางรูปที่นี่' : 'อัปโหลดรูปใบวัดองค์ประกอบร่างกาย' }}</span>
+                    <span class="tn-sub">รองรับ drag & drop — AI จะกรอกข้อมูลให้อัตโนมัติ</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="tn-grid-3">
+                <div class="tn-f-group"><input type="number" v-model="tanitaForm.height" placeholder=" "/><label>ส่วนสูง (cm)</label></div>
+                <div class="tn-f-group"><input type="number" step="0.1" v-model="tanitaForm.weight" placeholder=" "/><label>น้ำหนัก (kg)</label></div>
+                <div class="tn-f-group"><input type="text" v-model="tanitaForm.bodyType" placeholder=" "/><label>ประเภทร่างกาย</label></div>
+              </div>
+              <div class="tn-grid-2" style="margin-bottom:4px">
+                <div class="tn-f-group">
+                  <input type="number" v-model="tanitaForm.age" placeholder=" "/>
+                  <label>อายุ (ปี) <span style="font-size:10px;color:#94a3b8">(จากวันเกิด)</span></label>
+                </div>
+              </div>
+              <div class="tn-divider-label">องค์ประกอบร่างกาย</div>
+              <div class="tn-grid-2">
+                <div class="tn-f-group"><input type="number" step="0.1" v-model="tanitaForm.fatPercent" placeholder=" "/><label>ไขมัน (%)</label></div>
+                <div class="tn-f-group"><input type="number" step="0.1" v-model="tanitaForm.fatMass" placeholder=" "/><label>มวลไขมัน (kg)</label></div>
+                <div class="tn-f-group"><input type="number" step="0.1" v-model="tanitaForm.ffm" placeholder=" "/><label>มวลไร้ไขมัน FFM (kg)</label></div>
+                <div class="tn-f-group"><input type="number" step="0.1" v-model="tanitaForm.muscleMass" placeholder=" "/><label>มวลกล้ามเนื้อ (kg)</label></div>
+                <div class="tn-f-group"><input type="number" step="0.1" v-model="tanitaForm.bodyWaterMass" placeholder=" "/><label>มวลน้ำ (kg)</label></div>
+                <div class="tn-f-group"><input type="number" step="0.1" v-model="tanitaForm.bodyWaterPercent" placeholder=" "/><label>น้ำในร่างกาย (%)</label></div>
+                <div class="tn-f-group"><input type="number" step="0.1" v-model="tanitaForm.boneMass" placeholder=" "/><label>มวลกระดูก (kg)</label></div>
+                <div class="tn-f-group"><input type="number" step="0.1" v-model="tanitaForm.clothesWeight" placeholder=" "/><label>น้ำหนักเสื้อผ้า (kg)</label></div>
+                <div class="tn-f-group"><input type="number" step="0.1" v-model="tanitaForm.waist_cm" placeholder=" "/><label>รอบเอว (cm)</label></div>
+              </div>
+              <div class="tn-divider-label">ระบบเผาผลาญ & ดัชนีสุขภาพ</div>
+              <div class="tn-grid-2">
+                <div class="tn-f-group"><input type="number" v-model="tanitaForm.bmrKj" placeholder=" "/><label>BMR (kJ)</label></div>
+                <div class="tn-f-group"><input type="number" v-model="tanitaForm.bmrKcal" placeholder=" "/><label>BMR (kcal)</label></div>
+                <div class="tn-f-group"><input type="number" v-model="tanitaForm.metabolicAge" placeholder=" "/><label>อายุเมตาบอลิก (ปี)</label></div>
+                <div class="tn-f-group"><input type="number" step="0.1" v-model="tanitaForm.visceralFat" placeholder=" "/><label>ไขมันช่องท้อง</label></div>
+                <div class="tn-f-group"><input type="number" step="0.1" v-model="tanitaForm.bmi" placeholder=" "/><label>BMI</label></div>
+                <div class="tn-f-group"><input type="number" step="0.1" v-model="tanitaForm.idealWeight" placeholder=" "/><label>น้ำหนักที่เหมาะสม (kg)</label></div>
+                <div class="tn-f-group"><input type="number" step="0.1" v-model="tanitaForm.obesityDegree" placeholder=" "/><label>ระดับความอ้วน (%)</label></div>
+                <div class="tn-f-group"><input type="number" v-model="tanitaForm.physiqueRating" placeholder=" "/><label>Physique Rating</label></div>
+              </div>
+            </div>
+
+            <div class="tn-footer">
+              <button class="tn-btn-cancel" @click="showTanitaModal = false">ยกเลิก</button>
+              <button class="tn-btn-save" @click="submitTanitaForm" :disabled="isSavingTanita">
+                <Loader2 v-if="isSavingTanita" class="spin" :size="14" />
+                <span v-else>บันทึกข้อมูล</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { 
+  Camera, ChevronRight, MapPin, Pencil, LogOut, Award, HeartPulse, Activity, 
+  LayoutDashboard, Loader2, User, Users, Calendar, Target, Mail, Phone, IdCard, 
+  Scale, Ruler, Stethoscope, School, GraduationCap, Building2, Briefcase, VenetianMask,
+  Heart, ImageIcon, Droplets
+} from 'lucide-vue-next'
+import { authStore } from '../store/auth'
+import { uiStore } from '../store/ui'
+import { logoutLiff } from '../lib/liff'
+import { useFavorites } from '../composables/useFavorites'
+import CustomSelect from '../components/CustomSelect.vue'
+
+import { useTanitaProfile, useTanitaInsights } from '../composables/useTanitaProfile'
+import { useProfileForm } from '../composables/useProfileForm'
+import { useProfileEvents } from '../composables/useProfileEvents'
+
+const router = useRouter()
+const user = computed(() => authStore.user)
+
+const isMobileScreen = ref(true)
+const activeTab = ref(null)
+
+const { favoriteIds, fetchFavorites, toggleFavorite: syncToggleFavorite } = useFavorites()
+
+function toggleFavorite(e, id) {
+  e.stopPropagation()
+  syncToggleFavorite(id)
+}
+
+function checkScreen() {
+  isMobileScreen.value = window.innerWidth < 768
+  if (!isMobileScreen.value && !activeTab.value) {
+    activeTab.value = 'general'
+  }
+}
+
+// ── Composables Setup ──
+const { 
+  tanita, isTanitaLoaded, showTanitaModal, isSavingTanita, isAnalyzingTanita, 
+  isTanitaDragging, tanitaInputMethod, tanitaLoadingMsg, tanitaForm,
+  openTanitaModal, fetchTanitaData, submitTanitaForm, handleTanitaFileSelect, 
+  handleTanitaImageUpload, handleTanitaDrop 
+} = useTanitaProfile(user, () => fetchData())
+
+const {
+  form, form_be, editing, underlyingDiseaseState, isUploading, fileInput,
+  dayOptions, monthOptions, yearOptions, generalFields, contactFields, goalOptions, activityOptions,
+  profileBMI, accurateAge, latestWeight, latestHeight, idealWeight,
+  recommendedCalories, fatStatus, bmiImage, initials,
+  setDisease, startEdit, cancelEdit, saveEdit, fetchData, triggerUpload, 
+  handleFileChange, formatBE, getFieldLabel, formatPhone, isSubmitting
+} = useProfileForm(user, tanita)
+
+const dashboardGoal = ref(user.value?.main_goal || 'รักษาสุขภาพทั่วไป')
+const dashboardActivity = ref(user.value?.activity_level || 'sedentary')
+
+watch(() => user.value?.main_goal, (ng) => { if (ng) dashboardGoal.value = ng })
+watch(() => user.value?.activity_level, (na) => { if (na) dashboardActivity.value = na })
+
+const {
+  insightSweetSpot, insightProtein, insightBodyType, insightVisceral, insightHydration, insightWeightGap
+} = useTanitaInsights(tanita, user, { latestWeight, latestHeight, profileBMI, recommendedCalories, accurateAge }, dashboardGoal, dashboardActivity)
+
+const {
+  registrations, userSubmissions, team, memberCount, teamProgress, teamGoal,
+  isEventsLoaded, isTeamLoaded, eventsPerPage, eventsCurrentPage, eventsTotalPages,
+  paginatedEvents, liveTotalPoints, fetchTeamData, fetchEventsData, getActivityStatus,
+  formatDate, formatDateRange, formatEventRemaining, getEventScore, hasGoal, formatGoalTarget
+} = useProfileEvents(user, activeTab)
+
+// ==========================
+// Real-time Sync
+// ==========================
+watch(() => uiStore.lastRealtimeUpdate, () => {
+  fetchData()
+  fetchTanitaData()
+  fetchFavorites()
+  fetchEventsData()
+})
+
+function openTab(tabName) {
+  activeTab.value = tabName
+  editing.value = false
+  if (isMobileScreen.value) document.body.style.overflow = 'hidden'
+  
+  if (tabName === 'tanita') fetchTanitaData()
+  else if (tabName === 'team') fetchTeamData()
+  else if (tabName === 'events') fetchEventsData()
+}
+
+function closeTab() {
+  if (isMobileScreen.value) {
+    activeTab.value = null
+    document.body.style.overflow = ''
+  }
+  editing.value = false
+}
+
+const currentTabTitle = computed(() => {
+  const titles = { general: 'ข้อมูลของฉัน', contact: 'ข้อมูลติดต่อ', tanita: 'ข้อมูลองค์ประกอบร่างกาย', team: 'ทีมของฉัน', events: 'กิจกรรมที่สมัคร' }
+  return titles[activeTab.value] || ''
+})
+
+const currentTabSubtitle = computed(() => {
+  if (activeTab.value === 'general' || activeTab.value === 'contact') return 'จัดการข้อมูลส่วนตัวคุณเพื่อการใช้งานที่สมบูรณ์'
+  return ''
+})
+
+const canEditTab = computed(() => activeTab.value === 'general' || activeTab.value === 'contact')
+
+function viewEvent(event) { router.push(`/activities/${event.id}`) }
+function handleLogout() { logoutLiff(); router.push('/') }
+
+onMounted(() => {
+  checkScreen()
+  window.addEventListener('resize', checkScreen)
+  fetchData()
+  fetchTanitaData()
+  fetchFavorites()
+  fetchEventsData()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkScreen)
+})
+</script>
+
+
+<style scoped>
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --primary: #FF6B00;
+  --primary-dark: #d64a18;
+  --primary-light: #fef0eb;
+  --bg-page: #ffffff;
+  --text-main: #333;
+  --text-sub: #757575;
+  --border-light: #efefef;
+}
+
+.app-wrap {
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100vw;
+  background-color: var(--bg-page, #ffffff);
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  color: var(--text-main, #333);
+  overflow-x: hidden;
+}
+
+.mobile-hero-section {
+  background: linear-gradient(135deg, #FF6B00 0%, #FF8533 100%);
+  box-shadow: 0 4px 20px rgba(255, 107, 0, 0.15);
+  padding: 12px 16px;
+  color: #fff;
+  position: relative;
+  z-index: 10;
+}
+
+.top-icon { width: 22px; height: 22px; color: #fff; cursor: pointer; opacity: 0.9; }
+.top-icon:hover { opacity: 1; }
+
+.hero-profile { display: flex; align-items: center; gap: 16px; }
+.avatar-wrap { position: relative; }
+.avatar { width: 48px; height: 48px; border-radius: 50% !important; background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center; font-size: 16px; color: #fff; font-weight: bold; position: relative; overflow: hidden; flex-shrink: 0; aspect-ratio: 1/1; }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; }
+.av-edit { position: absolute; bottom: 0; width: 100%; height: 20px; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; color: #fff; cursor: pointer; }
+.hero-info { flex: 1; }
+.hero-name { font-size: 1.1rem; font-weight: 700; color: #fff; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+.top-right { display: flex; gap: 12px; }
+
+.layout-container {
+  padding: 0;
+}
+
+.nav-sidebar {
+  background: transparent;
+}
+
+.menu-list.mobile-grid {
+  background: #fff;
+  margin: 0;
+  border-radius: 0;
+  border-top: 1px solid #f5f5f5;
+  padding: 20px 0 16px;
+  position: relative;
+  z-index: 20;
+}
+
+.menu-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
+
+.menu-items-container.horizontal-scroll {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap; /* 🌟 ป้องกันไอคอนตกบรรทัด 🌟 */
+  gap: 20px;
+  padding: 8px 20px 16px;
+  overflow-x: auto;
+  width: auto;
+  min-width: 100%;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  /* 🌟 บังคับให้เนื้อหาขยายออกไปเพื่อให้เลื่อนได้บนจอเล็ก 🌟 */
+}
+.menu-items-container.horizontal-scroll::-webkit-scrollbar { display: none; }
+.menu-title { padding: 0 20px; }
+
+/* Skeleton Loading Like Lazada */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+@keyframes skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.menu-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.menu-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 0; }
+.menu-more { font-size: 0.8rem; color: #888; }
+
+.menu-item { 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  gap: 12px; 
+  cursor: pointer; 
+  min-width: 70px; /* 🌟 กำหนดขนาดขั้นต่ำเพื่อให้เกิดการเลื่อนบนจอเล็ก 🌟 */
+  flex-shrink: 0; 
+}
+.menu-icon-wrap { 
+  width: 3.2rem; height: 3.2rem; min-width: 3.2rem; min-height: 3.2rem;
+  aspect-ratio: 1/1 !important; border-radius: 50% !important; display: flex; align-items: center; justify-content: center; 
+  transition: all 0.2s; border: 1.5px solid rgba(0,0,0,0.05); flex-shrink: 0; overflow: hidden; 
+  box-shadow: none;
+}
+.m-blue { background: #1e88e5; color: #fff; border-color: transparent; }
+.m-orange { background: #FF6B00; color: #fff; border-color: transparent; }
+.m-green { background: #43a047; color: #fff; border-color: transparent; }
+.m-purple { background: #8e24aa; color: #fff; border-color: transparent; }
+.m-red { background: #e53935; color: #fff; border-color: transparent; }
+.m-slate { background: #546e7a; color: #fff; border-color: transparent; }
+.menu-icon { width: 22px; height: 22px; stroke-width: 2.5px; }
+.menu-label { font-size: 0.8rem; text-align: center; color: #444; line-height: 1.2; font-weight: 500; width: 64px; }
+.pc-only { display: none; }
+
+.content-area.is-full-page {
+  position: fixed; inset: 0; background: #fff; z-index: 100; display: flex; flex-direction: column;
+  height: 100dvh; /* 🌟 ใช้ dvh เพื่อให้พอดีกับหน้าจอมือถือที่มี Address bar 🌟 */
+}
+
+.content-card.full-view {
+  background: #fff; width: 100%; height: 100%; display: flex; flex-direction: column; border-radius: 0;
+}
+
+.card-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #efefef; min-height: 56px; }
+.header-actions-left { margin-right: 12px; cursor: pointer; }
+.icon-btn-back { background: none; border: none; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+.icon-btn-back svg { width: 24px; height: 24px; color: #333; }
+
+.card-title { font-size: 1.15rem; font-weight: 700; margin: 0; flex: 1; }
+.header-actions { display: flex; align-items: center; gap: 12px; }
+.btn-text { background: none; border: none; font-weight: 600; cursor: pointer; color: #F05A23; font-size: 0.95rem; }
+.icon-btn-close { background: #f4f4f4; border: none; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.icon-btn-close svg { width: 16px; height: 16px; stroke: #222; fill: none; stroke-width: 2; }
+
+/* --- Flat Grid & Card Styles (Activity Marketplace Style) --- */
+.flat-grid { 
+  display: grid; 
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
+  gap: 24px 20px; 
+}
+@media (max-width: 768px) {
+  .flat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 20px 12px;
+  }
+}
+
+.flat-card { 
+  display: flex; 
+  flex-direction: column; 
+  cursor: pointer; 
+  transition: all 0.3s ease; 
+  background: #fff;
+  border-radius: 16px;
+}
+.flat-card:hover { transform: translateY(-4px); }
+
+.img-box {
+  position: relative; 
+  width: 100%; 
+  aspect-ratio: 1/1; 
+  background: #f8fafc; 
+  border-radius: 16px; 
+  overflow: hidden; 
+  margin-bottom: 12px;
+}
+.img-box img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+.flat-card:hover .img-box img { transform: scale(1.05); }
+
+.img-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #D1D5DB; }
+
+.dark-badge {
+  position: absolute; top: 12px; left: 12px; background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(4px);
+  color: #fff; font-size: 11px; font-weight: 600; padding: 6px 12px; border-radius: 8px; letter-spacing: 0.5px;
+}
+
+.heart-btn {
+  position: absolute; bottom: 12px; right: 12px;
+  width: 36px; height: 36px; min-width: 36px; min-height: 36px; flex-shrink: 0;
+  background: #fff; border-radius: 50%; border: none;
+  display: flex; align-items: center; justify-content: center;
+  color: #6B7280; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.08); transition: transform 0.2s;
+}
+.heart-btn:active { transform: scale(0.9); }
+.heart-btn.active { color: #F05A23; }
+
+.info-box { padding: 0 4px; }
+.info-box .title {
+  font-size: 15px; font-weight: 700; color: #111; margin: 0 0 10px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.meta-row { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 4px; color: #6B7280; font-weight: 500; }
+.meta-row.text-primary { color: #F05A23; font-weight: 700; }
+.meta-row.text-orange-600 { color: #F05A23; }
+
+.card-body { 
+  padding: 16px; 
+  overflow-y: auto; 
+  flex: 1; 
+  /* 🌟 เพิ่ม Padding ด้านล่างเพื่อให้เลื่อนพ้น Bottom Nav (เพิ่มขึ้นเป็น 150px เพื่อความชัวร์) 🌟 */
+  padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px)); 
+}
+@media (min-width: 769px) {
+  .card-body { padding-bottom: 16px; }
+}
+.card-footer { 
+  padding: 16px; 
+  border-top: 1px solid #efefef; 
+  display: flex; 
+  gap: 12px; 
+  background: #fff; 
+  /* 🌟 เพิ่ม Padding ด้านล่างสำหรับมือถือที่มี Bottom Nav 🌟 */
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 768px) {
+  .card-footer {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.shopee-f-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; width: 100%; }
+.shopee-f-row.editing-row { display: block; margin-bottom: 20px; }
+.shopee-f-label { font-size: 0.85rem; color: #757575; font-weight: 500; flex-shrink: 0; min-width: 80px; max-width: 40%; }
+.shopee-f-val { font-size: 0.88rem; color: #222; text-align: right; flex: 1; min-width: 0; display: flex; justify-content: flex-end; word-break: break-word; }
+.shopee-f-val span { overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }
+.editing-row .shopee-f-val { display: block; text-align: left; }
+.mobile-split .shopee-f-val { padding-left: 0; }
+
+.floating-input-group { position: relative; width: 100%; }
+.floating-label { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-size: 14px; color: #94a3b8; pointer-events: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.fi:focus + .floating-label, .fi:not(:placeholder-shown) + .floating-label { top: 12px; font-size: 11px; font-weight: 600; color: #ea580c; }
+.fi:not(:placeholder-shown) + .floating-label { color: #64748b; }
+.fi { padding: 24px 16px 8px; }
+
+.fi { width: 100%; padding: 12px 16px; border: 1.5px solid #eaeaea; border-radius: 12px; font-size: 0.95rem; font-family: inherit; transition: all 0.2s; background: #fff; box-shadow: 0 6px 16px rgba(0,0,0,0.06); }
+.fi:focus { border-color: #F05A23; outline: none; background: #fffaf8; box-shadow: 0 10px 25px rgba(240,90,35,0.15); }
+
+.fi.readonly-input, .readonly-input { 
+  background-color: transparent !important; 
+  color: #64748b !important; 
+  cursor: default !important; 
+  border-color: transparent !important; 
+  box-shadow: none !important; 
+  pointer-events: none; 
+}
+.fi-date-be { display: flex; gap: 8px; }
+.s-d { flex: 1; } .s-m { flex: 1.5; } .s-y { flex: 1.2; }
+
+.pc-custom-sel { width: 100%; max-width: 100%; display: block; flex: 1; }
+.pc-custom-sel :deep(.select-trigger) { min-height: 48px; padding: 14px 16px 6px; border-radius: 12px; border-color: #eaeaea; box-shadow: 0 6px 16px rgba(0,0,0,0.06); }
+.pc-custom-sel :deep(label) { display: none; }
+.pc-custom-sel :deep(.trigger-text) { padding-right: 18px; text-align: left; }
+
+.disease-selector { width: 100%; max-width: 100%; }
+.disease-btns { display: flex; gap: 8px; }
+.d-btn { flex: 1; padding: 10px; border: 1.5px solid #eaeaea; border-radius: 8px; background: #fff; font-size: 0.95rem; font-weight: 500; color: #666; cursor: pointer; transition: all 0.2s; }
+.d-btn.active { border-color: #F05A23; background: #F05A23; color: #fff; font-weight: 600; }
+
+.btn-primary { background: #F05A23; color: #fff; border: none; padding: 10px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; text-align: center; transition: background 0.2s; }
+.btn-primary:hover { background: #d64a18; }
+.btn-outline { background: #fff; color: #F05A23; border: 1px solid #F05A23; padding: 10px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; text-align: center; transition: background 0.2s; }
+.btn-outline:hover { background: #fff5f2; }
+.w-full { width: 100%; } .w-auto { width: auto; min-width: 100px; }
+
+.t-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.t-box { background: #fff; padding: 16px; border-radius: 14px; border: 1px solid #f0f0f0; box-shadow: 0 10px 25px rgba(0,0,0,0.07); }
+.full-w { grid-column: span 2; }
+.t-accent { background: #fef0eb; border-color: #fbd6c6; }
+.t-box-l { font-size: 0.8rem; color: #757575; margin-bottom: 6px; }
+.t-box-v { font-size: 1.25rem; font-weight: 700; color: #333; }
+.t-box-u { font-size: 0.85rem; margin-left: 4px; font-weight: 400; color: #757575; }
+.t-box-s { font-size: 0.75rem; color: #757575; margin-top: 6px; }
+.tanita-wrap { display: flex; flex-direction: column; gap: 0; }
+.btn-outline-tanita { align-self: flex-end; background: #fff; border: 1px solid #F05A23; color: #F05A23; padding: 6px 14px; border-radius: 4px; font-size: 0.82rem; font-weight: 600; cursor: pointer; margin-bottom: 12px; transition: background 0.2s; }
+.btn-outline-tanita:hover { background: #fef0eb; }
+.tanita-date { font-size: 0.85rem; color: #757575; text-align: right; margin-bottom: 16px; }
+
+.bmi-zone { display: flex; flex-direction: column; align-items: center; background: #fff; border: 1px solid #efefef; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.03); }
+.bmi-img { height: 100px; object-fit: contain; margin-bottom: 12px; }
+.bmi-label { font-size: 1rem; font-weight: 700; }
+.bmi-val { background: #f5f5f5; padding: 4px 10px; border-radius: 10px; font-size: 0.78rem; margin-top: 4px; }
+.bmi-ideal { font-size: 0.85rem; margin-top: 12px; color: #757575; }
+.bmi-badge { margin-top: 12px; padding: 4px 16px; border-radius: 16px; font-size: 0.75rem; font-weight: bold; align-self: flex-start; }
+.bmi-scale-container { width: 100%; margin-top: 20px; position: relative; padding: 4px 0; }
+.bmi-scale-line { height: 4px; border-radius: 2px; background: linear-gradient(to right, #e0f2fe, #dcfce7, #fef9c3, #ffedd5, #fee2e2); }
+.bmi-marker { position: absolute; top: -1px; width: 10px; height: 10px; background: #fff; border: 2px solid #333; border-radius: 50%; transform: translateX(-50%); transition: left 0.3s ease; }
+.bmi-dot { display: none; }
+.bmi-dot-active { display: none; }
+.bmi-desc-box { font-size: 0.8rem; padding: 12px; border-radius: 6px; margin-top: 20px; width: 100%; line-height: 1.5; }
+.bmi-info-wrap { display: flex; flex-direction: column; align-items: center; width: 100%; }
+
+.team-wrap { display: flex; align-items: center; gap: 16px; padding: 16px; background: #fff; border-radius: 14px; border: 1px solid #f0f0f0; cursor: pointer; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
+.team-ico { width: 48px; height: 48px; background: #F05A23; color: #fff; display: flex; align-items: center; justify-content: center; border-radius: 10px; }
+.team-details { flex: 1; }
+.team-name { font-weight: 700; font-size: 1.05rem; margin-bottom: 4px; }
+.team-sub { font-size: 0.85rem; color: #757575; }
+
+.ev-list { display: flex; flex-direction: column; gap: 12px; }
+.ev-card { display: flex; gap: 16px; padding: 12px; background: #fff; border-radius: 14px; border: 1px solid #f0f0f0; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.07); }
+.ev-poster { width: 64px; height: 64px; border-radius: 8px; overflow: hidden; background: #eee; flex-shrink: 0; }
+.ev-poster img { width: 100%; height: 100%; object-fit: cover; }
+.ev-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; color: #ccc; }
+.ev-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.ev-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+.ev-date { font-size: 0.75rem; color: #757575; margin-bottom: 6px; }
+.ev-bottom { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ev-score { background: #fef0eb; color: #F05A23; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+.ev-goal { background: #fff8e1; color: #f57f17; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
+
+
+.empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; text-align: center; }
+
+.modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.3s ease; }
+.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
+.modal-fade-enter-active .modal-sheet { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.modal-fade-leave-active .modal-sheet { animation: slideDown 0.2s ease-in; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes slideDown { from { transform: translateY(0); } to { transform: translateY(100%); } }
+
+.av-large { position: relative; width: 100px; height: 100px; border-radius: 50%; border: 1px solid #efefef; display: flex; align-items: center; justify-content: center; background: #fafafa; font-size: 36px; color: #ccc; overflow: hidden; margin: 0 auto 16px; cursor: pointer; }
+.av-edit-overlay { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.5); height: 32px; display: flex; align-items: center; justify-content: center; color: white; }
+.uploading-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; color: #F05A23; }
+.av-large img { width: 100%; height: 100%; object-fit: cover; }
+.mobile-split .av-large { width: 100px; height: 100px; }
+
+@media (min-width: 768px) {
+  .app-wrap.is-desktop { padding: 24px; }
+  
+  .layout-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+
+  .nav-sidebar {
+    width: 250px;
+    flex-shrink: 0;
+  }
+
+  .pc-profile-brief {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #efefef;
+    margin-bottom: 20px;
+  }
+
+  .pc-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: #F05A23;
+  }
+  .pc-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+  .pc-brief-info { flex: 1; }
+  .pc-username { font-weight: 700; font-size: 0.95rem; color: #333; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+  .pc-edit-link { font-size: 0.8rem; color: #888; display: flex; align-items: center; gap: 4px; cursor: pointer; transition: color 0.2s; }
+  .pc-edit-link:hover { color: #F05A23; }
+
+  .menu-items-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .menu-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .menu-item:hover { background: transparent; }
+  .menu-item.active { background: transparent; }
+  .menu-item.active .menu-label { font-weight: 700; color: #1a1a1a; }
+  .menu-item.active .menu-icon-wrap { transform: scale(1.05); box-shadow: none; }
+  
+  .menu-item.active.mi-general .menu-label { color: #0284c7; }
+  .menu-item.active.mi-contact .menu-label { color: #ea580c; }
+  .menu-item.active.mi-tanita .menu-label { color: #16a34a; }
+  .menu-item.active.mi-team .menu-label { color: #9333ea; }
+  .menu-item.active.mi-events .menu-label { color: #dc2626; }
+
+  .menu-icon-wrap { width: 34px; height: 34px; border-radius: 10px; border: 1.5px solid #eaeaea; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .menu-icon { width: 17px; height: 17px; }
+  .menu-label { font-size: 0.95rem; text-align: left; color: #555; font-weight: 500; transition: color 0.2s; }
+  
+  .pc-only { display: flex; }
+  .logout-item { margin-top: 24px; border-top: 1px solid #efefef; padding-top: 24px; border-radius: 0; }
+  .logout-item:hover { background: transparent; }
+  .logout-item .menu-label { color: #555; }
+  .logout-item .menu-icon-wrap { color: #64748b; background: #f1f5f9; border-color: #cbd5e1; }
+  .logout-item:hover .menu-label { color: #dc2626; }
+
+  .content-area {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .content-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+    padding: 32px;
+  }
+
+  .card-header { padding: 0 0 20px 0; align-items: flex-start; }
+  .card-title { font-size: 1.25rem; }
+  .card-subtitle { font-size: 0.85rem; color: #757575; margin-top: 4px; }
+  .card-body { padding: 20px 0 0 0; overflow-y: visible; }
+
+  .profile-split-layout { display: flex; flex-direction: column; gap: 40px; align-items: center; }
+  .profile-form-area { width: 100%; max-width: 500px; border-right: none; }
+  .profile-avatar-area { width: 100%; display: flex; flex-direction: column; align-items: center; padding-bottom: 24px; }
+
+  .av-large { width: 120px; height: 120px; margin-bottom: 0; }
+  .btn-outline-sm { background: #fff; border: 1px solid #ddd; padding: 8px 16px; border-radius: 6px; font-size: 0.85rem; color: #555; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; justify-content: center; min-width: 90px; }
+  .btn-outline-sm:hover { background: #fafafa; }
+  .av-hint { font-size: 0.75rem; color: #888; text-align: center; margin-top: 16px; line-height: 1.5; }
+
+  .shopee-f-row { flex-direction: row; align-items: center; margin-bottom: 24px; gap: 20px; }
+  .shopee-f-row.editing-row { flex-direction: column; align-items: stretch; gap: 4px; margin-bottom: 24px; display: flex; }
+  .shopee-f-label { width: 140px; text-align: left; margin: 0; flex-shrink: 0; color: #555; }
+  .shopee-f-val { flex: 1; min-height: auto; padding: 0; justify-content: flex-start; text-align: left; }
+  .editing-row .shopee-f-val { max-width: 100%; width: 100%; display: flex; flex-direction: column; }
+  .editing-row .shopee-f-val .flex { flex-direction: row; }
+  .fi { max-width: 100%; padding: 24px 16px 8px; border-radius: 12px; }
+  .fi-date-be { max-width: 100%; }
+
+  .btn-primary { border-radius: 6px; padding: 10px 24px; }
+
+  .t-grid { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .t-box { padding: 20px; }
+  .bmi-zone { padding: 32px; border-radius: 10px; flex-direction: column; gap: 24px; align-items: center; text-align: center; }
+  .bmi-img { height: 180px; margin: 0; flex-shrink: 0; }
+  .bmi-info-wrap { width: 100%; display: flex; flex-direction: column; align-items: center; }
+  .bmi-top-row { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; width: 100%; text-align: center; }
+  .bmi-tabs { display: none; }
+  .bmi-scale-container { width: 100%; margin-top: 24px; position: relative; padding: 4px 0; }
+  .bmi-scale-line { height: 6px; border-radius: 3px; background: linear-gradient(to right, #0369a1, #10b981, #ca8a04, #ea580c, #dc2626); }
+  .bmi-marker { position: absolute; top: 0; width: 14px; height: 14px; background: #fff; border: 3px solid #333; border-radius: 50%; transform: translateX(-50%); transition: left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+  .team-profile-wrap { padding: 4px; }
+  .team-header-card { display: flex; align-items: center; gap: 20px; padding: 20px; background: #faf8ff; border-radius: 12px; border: 1px solid #f3e8ff; }
+  .team-ico, .team-ico-placeholder { width: 72px; height: 72px; border-radius: 14px; }
+  .team-name { font-size: 1.3rem; margin: 0 0 6px 0; }
+  .team-stats-row { flex-direction: row; gap: 16px; }
+  .ts-item { font-size: 0.85rem; }
+  .progress-info { font-size: 0.9rem; }
+  .progress-bar-bg { height: 10px; }
+  .progress-footer { font-size: 0.8rem; }
+  .list-title { font-size: 1rem; }
+  .members-grid { grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 12px; }
+  .m-avatar { width: 44px; height: 44px; }
+  .m-name { font-size: 0.75rem; }
+
+  
+  .ev-card { padding: 16px; border-radius: 10px; }
+  .ev-poster { width: 80px; height: 80px; border-radius: 8px; }
+  .ev-name { font-size: 1.1rem; }
+}
+
+@media (min-width: 1024px) {
+  .profile-split-layout { flex-direction: row; align-items: flex-start; justify-content: space-between; }
+  .profile-form-area { flex: 1; padding-right: 40px; border-right: 1px solid #efefef; max-width: none; order: 1; }
+  .profile-avatar-area { width: 220px; flex-shrink: 0; order: 2; padding-bottom: 0; }
+}
+
+
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.tanita-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.btn-outline-tanita { background: #fff; border: 1px solid #F05A23; color: #F05A23; padding: 6px 14px; border-radius: 4px; font-size: 0.82rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.2s; }
+.btn-outline-tanita:hover { background: #fef0eb; }
+
+.mobile-recommended-section { padding: 16px 16px 80px; background: transparent; }
+.section-divider-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 0 4px; }
+.section-divider-row .line { flex: 1; height: 1px; background: #e0e0e0; }
+.section-title-rec { font-size: 1.1rem; font-weight: 700; color: #F05A23; white-space: nowrap; }
+
+.rec-grid-masonry { 
+  display: flex; 
+  gap: 12px;
+  align-items: flex-start;
+  width: 100%;
+}
+.masonry-col {
+  flex: 1;
+  width: 50%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shopee-card {
+  background: #fff; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; cursor: pointer;
+  display: flex; flex-direction: column; overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  width: 100%;
+}
+
+.sc-poster { position: relative; width: 100%; aspect-ratio: 1/1; background: #e2e8f0; overflow: hidden; }
+.shopee-card.is-tall .sc-poster { aspect-ratio: 1/1.4; }
+.sc-poster img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.sc-body { padding: 8px; display: flex; flex-direction: column; flex: 1; gap: 4px; min-height: 100px; }
+.sc-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 4px; }
+.sc-title { font-size: 0.9rem; color: #111; line-height: 1.35; height: 2.7em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; margin: 0; font-weight: 600; flex: 1; white-space: normal; }
+.sc-heart-ico { width: 18px; height: 18px; color: #ccc; cursor: pointer; transition: all 0.2s; flex-shrink: 0; margin-top: 2px; stroke-width: 2.5px; }
+.sc-heart-ico.active { color: #f53d2d; fill: #f53d2d; transform: scale(1.1); }
+
+.sc-info-row { display: flex; flex-direction: column; gap: 2px; font-size: 0.78rem; color: #777; margin-top: 2px; }
+.sc-info-line { display: flex; gap: 4px; align-items: center; }
+.sc-info-label { font-weight: 600; color: #444; white-space: nowrap; font-size: 0.78rem; }
+.text-truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; font-weight: 400; }
+
+.rec-badge { position: absolute; top: 0; left: 0; background: #f53d2d; color: #fff; font-size: 11px; padding: 4px 8px; font-weight: 700; z-index: 1; border-top-left-radius: 2px; border-bottom-right-radius: 8px; }
+.is-banner img { object-position: center; }
+.is-banner .sc-poster { aspect-ratio: 1/1.65 !important; }
+
+.banner-slider { position: relative; overflow: hidden; width: 100%; height: 100%; }
+.banner-track { display: flex; transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1); height: 100%; }
+.banner-slide { min-width: 100%; height: 100%; flex-shrink: 0; }
+.banner-slide img { width: 100%; height: 100%; object-fit: cover; }
+.banner-dots { position: absolute; bottom: 8px; left: 0; right: 0; display: flex; justify-content: center; gap: 5px; z-index: 2; }
+.banner-dots .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.4); }
+.banner-dots .dot.active { background: #fff; width: 14px; border-radius: 3px; }
+
+
+.rec-more-wrap { display: flex; justify-content: center; margin-top: 24px; }
+.btn-rec-more { background: #fff; border: 1px solid #e0e0e0; color: #555; padding: 8px 32px; border-radius: 2px; font-size: 13px; cursor: pointer; transition: background 0.2s; }
+.btn-rec-more:hover { background: #fafafa; }
+
+.rec-more-wrap { display: flex; justify-content: center; margin-top: 24px; }
+.btn-rec-more { background: #fff; border: 1px solid #e0e0e0; color: #555; padding: 8px 32px; border-radius: 2px; font-size: 13px; cursor: pointer; transition: background 0.2s; }
+.btn-rec-more:hover { background: #fafafa; }
+
+.profile-preview-section { width: 100%; }
+.preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.preview-title { font-size: 1.1rem; font-weight: 700; color: #333; margin: 0; }
+.mt-10 { margin-top: 40px; }
+
+/* Stats Preview Bar */
+.stats-preview-bar {
+  display: flex;
+  background: #f8fafc;
+  border-bottom: 1px solid #edf2f7;
+  padding: 14px 0;
+  animation: fadeIn 0.3s ease;
+}
+.stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.stat-divider {
+  width: 1px;
+  background: #e2e8f0;
+  height: 28px;
+  margin-top: 4px;
+}
+.stat-label {
+  font-size: 0.65rem;
+  color: #64748b;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.stat-val {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1.2;
+}
+.stat-val small {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-left: 1px;
+}
+.stat-val-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.stat-badge {
+  font-size: 0.62rem;
+  padding: 1px 8px;
+  border-radius: 9999px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 640px) {
+  .stats-preview-bar { padding: 12px 0; }
+  .stat-val { font-size: 1.05rem; }
+  .stat-label { font-size: 0.6rem; }
+}
+
+</style>
+
+<style>
+.tn-overlay { position: fixed; inset: 0; background: #fff; z-index: 200; display: block; overflow-y: auto; }
+@media (min-width: 640px) { .tn-overlay { background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; } }
+
+.tn-sheet {
+  background: #fff;
+  width: 100%;
+  min-height: 100dvh;
+  margin: 0;
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  animation: tnSlideUp 0.28s cubic-bezier(0.16,1,0.3,1);
+}
+@media (min-width: 640px) { 
+  .tn-sheet { 
+    max-width: 620px;
+    min-height: auto;
+    height: auto;
+    border-radius: 12px; 
+    max-height: 86vh; 
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+  } 
+}
+@keyframes tnSlideUp { from { transform: translateY(32px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.tn-header { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid #efefef; min-height: 56px; gap: 12px; flex-shrink: 0; }
+.tn-title { font-size: 1.15rem; font-weight: 700; color: #333; flex: 1; }
+.header-actions-left { cursor: pointer; display: flex; align-items: center; }
+.tn-close { background: #f5f5f5; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #666; transition: background 0.15s; }
+.tn-close:hover { background: #ebebeb; }
+
+.tn-mode-bar { display: flex; gap: 8px; padding: 12px 20px; border-bottom: 1px solid #f0f0f0; flex-shrink: 0; }
+.tn-mode-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; border: 1.5px solid #e5e5e5; border-radius: 8px; background: #fafafa; font-size: 0.84rem; cursor: pointer; font-weight: 500; color: #666; transition: all 0.15s; font-family: inherit; }
+.tn-mode-btn:hover { border-color: #ccc; color: #333; }
+.tn-mode-btn.active { background: #fef0eb; border-color: #F05A23; color: #F05A23; font-weight: 700; }
+
+.tn-body { 
+  flex: 1; 
+  overflow-y: auto; 
+  padding: 16px 20px 8px; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 12px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.tn-body::-webkit-scrollbar { display: none; }
+
+.tn-ai-inline { margin-bottom: 4px; }
+.tn-ai-loading { display: flex; align-items: center; gap: 10px; padding: 14px 0; color: #F05A23; font-size: 0.85rem; }
+.tn-upload-trigger { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 2px dashed #cbd5e1; border-radius: 16px; padding: 32px 16px; cursor: pointer; color: #64748b; font-size: 15px; font-weight: 500; background: #f8fafc; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+.tn-upload-trigger:hover, .tn-upload-trigger.dragging { border-color: #ea580c; background: #fffaf5; color: #ea580c; border-style: solid; box-shadow: 0 10px 25px rgba(234, 88, 12, 0.1); transform: translateY(-2px); }
+.tn-sub { font-size: 0.8rem; color: #94a3b8; font-weight: 400; }
+
+.tn-divider-label { font-size: 0.85rem; font-weight: 700; color: #64748b; margin-top: 12px; margin-bottom: 4px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; }
+
+.tn-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tn-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+.tn-f-group { display: flex; flex-direction: column; gap: 3px; position: relative; }
+.tn-f-group label { position: absolute; top: 16px; left: 16px; font-size: 14px; color: #94a3b8; pointer-events: none; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.tn-f-group input { width: 100%; padding: 24px 16px 8px; border: 1.5px solid #cbd5e1; border-radius: 14px; font-size: 1rem; box-sizing: border-box; transition: all 0.2s; background: #fff; font-family: inherit; color: #1e293b; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+.tn-f-group input:focus { border-color: #ea580c; outline: none; box-shadow: 0 8px 20px rgba(234, 88, 12, 0.12); }
+.tn-f-group input:focus + label, .tn-f-group input:not(:placeholder-shown) + label { top: 6px; font-size: 11px; font-weight: 600; color: #ea580c; }
+.tn-f-group input:not(:placeholder-shown) + label { color: #64748b; }
+.tn-f-group input::placeholder { color: transparent; }
+
+.tn-footer { padding: 14px 20px; border-top: 1px solid #f0f0f0; display: flex; gap: 10px; flex-shrink: 0; }
+.tn-btn-cancel { flex: 1; padding: 10px; border: 1px solid #F05A23; border-radius: 8px; background: #fff; font-size: 0.9rem; cursor: pointer; color: #F05A23; font-weight: 600; font-family: inherit; transition: background 0.15s; }
+.tn-btn-cancel:hover { background: #fff5f2; }
+.tn-btn-save { flex: 2; padding: 10px; border: none; border-radius: 8px; background: #F05A23; color: #fff; font-size: 0.9rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.2s; font-family: inherit; }
+.tn-btn-save:hover:not(:disabled) { background: #d64a18; }
+.tn-btn-save:disabled { opacity: 0.65; cursor: not-allowed; }
+
+.ai-insights-dashboard { margin-top: 16px; display: flex; flex-direction: column; gap: 20px; }
+.ins-intro { margin-bottom: 8px; }
+.ins-title { font-size: 1rem; font-weight: 700; color: #1f2937; }
+.ins-sub { font-size: 0.82rem; color: #6b7280; margin-top: 2px; }
+
+.ins-grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+
+.ins-card { padding: 16px; border-radius: 10px; border: 1px solid #efefef; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 8px 20px rgba(0,0,0,0.04); transition: transform 0.2s, box-shadow 0.2s; }
+.ins-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(0,0,0,0.08); }
+.ins-card.bg-orange { background: #fffaf5; border-color: #ffedd5; }
+.ins-card.bg-blue { background: #f0f9ff; border-color: #e0f2fe; }
+.ins-card.bg-purple { background: #faf5ff; border-color: #f3e8ff; }
+.ins-card.bg-red { background: #fef2f2; border-color: #fee2e2; }
+.ins-card.bg-teal { background: #f0fdfa; border-color: #ccfbf1; }
+.ins-card.bg-green { background: #f0fdf4; border-color: #bbf7d0; }
+
+.ins-head { font-size: 0.95rem; font-weight: 600; color: #374151; display: flex; align-items: center; gap: 8px; }
+.ins-card.bg-orange .ins-head { color: #ea580c; }
+.ins-card.bg-blue .ins-head { color: #0284c7; }
+.ins-card.bg-purple .ins-head { color: #9333ea; }
+.ins-card.bg-red .ins-head { color: #dc2626; }
+.ins-card.bg-teal .ins-head { color: #0d9488; }
+.ins-card.bg-green .ins-head { color: #16a34a; }
+
+.ins-val { font-size: 1.35rem; font-weight: 700; color: #111827; }
+.ins-desc, .ins-action { font-size: 0.82rem; color: #4b5563; line-height: 1.45; }
+.ins-desc strong, .ins-action strong { color: #1f2937; }
+
+.ins-summary-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+.is-sim-controls { display: flex; flex-direction: column; }
+.is-goal-picker { flex: 1; min-width: 220px; }
+.goal-mini-select :deep(.select-trigger) { min-height: 40px; padding: 10px 12px 2px; background: #fff; border-color: #e2e8f0; font-size: 0.85rem; border-radius: 8px; }
+.goal-mini-select :deep(label) { display: none !important; }
+.goal-mini-select :deep(.select-caret) { top: 20px; border-top-color: #94a3b8; }
+.is-list { display: flex; flex-direction: column; gap: 12px; }
+.is-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin: 0; }
+.is-item { font-size: 1rem; color: #334155; }
+</style>
