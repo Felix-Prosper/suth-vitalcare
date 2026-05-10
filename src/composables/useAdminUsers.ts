@@ -102,7 +102,8 @@ export function useAdminUsers() {
         (statusFilter.value === "active" && !u.is_suspended) ||
         (statusFilter.value === "suspended" && u.is_suspended === 1) ||
         (statusFilter.value === "banned" && u.is_suspended === 2);
-      const matchRole = roleFilter.value === "all" || u.role === roleFilter.value;
+      const matchRole =
+        roleFilter.value === "all" || u.role === roleFilter.value;
       return matchStatus && matchRole;
     });
 
@@ -148,13 +149,14 @@ export function useAdminUsers() {
 
   const getInitialsAvatar = (u: any) => {
     const name = displayName(u);
-    const initials = name
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((n: string) => n[0])
-      .join("")
-      .toUpperCase() || "?";
+    const initials =
+      name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((n: string) => n[0])
+        .join("")
+        .toUpperCase() || "?";
 
     // Premium Gradient Palettes
     const palettes = [
@@ -205,7 +207,8 @@ export function useAdminUsers() {
   };
 
   const statusBadge = (u: any) => {
-    if (u.is_suspended === 2) return "bg-rose-100 text-rose-700 border-rose-200";
+    if (u.is_suspended === 2)
+      return "bg-rose-100 text-rose-700 border-rose-200";
     if (u.is_suspended === 1)
       return "bg-amber-100 text-amber-700 border-amber-200";
     return "bg-emerald-100 text-emerald-700 border-emerald-200";
@@ -245,9 +248,11 @@ export function useAdminUsers() {
       if (validSub) {
         modal.value = sub as any;
         if (newId && Array.isArray(userList) && userList.length > 0) {
-          const found = userList.find((u: any) => u.id === Number(newId)) as any;
+          const found = userList.find(
+            (u: any) => u.id === Number(newId),
+          ) as any;
           if (found && (!target.value || target.value.id !== found.id)) {
-            // We found the user, but we should only trigger the full setup 
+            // We found the user, but we should only trigger the full setup
             // if we didn't already have this user set (to avoid infinite setup loops)
             setupModalData(sub as any, found);
           }
@@ -257,10 +262,13 @@ export function useAdminUsers() {
         target.value = null;
       }
     },
-    { immediate: true }
+    { immediate: true },
   );
 
-  const setupModalData = (type: "edit" | "ban" | "view" | "enroll", user: any) => {
+  const setupModalData = (
+    type: "edit" | "ban" | "view" | "enroll",
+    user: any,
+  ) => {
     target.value = user;
     if (type === "enroll") {
       fetchUserRegistrations(user.id);
@@ -278,7 +286,10 @@ export function useAdminUsers() {
             if (type === "edit") editTanita.value = { ...d[0] };
             if (type === "view") viewTanita.value = { ...d[0] };
           } else if (type === "edit") {
-            editTanita.value = { weight: user.weight || "", height: user.height || "" };
+            editTanita.value = {
+              weight: user.weight || "",
+              height: user.height || "",
+            };
           }
         });
     }
@@ -308,7 +319,10 @@ export function useAdminUsers() {
     }
   };
 
-  const openModal = async (type: "edit" | "ban" | "view" | "enroll", user: any) => {
+  const openModal = async (
+    type: "edit" | "ban" | "view" | "enroll",
+    user: any,
+  ) => {
     target.value = user;
     modal.value = type;
     activeMenuId.value = null;
@@ -342,15 +356,16 @@ export function useAdminUsers() {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "x-user-id": String(authStore.user?.id || ''),
+          "x-user-id": String(authStore.user?.id || ""),
         },
         body: JSON.stringify(editForm.value),
       });
       if (!r.ok) {
         const e = await r.json().catch(() => ({}));
-        throw new Error(e.error || `ไม่สามารถบันทึกข้อมูลได้ (Status: ${r.status})`);
+        throw new Error(
+          e.error || `ไม่สามารถบันทึกข้อมูลได้ (Status: ${r.status})`,
+        );
       }
-
 
       if (
         Object.keys(editTanita.value).length > 0 &&
@@ -398,7 +413,7 @@ export function useAdminUsers() {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "x-user-id": String(authStore.user?.id || ''),
+          "x-user-id": String(authStore.user?.id || ""),
         },
         body: JSON.stringify({
           is_suspended: banType.value === "ban" ? 2 : 1,
@@ -431,7 +446,7 @@ export function useAdminUsers() {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          "x-user-id": String(authStore.user?.id || ''),
+          "x-user-id": String(authStore.user?.id || ""),
         },
       });
       if (!r.ok) {
@@ -452,9 +467,9 @@ export function useAdminUsers() {
     const ok = await showConfirm(
       `เตะ ${displayName(u)} ออกจากระบบทั้งหมด ใช่หรือไม่?`,
       undefined,
-      'ยืนยันเตะ',
-      'warning',
-      true
+      "ยืนยันเตะ",
+      "warning",
+      true,
     );
     if (!ok) return;
     submitting.value = true;
@@ -482,9 +497,9 @@ export function useAdminUsers() {
     const ok = await showConfirm(
       `ลบบัญชี "${displayName(u)}" ใช่หรือไม่? ไม่สามารถกู้คืนได้`,
       undefined,
-      'ยืนยันลบ',
-      'warning',
-      true
+      "ยืนยันลบ",
+      "warning",
+      true,
     );
     if (!ok) return;
     submitting.value = true;
@@ -507,35 +522,40 @@ export function useAdminUsers() {
   // --- Enrollment Actions ---
   const fetchAllActivities = async () => {
     try {
-      const r = await fetch('/api/activities?manage=true', {
-        headers: { "x-user-id": String(authStore.user?.id) }
+      const r = await fetch("/api/activities?manage=true", {
+        headers: { "x-user-id": String(authStore.user?.id) },
       });
       if (r.ok) allActivities.value = await r.json();
-    } catch (e) { console.error(e); }
+    } catch {
+      // intentionally silent (no console output in browser)
+    }
   };
 
   const fetchUserRegistrations = async (userId: number) => {
     loadingRegistrations.value = true;
     try {
       const r = await fetch(`/api/activities/user/${userId}/registered`, {
-        headers: { "x-user-id": String(authStore.user?.id) }
+        headers: { "x-user-id": String(authStore.user?.id) },
       });
       if (r.ok) userRegistrations.value = await r.json();
-    } catch (e) { console.error(e); }
-    finally { loadingRegistrations.value = false; }
+    } catch {
+      // intentionally silent (no console output in browser)
+    } finally {
+      loadingRegistrations.value = false;
+    }
   };
 
   const adminEnroll = async (eventId: number) => {
     if (!target.value) return;
     submitting.value = true;
     try {
-      const r = await fetch('/api/activities/admin/enroll', {
-        method: 'POST',
+      const r = await fetch("/api/activities/admin/enroll", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': String(authStore.user?.id)
+          "Content-Type": "application/json",
+          "x-user-id": String(authStore.user?.id),
         },
-        body: JSON.stringify({ userId: target.value.id, eventId })
+        body: JSON.stringify({ userId: target.value.id, eventId }),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
@@ -543,8 +563,11 @@ export function useAdminUsers() {
       }
       showSuccess("ย้ายผู้ใช้เข้ากิจกรรมสำเร็จ");
       fetchUserRegistrations(target.value.id);
-    } catch (e: any) { showError(e.message); }
-    finally { submitting.value = false; }
+    } catch (e: any) {
+      showError(e.message);
+    } finally {
+      submitting.value = false;
+    }
   };
 
   const adminKick = async (eventId: number, eventTitle: string) => {
@@ -552,27 +575,30 @@ export function useAdminUsers() {
     const ok = await showConfirm(
       `คัด ${displayName(target.value)} ออกจากกิจกรรม "${eventTitle}" ใช่หรือไม่?`,
       undefined,
-      'ยืนยันคัดออก',
-      'warning',
-      true
+      "ยืนยันคัดออก",
+      "warning",
+      true,
     );
     if (!ok) return;
 
     submitting.value = true;
     try {
-      const r = await fetch('/api/activities/admin/kick', {
-        method: 'POST',
+      const r = await fetch("/api/activities/admin/kick", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': String(authStore.user?.id)
+          "Content-Type": "application/json",
+          "x-user-id": String(authStore.user?.id),
         },
-        body: JSON.stringify({ userId: target.value.id, eventId })
+        body: JSON.stringify({ userId: target.value.id, eventId }),
       });
       if (!r.ok) throw new Error("คัดออกไม่สำเร็จ");
       showSuccess("คัดผู้ใช้ออกสำเร็จ");
       fetchUserRegistrations(target.value.id);
-    } catch (e: any) { showError(e.message); }
-    finally { submitting.value = false; }
+    } catch (e: any) {
+      showError(e.message);
+    } finally {
+      submitting.value = false;
+    }
   };
 
   const bulkEnroll = async (eventIds: number[]) => {
@@ -584,18 +610,20 @@ export function useAdminUsers() {
 
       for (const userId of selectedIds.value) {
         for (const eventId of eventIds) {
-          await fetch('/api/activities/admin/enroll', {
-            method: 'POST',
+          await fetch("/api/activities/admin/enroll", {
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              'x-user-id': String(authStore.user?.id)
+              "Content-Type": "application/json",
+              "x-user-id": String(authStore.user?.id),
             },
-            body: JSON.stringify({ userId, eventId })
+            body: JSON.stringify({ userId, eventId }),
           });
           count++;
         }
       }
-      showSuccess(`ดำเนินการสำเร็จ: ย้ายผู้ใช้ ${selectedIds.value.length} คน เข้า ${eventIds.length} กิจกรรม เรียบร้อยแล้ว`);
+      showSuccess(
+        `ดำเนินการสำเร็จ: ย้ายผู้ใช้ ${selectedIds.value.length} คน เข้า ${eventIds.length} กิจกรรม เรียบร้อยแล้ว`,
+      );
       selectedIds.value = [];
     } catch (e: any) {
       showError("การดำเนินการบางส่วนอาจไม่สำเร็จ กรุณาตรวจสอบอีกครั้ง");
@@ -610,9 +638,9 @@ export function useAdminUsers() {
     const ok = await showConfirm(
       `แบน ${selectedIds.value.length} บัญชีที่เลือก ใช่หรือไม่?`,
       undefined,
-      'ยืนยันแบน',
-      'warning',
-      true
+      "ยืนยันแบน",
+      "warning",
+      true,
     );
     if (!ok) return;
     submitting.value = true;
@@ -644,9 +672,9 @@ export function useAdminUsers() {
     const ok = await showConfirm(
       `ลบ ${selectedIds.value.length} บัญชีที่เลือก ใช่หรือไม่?`,
       undefined,
-      'ยืนยันลบ',
-      'warning',
-      true
+      "ยืนยันลบ",
+      "warning",
+      true,
     );
     if (!ok) return;
     submitting.value = true;
@@ -688,7 +716,8 @@ export function useAdminUsers() {
       sortable: true,
       sortKey: "email",
       minWidth: 140,
-      exportRender: (u) => [u.email, u.phone, u.id_code].filter(Boolean).join(" | "),
+      exportRender: (u) =>
+        [u.email, u.phone, u.id_code].filter(Boolean).join(" | "),
     },
     {
       key: "role",
@@ -733,7 +762,9 @@ export function useAdminUsers() {
     ]
       .map((r) => r.join(","))
       .join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob(["\uFEFF" + csv], {
+      type: "text/csv;charset=utf-8;",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -820,6 +851,6 @@ export function useAdminUsers() {
     showConfirm,
     showSuccess,
     showError,
-    formatPhone
+    formatPhone,
   };
 }

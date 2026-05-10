@@ -9,18 +9,15 @@ import moment from 'moment';
 import 'moment/dist/locale/th';
 import { authStore } from '../../store/auth';
 import { uiStore } from '../../store/ui';
-
 moment.locale('th');
-
 const logs = ref<any[]>([]);
 const stats = ref<any>(null);
 const loading = ref(true);
 const page = ref(1);
 const total = ref(0);
 const limit = 10; // ปรับเป็น 10 รายการต่อหน้า
-
 // ดึง Log ทั้งหมดเป็นค่าเริ่มต้น (เนื่องจากเอาแท็บออกแล้ว)
-const logType = ref<'admin' | 'user' | 'all'>('all'); 
+const logType = ref<'admin' | 'user' | 'all'>('all');
 const filters = ref({
   search: '',
   action: '',
@@ -28,13 +25,11 @@ const filters = ref({
   startDate: '',
   endDate: ''
 });
-
 const activeLog = ref<any>(null);
 const showScrollTop = ref(false);
 const expandedLogId = ref<number | null>(null);
 const selectedIds = ref<number[]>([]);
 const isAllSelected = computed(() => logs.value.length > 0 && logs.value.every(l => selectedIds.value.includes(l.id)));
-
 const toggleOne = (id: number) => {
   if (selectedIds.value.includes(id)) {
     selectedIds.value = selectedIds.value.filter(i => i !== id);
@@ -42,7 +37,6 @@ const toggleOne = (id: number) => {
     selectedIds.value.push(id);
   }
 };
-
 const toggleAll = () => {
   if (isAllSelected.value) {
     selectedIds.value = selectedIds.value.filter(id => !logs.value.some(l => l.id === id));
@@ -54,13 +48,10 @@ const toggleAll = () => {
     selectedIds.value = newIds;
   }
 };
-
-const toggleExpandLog = (id: number) => { 
-  expandedLogId.value = expandedLogId.value === id ? null : id; 
+const toggleExpandLog = (id: number) => {
+  expandedLogId.value = expandedLogId.value === id ? null : id;
 };
-
 const copiedId = ref<string | null>(null);
-
 const fetchLogs = async () => {
   loading.value = true;
   try {
@@ -78,27 +69,26 @@ const fetchLogs = async () => {
       logs.value = result.data;
       total.value = result.total;
     }
-  } catch (e) {
-    console.error("Fetch logs failed", e);
+  } catch {
+    // intentionally silent (no console output in browser)
   } finally {
     loading.value = false;
   }
 };
-
 const fetchStats = async () => {
     try {
         const res = await fetch('/api/logs/stats', {
             headers: { 'x-user-id': authStore.user?.id || '' }
         });
         if (res.ok) stats.value = await res.json();
-    } catch (e) { console.error(e); }
+    } catch {
+      // intentionally silent (no console output in browser)
+    }
 };
-
 const applyFilters = () => {
   page.value = 1;
   fetchLogs();
 };
-
 let searchTimeout: any = null;
 watch(() => filters.value.search, () => {
   if (searchTimeout) clearTimeout(searchTimeout);
@@ -106,12 +96,10 @@ watch(() => filters.value.search, () => {
     applyFilters();
   }, 500);
 });
-
 const clearSearch = () => {
   filters.value.search = '';
   applyFilters();
 };
-
 const clearFilters = () => {
   filters.value = {
     search: '',
@@ -122,23 +110,19 @@ const clearFilters = () => {
   };
   applyFilters();
 };
-
 const copyToClipboard = (text: string) => {
   navigator.clipboard.writeText(text);
   copiedId.value = text;
   setTimeout(() => { copiedId.value = null; }, 2000);
 };
-
 const totalPages = computed(() => Math.ceil(total.value / limit) || 1);
-
 const goToPage = (p: number) => {
   if (p >= 1 && p <= totalPages.value) {
     page.value = p;
     fetchLogs();
-    window.scrollTo({ top: 0, behavior: 'smooth' }); 
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 };
-
 const displayedPages = computed(() => {
   const current = page.value;
   const last = totalPages.value;
@@ -148,13 +132,11 @@ const displayedPages = computed(() => {
   const range = [];
   const rangeWithDots = [];
   let l;
-
   for (let i = 1; i <= last; i++) {
     if (i === 1 || i === last || (i >= left && i < right)) {
       range.push(i);
     }
   }
-
   for (const i of range) {
     if (l) {
       if (i - l === 2) {
@@ -166,10 +148,8 @@ const displayedPages = computed(() => {
     rangeWithDots.push(i);
     l = i;
   }
-
   return rangeWithDots;
 });
-
 const actionLabels: Record<string, string> = {
   'login_line': 'เข้าสู่ระบบด้วย LINE',
   'login_google': 'เข้าสู่ระบบด้วย Google',
@@ -188,7 +168,6 @@ const actionLabels: Record<string, string> = {
   'activity_status_change': 'เปลี่ยนสถานะกิจกรรม',
   'EXPORT': 'ส่งออกข้อมูล'
 };
-
 const targetLabels: Record<string, string> = {
   'activity': 'กิจกรรม',
   'user': 'ผู้ใช้งาน',
@@ -196,19 +175,15 @@ const targetLabels: Record<string, string> = {
   'team': 'ทีม',
   'goal': 'เป้าหมาย'
 };
-
 const getActionLabel = (action: string) => actionLabels[action] || action;
 const getTargetLabel = (target: string) => targetLabels[target] || target;
-
 const isActionDropdownOpen = ref(false);
 const selectAction = (act: string) => {
   filters.value.action = act;
   isActionDropdownOpen.value = false;
   applyFilters();
 };
-
 const handleScroll = () => { showScrollTop.value = window.scrollY > 300; };
-
 onMounted(() => {
   fetchLogs();
   fetchStats();
@@ -220,9 +195,7 @@ onMounted(() => {
     }
   });
 });
-
 onUnmounted(() => { window.removeEventListener('scroll', handleScroll); });
-
 let fetchTimeout: any = null;
 watch(() => uiStore.lastRealtimeUpdate, () => {
     if (fetchTimeout) clearTimeout(fetchTimeout);
@@ -231,7 +204,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
         fetchStats();
     }, 1500);
 });
-
 const getStatus = (action: string) => {
   const act = action.toLowerCase();
   if (act.includes('error') || act.includes('fail') || act.includes('denied')) return { text: 'ล้มเหลว', color: 'text-rose-600', icon: AlertCircle };
@@ -239,22 +211,18 @@ const getStatus = (action: string) => {
   if (act.includes('update') || act.includes('edit')) return { text: 'แก้ไข', color: 'text-orange-600', icon: CheckCircle2 };
   return { text: 'สำเร็จ', color: 'text-orange-600', icon: CheckCircle2 };
 };
-
 const maskName = (fname: string, lname: string) => {
   if (!fname) return 'ไม่ระบุชื่อ';
   return `${fname} ${lname || ''}`.trim();
 };
-
 const getDeviceIcon = (ua: string) => {
   if (!ua) return 'Unknown Device';
-  
   let browser = "Browser";
   if (ua.includes("Edg")) browser = "Edge";
   else if (ua.includes("Line")) browser = "LINE";
   else if (ua.includes("Chrome") && !ua.includes("Chromium")) browser = "Chrome";
   else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
   else if (ua.includes("Firefox")) browser = "Firefox";
-
   let os = "OS";
   if (ua.includes("Windows NT 10.0")) os = "Windows 10/11";
   else if (ua.includes("Windows NT")) os = "Windows";
@@ -270,19 +238,15 @@ const getDeviceIcon = (ua: string) => {
     const match = ua.match(/OS ([0-9_]+) like Mac OS X/);
     os = match ? `iOS ${match[1].replace(/_/g, '.')}` : "iOS";
   }
-  
   return `${browser} on ${os}`;
 };
-
 const bulkExport = () => {
-  console.log("Exporting logs:", selectedIds.value);
+  // reserved for future implementation
 };
 </script>
-
 <template>
   <div class="font-sarabun bg-white min-h-screen w-full relative pb-24">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-in">
-
       <div class="flex flex-col gap-4">
         <div class="flex items-center gap-2 sm:gap-4 w-full">
           <div class="search-pill-container flex-1 min-w-0 w-full">
@@ -293,7 +257,6 @@ const bulkExport = () => {
             </button>
           </div>
         </div>
-
         <div class="flex flex-wrap items-center gap-3 bg-white p-0 rounded-none border-0 shadow-none">
           <div class="flex items-center gap-2 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm flex-1 min-w-[220px] relative custom-dropdown-container">
              <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest flex-shrink-0 font-sarabun">การกระทำ</span>
@@ -303,14 +266,13 @@ const bulkExport = () => {
                </span>
                <ChevronDown :size="16" class="text-slate-400 group-hover:text-orange-500 transition-colors" />
              </div>
-             
              <!-- Custom Dropdown Menu -->
              <transition name="fade">
                <div v-if="isActionDropdownOpen" class="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 shadow-2xl rounded-2xl overflow-hidden z-[100] max-h-[300px] overflow-y-auto custom-scrollbar">
                  <div @click="selectAction('')" class="px-5 py-3 text-sm font-bold hover:bg-slate-50 cursor-pointer border-b border-slate-50" :class="filters.action === '' ? 'text-orange-600 bg-orange-50' : 'text-slate-600'">
                    ทั้งหมด (All Actions)
                  </div>
-                 <div v-for="act in stats?.actions" :key="act.action" @click="selectAction(act.action)" 
+                 <div v-for="act in stats?.actions" :key="act.action" @click="selectAction(act.action)"
                    class="px-5 py-3 text-sm font-bold hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors border-b border-slate-50 last:border-0"
                    :class="filters.action === act.action ? 'text-orange-600 bg-orange-50' : 'text-slate-600'">
                    <span>{{ getActionLabel(act.action) }}</span>
@@ -319,33 +281,27 @@ const bulkExport = () => {
                </div>
              </transition>
           </div>
-          
           <div class="flex items-center gap-2 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm flex-1 min-w-[180px]">
              <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest flex-shrink-0 font-sarabun">ตั้งแต่</span>
              <input type="date" v-model="filters.startDate" @change="applyFilters" class="text-sm font-bold text-slate-800 bg-transparent outline-none w-full cursor-pointer font-sarabun" />
           </div>
-
           <div class="flex items-center gap-2 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm flex-1 min-w-[180px]">
              <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-widest flex-shrink-0 font-sarabun">ถึง</span>
              <input type="date" v-model="filters.endDate" @change="applyFilters" class="text-sm font-bold text-slate-800 bg-transparent outline-none w-full cursor-pointer font-sarabun" />
           </div>
-          
           <button @click="clearFilters" class="px-6 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm font-extrabold text-slate-600 hover:text-orange-600 hover:bg-orange-50 hover:border-orange-200 transition-all shadow-sm flex-shrink-0 font-sarabun">
             ล้างตัวกรอง
           </button>
         </div>
       </div>
-
       <div class="flex items-center justify-between px-1">
         <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest font-sarabun">
           แสดง {{ logs.length }} / {{ total }} รายการบันทึกระบบ
         </p>
       </div>
-
       <div v-if="loading" class="space-y-4">
         <div v-for="i in 5" :key="i" class="h-16 bg-white border border-slate-100 animate-pulse rounded-2xl shadow-sm"></div>
       </div>
-
       <div v-else class="w-full">
         <div class="overflow-x-auto custom-scrollbar pb-10">
           <table class="w-full text-left border-collapse whitespace-nowrap text-sm">
@@ -378,7 +334,6 @@ const bulkExport = () => {
                       <p class="text-[10px] font-bold text-slate-400 uppercase font-sarabun">{{ moment(log.created_at).format('DD MMM YY') }}</p>
                     </div>
                   </td>
-                  
                   <td class="p-4">
                     <div v-if="log.user_id" class="flex items-center gap-3">
                       <img :src="log.picture_url || '/placeholder.jpg'" class="w-10 h-10 rounded-full border border-slate-200 object-cover bg-slate-50 shrink-0" />
@@ -394,24 +349,21 @@ const bulkExport = () => {
                       <span class="text-[11px] font-black text-slate-400 tracking-wider font-sarabun uppercase">ระบบอัตโนมัติ</span>
                     </div>
                   </td>
-                  
                   <td class="p-4 text-center">
                     <div class="flex flex-col gap-1.5 items-center font-sarabun">
                       <span class="font-black text-slate-900 text-[10px] uppercase tracking-tight font-sarabun">{{ getActionLabel(log.action) }}</span>
-                      <span class="border text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider inline-flex items-center gap-1 font-sarabun" 
+                      <span class="border text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider inline-flex items-center gap-1 font-sarabun"
                         :class="getStatus(log.action).color.replace('text-', 'border-').replace('-600', '-200') + ' ' + getStatus(log.action).color.replace('-600', '-50')">
                         <component :is="getStatus(log.action).icon" :size="10" stroke-width="3" :class="getStatus(log.action).color" />
                         <span :class="getStatus(log.action).color">{{ getStatus(log.action).text }}</span>
                       </span>
                     </div>
                   </td>
-                  
                   <td class="p-4">
                     <p class="text-slate-600 text-[13px] font-bold leading-relaxed font-sarabun">
                       {{ log.description }}
                     </p>
                   </td>
-                  
                   <td class="p-4">
                     <div class="flex flex-col gap-1 font-sarabun">
                       <div class="flex items-center gap-2">
@@ -424,9 +376,8 @@ const bulkExport = () => {
                       </div>
                     </div>
                   </td>
-                  
                   <td class="p-4 text-center sticky right-0 bg-white group-hover:bg-slate-50 transition-colors z-10 border-l border-slate-50 font-sarabun">
-                    <button @click.stop="expandedLogId = expandedLogId === log.id ? null : log.id" 
+                    <button @click.stop="expandedLogId = expandedLogId === log.id ? null : log.id"
                       class="w-10 h-10 mx-auto flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all font-sarabun">
                       <ChevronDown :size="20" :class="{'rotate-180': expandedLogId === log.id}" class="transition-transform" />
                     </button>
@@ -467,7 +418,6 @@ const bulkExport = () => {
           </table>
         </div>
       </div>
-
       <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 pt-4 pb-4 font-sarabun">
         <button @click="goToPage(page - 1)" :disabled="page === 1"
           class="rounded-full border border-slate-200 bg-white text-slate-500 hover:text-orange-500 hover:border-orange-500 disabled:opacity-30 disabled:hover:text-slate-500 disabled:hover:border-slate-200 transition-all shadow-sm flex items-center justify-center flex-shrink-0 font-sarabun"
@@ -475,12 +425,12 @@ const bulkExport = () => {
           <ChevronLeft :size="18" />
         </button>
         <div class="flex items-center gap-1.5 font-sarabun">
-          <button v-for="(p, idx) in displayedPages" :key="idx" 
+          <button v-for="(p, idx) in displayedPages" :key="idx"
             @click="p !== '...' ? goToPage(p) : null"
             class="rounded-full text-sm font-bold transition-all flex items-center justify-center flex-shrink-0 font-sarabun"
             :class="[
-              page === p ? 'bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-200' : 
-              p === '...' ? 'text-slate-400 cursor-default border-transparent' : 
+              page === p ? 'bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-200' :
+              p === '...' ? 'text-slate-400 cursor-default border-transparent' :
               'bg-white border border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-600 shadow-sm'
             ]"
             style="width: 40px; height: 40px; min-width: 40px; min-height: 40px; padding: 0;">
@@ -496,80 +446,71 @@ const bulkExport = () => {
     </div>
   </div>
 </template>
-
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
-
 .font-sarabun { font-family: 'Sarabun', sans-serif !important; }
 .font-sarabun input, .font-sarabun select, .font-sarabun button, .font-sarabun textarea { font-family: 'Sarabun', sans-serif !important; }
-
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
-
 @keyframes zoomIn {
   from { opacity: 0; transform: scale(0.98); }
   to { opacity: 1; transform: scale(1); }
 }
 .animate-in { animation: zoomIn 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
-
-@keyframes logExpand { 
-  from { opacity:0; transform:translateY(-4px); } 
-  to { opacity:1; transform:translateY(0); } 
+@keyframes logExpand {
+  from { opacity:0; transform:translateY(-4px); }
+  to { opacity:1; transform:translateY(0); }
 }
-
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
 .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; border-radius: 10px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; border: 2px solid #f8fafc; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
 /* ─── Search Pill ─── */
-.search-pill-container { 
-  display: flex; 
-  align-items: center; 
+.search-pill-container {
+  display: flex;
+  align-items: center;
   background: white;
-  padding: 0 24px; 
+  padding: 0 24px;
   height: 54px;
-  border-radius: 99px; 
-  border: 1.5px solid #E2E8F0; 
+  border-radius: 99px;
+  border: 1.5px solid #E2E8F0;
   box-shadow: 0 4px 20px rgba(0,0,0,0.03);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   gap: 14px;
 }
-.search-pill-container:focus-within { 
+.search-pill-container:focus-within {
   border-color: #f97316;
   box-shadow: 0 10px 30px rgba(249, 115, 22, 0.1);
   transform: translateY(-1px);
 }
 .search-icon { color: #9CA3AF; flex-shrink: 0; }
-.search-pill-container input { 
-  flex: 1; 
-  border: none; 
-  background: transparent; 
-  outline: none; 
-  font-family: inherit; 
-  font-size: 0.95rem; 
+.search-pill-container input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 0.95rem;
   font-weight: 700;
-  color: #1e293b; 
+  color: #1e293b;
 }
 .search-pill-container input::placeholder { color: #9CA3AF; font-weight: 500; }
-.btn-clear-search { 
-  background: #F3F4F6; 
-  border: none; 
+.btn-clear-search {
+  background: #F3F4F6;
+  border: none;
   color: #64748b;
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  padding: 6px; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
   border-radius: 50%;
-  cursor: pointer; 
-  flex-shrink: 0; 
+  cursor: pointer;
+  flex-shrink: 0;
   transition: all 0.2s;
 }
 .btn-clear-search:hover { background: #E5E7EB; color: #1e293b; }
-
 @media (max-width: 768px) {
   table th, table td {
     padding: 12px 10px !important;
@@ -579,4 +520,4 @@ const bulkExport = () => {
   .sticky.left-14 { left: 47px !important; min-width: 100px !important; max-width: 100px !important; border-left: none !important; }
   .sticky.right-0 { width: 50px !important; min-width: 50px !important; box-shadow: none !important; }
 }
-</style>
+</style>

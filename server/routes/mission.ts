@@ -220,7 +220,7 @@ router.patch("/submission/:id", async (req, res) => {
     res.json({ success: true, submission: rows[0] });
   } catch (error: any) {
     if (connection) await connection.rollback();
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   } finally {
     if (connection) connection.release();
   }
@@ -280,7 +280,7 @@ router.get("/user/:userId", async (req, res) => {
 
     res.json(transformed);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -357,7 +357,7 @@ router.get("/all", async (req, res) => {
 
     res.json(transformed);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
  
@@ -437,7 +437,7 @@ router.patch("/bulk-status", async (req, res) => {
     res.json({ success: true });
   } catch (error: any) {
     await connection.rollback();
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   } finally {
     connection.release();
   }
@@ -571,7 +571,7 @@ router.patch("/:id/status", async (req, res) => {
     res.json({ success: true });
   } catch (error: any) {
     await connection.rollback();
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   } finally {
     connection.release();
   }
@@ -633,7 +633,7 @@ router.delete("/submission/:id", async (req, res) => {
     res.json({ success: true });
   } catch (error: any) {
     await connection.rollback();
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   } finally {
     connection.release();
   }

@@ -16,7 +16,7 @@ async function checkManageAccess(req: express.Request, res: express.Response, ne
       return res.status(403).json({ error: "Forbidden" });
     next();
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 }
 
@@ -857,7 +857,7 @@ router.get("/activities/:id/monthly-report", checkManageAccess, async (req, res)
 
   } catch (error: any) {
     console.error("Export Excel error:", error);
-    if (!res.headersSent) res.status(500).json({ error: error.message });
+    if (!res.headersSent) res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1012,7 +1012,7 @@ router.get("/activities/:id/participants-export", checkManageAccess, async (req,
     });
   } catch (error: any) {
     console.error("Export Participants Error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

@@ -12,15 +12,12 @@ import { authStore } from '../store/auth';
 import { useSWR } from '../composables/useSWR';
 import { uiStore } from '../store/ui';
 import Swal from 'sweetalert2';
-
 const route = useRoute();
 const router = useRouter();
 const isSubmitting = ref(false);
-
 // Activity assessment context (from EventDetail.vue redirect)
 const activityEventId = computed(() => route.query.eventId ? Number(route.query.eventId) : null);
 const activityTestType = computed(() => (route.query.type as 'pre_test' | 'post_test') || null);
-
 interface Option { text: string; score: number; shortLabel: string }
 interface Question { id: string; text: string; isList?: boolean; options: Option[] }
 interface ScoringRange { min: number; max: number; level: string; desc: string; advice: string }
@@ -32,7 +29,6 @@ interface Section {
   layout: 'grid' | 'list';
   gridHeaders?: string[];
 }
-
 // ─── ข้อมูลแบบประเมินอิงตามไฟล์ PDF ───
 const sections: Section[] = [
   {
@@ -255,22 +251,18 @@ const sections: Section[] = [
     ],
   },
 ];
-
 // ─── PDPA Consent ─────────────────────────────────────────────────────────────
 const acceptAll = ref(false);
 const acceptTerms = ref(false);
 const acceptPrivacy = ref(false);
 const pdpaAccepted = computed(() => acceptTerms.value && acceptPrivacy.value);
-
 watch(acceptAll, (val) => {
   acceptTerms.value = val;
   acceptPrivacy.value = val;
 });
-
 watch([acceptTerms, acceptPrivacy], ([terms, privacy]) => {
   acceptAll.value = terms && privacy;
 });
-
 const showPrivacyPolicy = (e?: Event) => {
   if (e) e.stopPropagation();
   const w = window.innerWidth;
@@ -294,7 +286,6 @@ const showPrivacyPolicy = (e?: Event) => {
     if (result.isConfirmed) acceptPrivacy.value = true;
   });
 };
-
 const showTerms = (e?: Event) => {
   if (e) e.stopPropagation();
   const w = window.innerWidth;
@@ -315,7 +306,6 @@ const showTerms = (e?: Event) => {
     if (result.isConfirmed) acceptTerms.value = true;
   });
 };
-
 // ─── SWR / History ────────────────────────────────────────────────────────────
 const { 
   data: historyData, 
@@ -325,7 +315,6 @@ const {
   () => authStore.user ? `/api/health/my-assessments/${authStore.user.id}` : null,
   { showErrorToast: false }
 );
-
 const localHistoryData = ref<any[]>([]);
 const updateLocalHistory = () => {
   if (authStore.user) {
@@ -333,16 +322,13 @@ const updateLocalHistory = () => {
     if (stored) localHistoryData.value = JSON.parse(stored);
   }
 };
-
 const displayHistory = computed(() => {
   if (historyData.value && historyData.value.length > 0) return historyData.value;
   return localHistoryData.value || [];
 });
-
 // ─── View state ───────────────────────────────────────────────────────────────
 type View = "intro" | "explanation" | "form" | "result";
 const view = ref<View>("intro");
-
 const genInfo = ref({
   fullName: authStore.user?.full_name || "",
   nickname: "",
@@ -358,47 +344,34 @@ const genInfo = ref({
   smokeHistory: "ไม่เคยสูบ",
   alcoholHistory: "ไม่เคยดื่ม"
 });
-
 const bmi = computed(() => {
   const w = parseFloat(genInfo.value.weight);
   const h = parseFloat(genInfo.value.height) / 100;
   if (!w || !h) return 0;
   return parseFloat((w / (h * h)).toFixed(2));
 });
-
 const currentSectionIdx = ref(0);
 const answers = ref<Record<string, string>>({});
 const isMobile = ref(false);
-
 const checkMobile = () => { isMobile.value = window.innerWidth < 768; };
-
 const showHistoryModal = ref(false);
 const selectedRecord = ref<any>(null);
-
 const currentSection = computed(() => sections[currentSectionIdx.value]);
 const highlightQId = ref<string | null>(null);
-
-
-
 const selectAnswer = (qId: string, optText: string) => {
   answers.value[qId] = optText;
   if (highlightQId.value === qId) highlightQId.value = null;
 };
-
 watch(currentSectionIdx, () => { 
   highlightQId.value = null;
 });
-
 // ─── Progress ─────────────────────────────────────────────────────────────────
 const sectionAnsweredCount = computed(() => currentSection.value.questions.filter(q => answers.value[q.id]).length);
 const sectionComplete = computed(() => sectionAnsweredCount.value === currentSection.value.questions.length);
-
 const totalQuestions = sections.reduce((t, s) => t + s.questions.length, 0);
 const overallAnsweredCount = computed(() => Object.keys(answers.value).length);
-
 const overallProgress = computed(() => (overallAnsweredCount.value / totalQuestions) * 100);
 const isLastSection = computed(() => currentSectionIdx.value === sections.length - 1);
-
 // ─── Scoring ──────────────────────────────────────────────────────────────────
 const sectionScores = computed(() => {
   if (selectedRecord.value && view.value === 'result') {
@@ -427,7 +400,6 @@ const sectionScores = computed(() => {
     return { section: s, score, pct, level: range.level, desc: range.desc, advice: range.advice };
   });
 });
-
 const overallLevel = computed(() => {
   if (selectedRecord.value && view.value === 'result') {
     return selectedRecord.value.overall_level || selectedRecord.value.overallLevel;
@@ -438,7 +410,6 @@ const overallLevel = computed(() => {
   if (levels.includes("ดี")) return "ดี";
   return "ดีมาก";
 });
-
 // ─── Navigation ───────────────────────────────────────────────────────────────
 const start = () => { 
   selectedRecord.value = null; 
@@ -448,11 +419,9 @@ const start = () => {
   highlightQId.value = null;
   window.scrollTo({ top: 0, behavior: 'smooth' }); 
 };
-
 const handleNextClick = () => {
   const qs = currentSection.value.questions;
   const unanswered = qs.find(q => !answers.value[q.id]);
-
   if (unanswered) {
     highlightQId.value = unanswered.id;
     const el = document.getElementById(`q-row-${unanswered.id}`);
@@ -467,14 +436,12 @@ const handleNextClick = () => {
     } 
   }
 };
-
 const prevSection = () => { 
   if (currentSectionIdx.value > 0) { 
     currentSectionIdx.value--;
     window.scrollTo({ top: 0, behavior: 'smooth' }); 
   } 
 };
-
 const submitForm = async () => {
   if (!authStore.user || isSubmitting.value) return;
   isSubmitting.value = true;
@@ -490,7 +457,6 @@ const submitForm = async () => {
         score: option?.score || 0
       };
     });
-
     const payload: Record<string, any> = {
       userId: authStore.user.id,
       granularAnswers,
@@ -503,22 +469,17 @@ const submitForm = async () => {
       })),
       metadata: { ...genInfo.value, bmi: bmi.value, assessmentType: "3O2S_FULL" }
     };
-
     if (activityEventId.value) {
       payload.activityId = activityEventId.value;
       payload.assessmentType = activityTestType.value || 'pre_test';
     }
-
     const res = await fetch("/api/health/save-assessment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-
     if (!res.ok) throw new Error('บันทึกลงฐานข้อมูลล้มเหลว');
-
     revalidateHistory();
-
     const localKey = `health_history_${authStore.user.id}`;
     const localData = JSON.parse(localStorage.getItem(localKey) || '[]');
     const newRecord = {
@@ -531,20 +492,17 @@ const submitForm = async () => {
     localData.unshift(newRecord);
     localStorage.setItem(localKey, JSON.stringify(localData));
     updateLocalHistory();
-
     selectedRecord.value = null;
     view.value = "result";
     window.scrollTo({ top: 0, behavior: "smooth" });
     uiStore.toast('success', 'บันทึกสำเร็จ', 'ข้อมูลสุขภาพของคุณถูกเก็บเข้าฐานข้อมูลเรียบร้อยแล้ว');
   } catch (e) {
-    console.error("Submit error:", e);
     uiStore.showAlert('error', 'ล้มเหลว', 'ไม่สามารถบันทึกข้อมูลลงฐานข้อมูลได้ กรุณาลองอีกครั้ง');
   } finally {
     uiStore.setLoading(false);
     isSubmitting.value = false;
   }
 };
-
 const restart = () => {
   if (Object.keys(answers.value).length > 0 && view.value === 'form') {
     if (!confirm('ข้อมูลที่กำลังทำจะหายไป ต้องการเริ่มใหม่ใช่หรือไม่?')) return;
@@ -556,14 +514,12 @@ const restart = () => {
   selectedRecord.value = null;
   revalidateHistory();
 };
-
 const viewPastRecord = (record: any) => {
   selectedRecord.value = record;
   showHistoryModal.value = false;
   view.value = "result";
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
-
 // ─── Helpers (Semantic Colors based on Theme) ─────────────────────────────────
 const levelMeta = (lvl: string) => {
   if (lvl === "ดีมาก") return { color: "#16a34a", bg: "#f0fdf4", border: "#16a34a" }; // Green-600
@@ -571,21 +527,18 @@ const levelMeta = (lvl: string) => {
   if (lvl === "พอใช้") return { color: "#eab308", bg: "#fefce8", border: "#eab308" }; // Yellow-500
   return { color: "#ef4444", bg: "#fef2f2", border: "#ef4444" }; // Red-500 (ควรปรับปรุง)
 };
-
 const formatDateTime = (dateStr: string) => {
   const d = new Date(dateStr);
   const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
   const time = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543} เวลา ${time}`;
 };
-
 const formatHistoryDate = (dateStr: string) => {
   const d = new Date(dateStr);
   const months = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
   const time = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear() + 543} เวลา ${time}`;
 };
-
 const getAnswerForQuestion = (qId: string) => {
   if (answers.value[qId]) return answers.value[qId];
   if (selectedRecord.value) {
@@ -603,7 +556,6 @@ const getAnswerForQuestion = (qId: string) => {
   }
   return null;
 };
-
 onMounted(() => {
   checkMobile();
   updateLocalHistory();
@@ -612,13 +564,10 @@ onMounted(() => {
     start();
   }
 });
-
 onUnmounted(() => { 
   window.removeEventListener('resize', checkMobile); 
 });
-
 watch(() => authStore.user, updateLocalHistory);
-
 const goBackToActivity = () => {
   if (activityEventId.value) {
     router.push(`/activities/${activityEventId.value}`);
@@ -627,11 +576,9 @@ const goBackToActivity = () => {
   }
 };
 </script>
-
 <template>
   <div class="app theme-white-orange">
     <transition name="page" mode="out-in">
-
       <div v-if="view === 'intro'" class="intro-page">
         <div class="intro-top-bar">
           <button v-if="activityEventId" class="rect-btn-history" @click="goBackToActivity">
@@ -643,7 +590,6 @@ const goBackToActivity = () => {
             <span>ประวัติสุขภาพ</span>
           </button>
         </div>
-
         <div class="intro-centered">
           <div class="icon-block mx-auto mb-6">
             <ClipboardCheck :size="48" stroke-width="1.5" />
@@ -651,11 +597,9 @@ const goBackToActivity = () => {
           <h1 class="intro-heading">แบบประเมิน<br><em>พฤติกรรมสุขภาพ</em></h1>
           <div class="intro-divider"></div>
           <p class="intro-body">เช็กความพร้อมของร่างกายผ่านหลัก 3อ. 2ส. และรับคำแนะนำที่ตรงจุดเพื่อนำไปปรับใช้ได้จริงในชีวิตประจำวัน</p>
-
           <button class="btn-rect-primary btn-large shadow-sharp" @click="start">เริ่มทำแบบประเมิน</button>
         </div>
       </div>
-
       <div v-else-if="view === 'explanation'" class="intro-page">
         <div class="explanation-container">
           <div class="explanation-card">
@@ -664,9 +608,7 @@ const goBackToActivity = () => {
               <p class="explanation-subtitle">ใช้เวลาประมาณ 3-5 นาที เพื่อเข้าใจสุขภาพของคุณ</p>
               <p>ประเมิน 5 ด้าน: อาหาร, ออกกำลังกาย, อารมณ์, บุหรี่ และสุรา</p>
             </div>
-
             <div class="explanation-body">
-              
               <!-- PDPA Consent Checkboxes -->
               <div class="pdpa-consent">
                 <label class="pdpa-row pdpa-accept-all" @click.stop>
@@ -678,9 +620,7 @@ const goBackToActivity = () => {
                   </span>
                   <span class="pdpa-label-text pdpa-label-bold">ยอมรับข้อตกลงทั้งหมด</span>
                 </label>
-
                 <div class="pdpa-divider"></div>
-
                 <label class="pdpa-row" @click.stop>
                   <span class="pdpa-checkbox-wrap">
                     <input type="checkbox" id="acceptTerms" v-model="acceptTerms" />
@@ -690,7 +630,6 @@ const goBackToActivity = () => {
                   </span>
                   <span class="pdpa-label-text">ยอมรับ <button type="button" class="pdpa-link" @click.stop="showTerms()">เงื่อนไขการให้บริการ</button></span>
                 </label>
-
                 <label class="pdpa-row" @click.stop>
                   <span class="pdpa-checkbox-wrap">
                     <input type="checkbox" id="acceptPrivacy" v-model="acceptPrivacy" />
@@ -701,11 +640,9 @@ const goBackToActivity = () => {
                   <span class="pdpa-label-text">ยอมรับ <button type="button" class="pdpa-link" @click.stop="showPrivacyPolicy()">นโยบายความเป็นส่วนตัว (PDPA)</button></span>
                 </label>
               </div>
-
               <button class="btn-premium-primary mt-4" :class="{ 'btn-disabled': !pdpaAccepted }" :disabled="!pdpaAccepted" @click="view = 'form'">
                 เริ่มทำแบบประเมิน <ArrowRight :size="18" />
               </button>
-
               <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #f1f5f9;">
                 <div style="display: flex; gap: 12px; align-items: flex-start; text-align: left;">
                   <ShieldCheck :size="16" style="color: #16a34a; margin-top: 2px; flex-shrink: 0;" />
@@ -714,7 +651,6 @@ const goBackToActivity = () => {
                   </p>
                 </div>
               </div>
-
               <div style="margin-top: 16px; display: flex; justify-content: center;">
                 <a href="/docs/manual_3O2S.pdf" target="_blank" style="font-size: 0.8rem; color: #f97316; font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 4px;">
                   <FileText :size="14" /> เอกสารอ้างอิงการประเมิน 3อ. 2ส.
@@ -725,7 +661,6 @@ const goBackToActivity = () => {
           <button class="btn-text-muted" @click="view = 'intro'"><ChevronLeft :size="16" /> ย้อนกลับ</button>
         </div>
       </div>
-
       <div v-else-if="view === 'form'" class="form-page">
         <div class="form-scroll">
           <div class="form-inner">
@@ -733,7 +668,6 @@ const goBackToActivity = () => {
               <div class="sec-label-title">{{ currentSection.label }}</div>
               <div class="sec-label-progress">{{ currentSectionIdx + 1 }} / {{ sections.length }}</div>
             </div>
-            
             <div class="question-list">
               <div v-for="q in currentSection.questions" :key="q.id" :id="`q-row-${q.id}`" 
                    class="question-block" :class="{ 'is-highlighted': highlightQId === q.id }">
@@ -752,7 +686,6 @@ const goBackToActivity = () => {
                 </div>
               </div>
             </div>
-
             <div class="form-cta">
               <div v-if="!sectionComplete" class="cta-hint-rect">กรุณาตอบให้ครบทุกข้อ</div>
               <div class="cta-buttons">
@@ -768,7 +701,6 @@ const goBackToActivity = () => {
           </div>
         </div>
       </div>
-
       <div v-else-if="view === 'result'" class="res-page">
         <div class="res-hero">
           <div class="res-hero-sub-rect">สรุปผลพฤติกรรมสุขภาพของคุณ</div>
@@ -780,7 +712,6 @@ const goBackToActivity = () => {
             </div>
           </div>
         </div>
-
         <div v-for="res in sectionScores" :key="res.section.id" class="res-section">
           <div class="res-section-title-rect">{{ res.section.label }}</div>
           <div class="res-cards-rect">
@@ -802,7 +733,6 @@ const goBackToActivity = () => {
             </div>
           </div>
         </div>
-
         <!-- ─── ส่วนแสดงสรุปคำตอบ ─── -->
         <div class="res-section" v-if="Object.keys(answers).length > 0 || (selectedRecord && (selectedRecord.granular_answers || selectedRecord.granularAnswers))">
           <div class="res-section-title-rect">
@@ -830,14 +760,12 @@ const goBackToActivity = () => {
             </div>
           </div>
         </div>
-
         <div class="res-actions">
           <button class="btn-rect-primary" @click="restart">ประเมินใหม่อีกครั้ง</button>
           <button class="btn-rect-outline" @click="goBackToActivity">กลับไปยังกิจกรรม</button>
         </div>
       </div>
     </transition>
-
     <div v-if="showHistoryModal" class="history-modal-overlay" @click.self="showHistoryModal = false">
       <div class="history-modal-rect">
         <div class="hm-header">
@@ -863,10 +791,8 @@ const goBackToActivity = () => {
     </div>
   </div>
 </template>
-
 <style scoped>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 .theme-white-orange {
   --P: #f97316;
   --P-hover: #ea580c;
@@ -881,10 +807,8 @@ const goBackToActivity = () => {
   overflow-x: hidden;
   font-family: 'Kanit', sans-serif;
 }
-
 .text-primary { color: var(--P); }
 .bg-primary { background: var(--P); }
-
 .rect-btn-history {
   display: flex; align-items: center; gap: 8px;
   background: #fff; border: 1px solid var(--border); color: var(--text-muted);
@@ -892,7 +816,6 @@ const goBackToActivity = () => {
   transition: all 0.2s ease;
 }
 .rect-btn-history:hover { background: var(--P-bg); border-color: var(--P); color: var(--P); }
-
 .intro-page { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; position: relative; }
 .intro-top-bar { position: absolute; top: 16px; right: 16px; left: 16px; z-index: 10; display: flex; flex-direction: column; align-items: flex-end; }
 .intro-centered { text-align: center; max-width: 600px; width: 100%; display: flex; flex-direction: column; align-items: center; animation: fadeUp 0.5s ease-out; }
@@ -901,7 +824,6 @@ const goBackToActivity = () => {
 .intro-heading em { font-style: normal; color: var(--P); }
 .intro-divider { width: 60px; height: 4px; background: var(--P); border-radius: 2px; margin: 0 auto 24px auto; }
 .intro-body { font-size: 1.1rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 30px; }
-
 /* Buttons */
 .btn-rect-primary {
   padding: 16px 24px; border-radius: 12px; background: var(--P); color: #fff; font-size: 1.1rem; font-weight: 700;
@@ -918,7 +840,6 @@ const goBackToActivity = () => {
 .btn-rect-outline:hover { background: var(--P-bg); }
 .shadow-sharp { box-shadow: 4px 4px 0px rgba(249, 115, 22, 0.2); transition: all 0.2s ease; }
 .shadow-sharp:hover { box-shadow: 6px 6px 0px rgba(249, 115, 22, 0.3); transform: translate(-2px, -2px); }
-
 /* Modal */
 .history-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0, 0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
 .history-modal-rect { background: #fff; width: 100%; max-width: 480px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); overflow: hidden; display: flex; flex-direction: column; max-height: 85vh; border: 1px solid var(--border); }
@@ -933,7 +854,6 @@ const goBackToActivity = () => {
 .jc-level { font-size: 1.3rem; font-weight: 800; line-height: 1.2; margin-bottom: 2px; }
 .jc-sub { font-size: 0.85rem; color: var(--text-muted); }
 .jc-icon { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-
 /* Form Navigation */
 .form-page { min-height: 100vh; display: flex; flex-direction: column; }
 .form-scroll { flex: 1; overflow-y: auto; }
@@ -941,7 +861,6 @@ const goBackToActivity = () => {
 .sec-label-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; border-bottom: 2px solid var(--P); padding-bottom: 16px; }
 .sec-label-title { font-size: 1.5rem; font-weight: 700; color: var(--text); }
 .sec-label-progress { font-weight: 700; color: var(--P); font-size: 1.1rem; }
-
 /* REBUILT UI: Smart Dropdown List */
 .question-list { display: flex; flex-direction: column; gap: 20px; }
 .question-block {
@@ -959,7 +878,6 @@ const goBackToActivity = () => {
   color: #fff; 
   animation: qNumberBlink 0.6s infinite; 
 }
-
 .q-header { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 24px; }
 .q-number-box { 
   width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
@@ -967,7 +885,6 @@ const goBackToActivity = () => {
 }
 .q-number-box.done { background: var(--P); border-color: var(--P); color: #fff; }
 .q-text-rect { font-size: 1.15rem; font-weight: 600; color: var(--text); line-height: 1.6; padding-top: 4px; }
-
 /* REBUILT UI: Visible Option Buttons */
 .q-options-container { width: 100%; }
 .q-options-grid { 
@@ -999,7 +916,6 @@ const goBackToActivity = () => {
   color: #fff;
   box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
 }
-
 @media (max-width: 992px) {
   .q-options-grid { grid-template-columns: repeat(3, 1fr); }
 }
@@ -1010,11 +926,9 @@ const goBackToActivity = () => {
 @media (max-width: 400px) {
   .q-options-grid { grid-template-columns: 1fr; }
 }
-
 .form-cta { text-align: center; margin-top: 40px; border-top: none; padding-top: 30px; }
 .cta-hint-rect { background: #fee2e2; color: #ef4444; padding: 6px 18px; border-radius: 30px; font-size: 0.95rem; font-weight: 600; margin-bottom: 16px; display: inline-block; border: 1px solid #fca5a5; }
 .cta-buttons { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
-
 /* Result Page */
 .res-page { max-width: 800px; margin: 0 auto; padding: 0 0 80px; }
 .res-hero { text-align: center; padding: 48px 24px 40px; border-bottom: 1px solid var(--border); background: transparent; margin-bottom: 40px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
@@ -1023,7 +937,6 @@ const goBackToActivity = () => {
 .res-overall-rect { display: flex; flex-direction: column; align-items: center; gap: 8px; background: #fff; border: 4px solid; border-radius: 20px; padding: 24px 60px; box-shadow: 8px 8px 0px rgba(0,0,0,0.05); margin-top: 8px; }
 .res-overall-label { font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); }
 .res-overall-value { font-size: 3rem; font-weight: 900; line-height: 1; }
-
 .res-section { padding: 0 20px; margin-bottom: 40px; }
 .res-section-title-rect { display: flex; align-items: center; gap: 12px; font-size: 1.3rem; font-weight: 800; color: var(--text); margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--P); }
 .res-cards-rect { display: flex; flex-direction: column; gap: 16px; }
@@ -1037,7 +950,6 @@ const goBackToActivity = () => {
 .res-advice-desc { font-size: 1rem; font-weight: 500; color: #64748b; line-height: 1.5; margin: 0; }
 .res-advice-sep { height: 1px; width: 30px; margin: 4px 0; }
 .res-advice-text { font-size: 1.05rem; font-weight: 700; color: var(--text); line-height: 1.5; margin: 0; }
-
 .res-ans-list-rect { background: transparent; border: none; border-radius: 0; overflow: visible; }
 .res-ans-row-rect { padding: 16px 0; border-bottom: none; display: flex; flex-direction: column; gap: 8px; transition: background 0.15s; }
 .res-ans-row-rect:last-child { border-bottom: none; }
@@ -1047,9 +959,7 @@ const goBackToActivity = () => {
 .res-ans-bottom { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
 .res-ans-a-rect { display: flex; align-items: center; gap: 10px; background: #fff; color: var(--P); border: 1px solid var(--P); border-radius: 12px; padding: 12px 20px; font-size: 1rem; font-weight: 700; flex: 1; min-width: 0; word-break: break-word; }
 .res-ans-score-rect { font-size: 0.9rem; font-weight: 800; background: #fff; color: var(--text-muted); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; white-space: nowrap; flex-shrink: 0; }
-
 .res-actions { display: flex; flex-direction: column; gap: 16px; padding: 0 20px; margin-top: 16px; }
-
 /* Animations */
 @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes qNumberBlink {
@@ -1062,7 +972,6 @@ const goBackToActivity = () => {
 .page-leave-to { opacity: 0; transform: translateY(-15px); }
 .dropdown-fade-enter-active, .dropdown-fade-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
 .dropdown-fade-enter-from, .dropdown-fade-leave-to { opacity: 0; transform: translateY(-5px); }
-
 /* Responsive adjustments */
 @media (min-width: 480px) {
   .res-actions { flex-direction: row; justify-content: center; }
@@ -1074,17 +983,14 @@ const goBackToActivity = () => {
   .cta-buttons { flex-direction: column-reverse; }
   .btn-rect-primary, .btn-rect-outline { width: 100%; }
 }
-
 @media (max-width: 768px) {
   .question-block { padding: 16px; }
   .q-header { flex-direction: column; gap: 10px; }
 }
-
 .intro-page.bg-grid-pattern {
   background-image: radial-gradient(var(--border) 1px, transparent 1px);
   background-size: 24px 24px;
 }
-
 .explanation-container {
   width: 100%;
   max-width: 600px;
@@ -1093,12 +999,10 @@ const goBackToActivity = () => {
   align-items: center;
   animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
 .step-indicator { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
 .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
 .step-dot.active { background: var(--P); box-shadow: 0 0 0 3px var(--P-bg); }
 .step-line { width: 30px; height: 1px; background: var(--border); }
-
 .explanation-card {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
@@ -1109,21 +1013,17 @@ const goBackToActivity = () => {
   text-align: center;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
 }
-
 .explanation-header { margin-bottom: 24px; }
 .explanation-title { font-size: 1.6rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
 .explanation-subtitle { font-size: 0.95rem; color: var(--text-muted); font-weight: 500; }
-
 .explanation-body {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
-
 .explanation-footer {
   padding-top: 24px;
 }
-
 .info-item {
   display: flex;
   gap: 16px;
@@ -1138,7 +1038,6 @@ const goBackToActivity = () => {
 .info-text p {
   font-size: 0.95rem; color: var(--text); line-height: 1.5;
 }
-
 .reassurance-box {
   background: #f0fdf4; border: 1px solid #dcfce7; border-radius: 16px;
   padding: 16px 20px; text-align: left;
@@ -1148,7 +1047,6 @@ const goBackToActivity = () => {
   display: flex; align-items: center; justify-content: center; color: #10b981;
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1); flex-shrink: 0;
 }
-
 .resource-link-card {
   display: flex; align-items: center; gap: 12px; padding: 14px 18px;
   background: #fff; border: 1px solid var(--border); border-radius: 16px;
@@ -1161,7 +1059,6 @@ const goBackToActivity = () => {
 .rlc-label { font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
 .rlc-title { font-size: 0.95rem; font-weight: 700; color: var(--text); }
 .rlc-arrow { color: var(--border); }
-
 .btn-premium-primary {
   width: 100%; padding: 16px; background: var(--P); color: #fff; border: none; border-radius: 14px;
   font-size: 1.05rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -1174,13 +1071,11 @@ const goBackToActivity = () => {
   cursor: pointer; font-size: 0.85rem; transition: color 0.2s; padding: 8px;
 }
 .btn-text-muted:hover { color: var(--text); }
-
 @media (max-width: 640px) {
   .explanation-card { padding: 24px 20px; }
   .explanation-title { font-size: 1.4rem; }
   .info-item { gap: 12px; }
 }
-
 /* ── PDPA Consent Block ───────────────────────────────────────────────────── */
 .pdpa-consent { margin-top: 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; text-align: left; }
 .pdpa-divider { height: 1px; background: #e2e8f0; margin: 2px 0; }
@@ -1195,5 +1090,4 @@ const goBackToActivity = () => {
 .pdpa-label-bold { font-weight: 700; color: #1e293b; font-size: 13.5px; }
 .pdpa-link { background: none; border: none; padding: 0; color: #F05A23; font-weight: 600; font-size: 13px; cursor: pointer; text-decoration: underline; font-family: inherit; line-height: inherit; }
 .btn-disabled { opacity: 0.45 !important; cursor: not-allowed !important; pointer-events: none; }
-
 </style>

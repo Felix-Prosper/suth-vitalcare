@@ -88,8 +88,8 @@ export function useAdminActivities() {
         activities.value = await res.json();
       }
       selectedIds.value = [];
-    } catch (e) {
-      console.error("[useAdminActivities] Fetch error:", e);
+    } catch {
+      // intentionally silent (no console output in browser)
     } finally {
       loading.value = false;
     }
@@ -102,12 +102,12 @@ export function useAdminActivities() {
     // If we are in host mode OR a specific teamId was requested, filter strictly by that team
     if (role !== "admin") {
       result = result.filter(
-        (act) => String(act.team_id) === String(authStore.user?.team_id)
+        (act) => String(act.team_id) === String(authStore.user?.team_id),
       );
     }
 
     result = result.filter((act) =>
-      act.title.toLowerCase().includes(searchQuery.value.toLowerCase())
+      act.title.toLowerCase().includes(searchQuery.value.toLowerCase()),
     );
 
     if (filterStatus.value === "open") {
@@ -117,40 +117,52 @@ export function useAdminActivities() {
     }
 
     if (filterCert.value) {
-      result = result.filter(act => {
+      result = result.filter((act) => {
         let cert = act.certificate_config;
-        if (typeof cert === 'string') {
-          try { cert = JSON.parse(cert); } catch { cert = null; }
+        if (typeof cert === "string") {
+          try {
+            cert = JSON.parse(cert);
+          } catch {
+            cert = null;
+          }
         }
         return cert && cert.enabled;
       });
     }
 
     if (filterContinuousReg.value) {
-      result = result.filter(act => act.is_continuous_registration);
+      result = result.filter((act) => act.is_continuous_registration);
     }
 
     if (filterHasGoals.value) {
-      result = result.filter(act => {
+      result = result.filter((act) => {
         let goal = act.goal_config;
-        if (typeof goal === 'string') {
-          try { goal = JSON.parse(goal); } catch { goal = null; }
+        if (typeof goal === "string") {
+          try {
+            goal = JSON.parse(goal);
+          } catch {
+            goal = null;
+          }
         }
         return goal && goal.enabled;
       });
     }
 
     const activeRoles: string[] = [];
-    if (filterRoleStudent.value) activeRoles.push('นักเรียน');
-    if (filterRoleUni.value) activeRoles.push('นักศึกษา');
-    if (filterRoleStaff.value) activeRoles.push('บุคลากร');
-    if (filterRolePublic.value) activeRoles.push('บุคคลทั่วไป');
+    if (filterRoleStudent.value) activeRoles.push("นักเรียน");
+    if (filterRoleUni.value) activeRoles.push("นักศึกษา");
+    if (filterRoleStaff.value) activeRoles.push("บุคลากร");
+    if (filterRolePublic.value) activeRoles.push("บุคคลทั่วไป");
 
     if (activeRoles.length > 0) {
-      result = result.filter(act => {
+      result = result.filter((act) => {
         let vis = act.visibility;
-        if (typeof vis === 'string') {
-          try { vis = JSON.parse(vis || '[]'); } catch { vis = []; }
+        if (typeof vis === "string") {
+          try {
+            vis = JSON.parse(vis || "[]");
+          } catch {
+            vis = [];
+          }
         }
         const roles = Array.isArray(vis) ? vis : [];
         return roles.some((r: string) => activeRoles.includes(r));
@@ -159,15 +171,23 @@ export function useAdminActivities() {
 
     if (filterOpenStatus.value) {
       const now = moment();
-      result = result.filter(act => {
-        if (act.is_active === false || act.status === 'draft') return false;
-        const regStart = act.registration_start_date ? moment(act.registration_start_date) : null;
-        const regEnd = act.registration_end_date ? moment(act.registration_end_date) : null;
+      result = result.filter((act) => {
+        if (act.is_active === false || act.status === "draft") return false;
+        const regStart = act.registration_start_date
+          ? moment(act.registration_start_date)
+          : null;
+        const regEnd = act.registration_end_date
+          ? moment(act.registration_end_date)
+          : null;
         const end = act.end_date ? moment(act.end_date) : null;
         if (!act.is_continuous_event && end && now.isAfter(end)) return false; // ended
-        const isFull = !act.is_unlimited_max_slots && act.max_slots && (act.registration_count || 0) >= act.max_slots;
+        const isFull =
+          !act.is_unlimited_max_slots &&
+          act.max_slots &&
+          (act.registration_count || 0) >= act.max_slots;
         if (isFull) return false; // full
-        const regClosed = !act.is_continuous_registration && regEnd && now.isAfter(regEnd);
+        const regClosed =
+          !act.is_continuous_registration && regEnd && now.isAfter(regEnd);
         if (regClosed) return false; // ongoing
         if (!regStart || now.isSameOrAfter(regStart)) return true; // open
         return true; // waiting to open
@@ -202,7 +222,9 @@ export function useAdminActivities() {
     return result;
   });
 
-  const totalPages = computed(() => Math.ceil(filteredActivities.value.length / dtPerPage.value));
+  const totalPages = computed(() =>
+    Math.ceil(filteredActivities.value.length / dtPerPage.value),
+  );
 
   const paginatedActivities = computed(() => {
     const start = (dtCurrentPage.value - 1) * dtPerPage.value;
@@ -222,7 +244,7 @@ export function useAdminActivities() {
       "กิจกรรมที่ลบไปแล้วจะไม่สามารถกู้คืนได้ คุณแน่ใจหรือไม่?",
       "ลบกิจกรรม",
       "warning",
-      true
+      true,
     );
 
     if (!confirmed) return false;
@@ -244,8 +266,7 @@ export function useAdminActivities() {
         const err = await response.json();
         showError(err.error || "ไม่สามารถลบกิจกรรมได้");
       }
-    } catch (error) {
-      console.error("[useAdminActivities] Delete error:", error);
+    } catch {
       showError("เกิดข้อผิดพลาดในการลบกิจกรรม");
     } finally {
       submitting.value = false;
@@ -255,7 +276,9 @@ export function useAdminActivities() {
 
   const duplicateActivity = async (act: Activity) => {
     if (submitting.value) return false;
-    const confirmed = await showConfirm(`ทำซ้ำกิจกรรม "${act.title}" ใช่หรือไม่?`);
+    const confirmed = await showConfirm(
+      `ทำซ้ำกิจกรรม "${act.title}" ใช่หรือไม่?`,
+    );
     if (!confirmed) return false;
 
     submitting.value = true;
@@ -333,7 +356,7 @@ export function useAdminActivities() {
 
   const duplicateMultipleActivities = async (act: Activity) => {
     const { value: copiesStr } = await swal.fire({
-      title: 'คัดลอกหลายฉบับ',
+      title: "คัดลอกหลายฉบับ",
       html: `
         <div style="text-align: left;">
           <label style="display: block; font-size: 14px; margin-bottom: 6px; color: #475569; font-weight: 600;">ระบุจำนวนฉบับของกิจกรรม "${act.title}" ที่ต้องการคัดลอก:</label>
@@ -341,26 +364,30 @@ export function useAdminActivities() {
         </div>
       `,
       showCancelButton: true,
-      confirmButtonText: 'ยืนยัน',
-      cancelButtonText: 'ยกเลิก',
+      confirmButtonText: "ยืนยัน",
+      cancelButtonText: "ยกเลิก",
       customClass: {
-        confirmButton: 'bg-orange-500 text-white font-bold rounded-xl px-6 py-2.5 hover:bg-orange-600 focus:ring-4 focus:ring-orange-200',
-        cancelButton: 'bg-slate-100 text-slate-600 font-bold rounded-xl px-6 py-2.5 hover:bg-slate-200'
+        confirmButton:
+          "bg-orange-500 text-white font-bold rounded-xl px-6 py-2.5 hover:bg-orange-600 focus:ring-4 focus:ring-orange-200",
+        cancelButton:
+          "bg-slate-100 text-slate-600 font-bold rounded-xl px-6 py-2.5 hover:bg-slate-200",
       },
       buttonsStyling: false,
       preConfirm: () => {
-        const input = document.getElementById('duplicate-copies') as HTMLInputElement;
+        const input = document.getElementById(
+          "duplicate-copies",
+        ) as HTMLInputElement;
         const val = parseInt(input.value);
         if (!val || val < 1) {
-          swal.showValidationMessage('กรุณาระบุจำนวนอย่างน้อย 1');
+          swal.showValidationMessage("กรุณาระบุจำนวนอย่างน้อย 1");
           return false;
         }
         if (val > 50) {
-          swal.showValidationMessage('สามารถคัดลอกได้สูงสุด 50 ฉบับต่อครั้ง');
+          swal.showValidationMessage("สามารถคัดลอกได้สูงสุด 50 ฉบับต่อครั้ง");
           return false;
         }
         return val;
-      }
+      },
     });
 
     if (!copiesStr || submitting.value) return false;
@@ -368,11 +395,11 @@ export function useAdminActivities() {
     const copies = parseInt(copiesStr as string, 10);
 
     swal.fire({
-      title: 'กำลังคัดลอก...',
+      title: "กำลังคัดลอก...",
       allowOutsideClick: false,
       didOpen: () => {
         swal.showLoading();
-      }
+      },
     });
 
     try {
@@ -431,7 +458,7 @@ export function useAdminActivities() {
               "x-user-id": String(authStore.user?.id),
             },
             body: JSON.stringify(basePayload),
-          })
+          }),
         );
       }
 
@@ -470,8 +497,8 @@ export function useAdminActivities() {
         act.is_active = newActiveState;
         return true;
       }
-    } catch (error) {
-      console.error("[useAdminActivities] Toggle error:", error);
+    } catch {
+      // intentionally silent (no console output in browser)
     } finally {
       submitting.value = false;
     }
@@ -504,7 +531,7 @@ export function useAdminActivities() {
       undefined,
       `ยืนยัน${actionText}`,
       action === "delete" ? "warning" : "question",
-      action === "delete"
+      action === "delete",
     );
     if (!confirmed) return;
 
@@ -527,19 +554,20 @@ export function useAdminActivities() {
               body: JSON.stringify({ is_active: action === "show" }),
             });
           }
-        })
+        }),
       );
       // ✅ ถ้าลบ ให้ลบออกจาก local state ทันที
       if (action === "delete") {
         const deletedIds = new Set(selectedIds.value);
-        activities.value = activities.value.filter((a) => !deletedIds.has(a.id));
+        activities.value = activities.value.filter(
+          (a) => !deletedIds.has(a.id),
+        );
         // Trigger หน้า Activities ของ user ให้ refresh
         uiStore.triggerRealtimeUpdate();
       }
       await fetchActivities();
       showSuccess(`${actionText}ที่เลือกสำเร็จ`);
-    } catch (error) {
-      console.error("[useAdminActivities] Bulk action error:", error);
+    } catch {
       showError("เกิดข้อผิดพลาดในการทำรายการ");
     } finally {
       submitting.value = false;
@@ -576,7 +604,14 @@ export function useAdminActivities() {
         return;
       }
 
-      const headers = ["ID", "ชื่อกิจกรรม", "สถานะ", "ผู้ลงทะเบียน", "วันเริ่ม", "ผู้จัด"];
+      const headers = [
+        "ID",
+        "ชื่อกิจกรรม",
+        "สถานะ",
+        "ผู้ลงทะเบียน",
+        "วันเริ่ม",
+        "ผู้จัด",
+      ];
       const csvContent = [
         headers.join(","),
         ...rows.map((r) =>
@@ -587,22 +622,26 @@ export function useAdminActivities() {
             r.registrations,
             r.start_date,
             `"${r.organizer}"`,
-          ].join(",")
+          ].join(","),
         ),
       ].join("\n");
 
-      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      const blob = new Blob(["\uFEFF" + csvContent], {
+        type: "text/csv;charset=utf-8;",
+      });
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
       link.setAttribute("href", url);
-      link.setAttribute("download", `activities_export_${moment().format("YYYYMMDD_HHmm")}.csv`);
+      link.setAttribute(
+        "download",
+        `activities_export_${moment().format("YYYYMMDD_HHmm")}.csv`,
+      );
       link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       showSuccess("ส่งออกไฟล์ CSV สำเร็จ");
-    } catch (error) {
-      console.error("[useAdminActivities] CSV Export error:", error);
+    } catch {
       showError("เกิดข้อผิดพลาดในการส่งออกไฟล์");
     }
   };
@@ -646,5 +685,4 @@ export function useAdminActivities() {
     setPage,
     toggleSelectAll,
   };
-
 }

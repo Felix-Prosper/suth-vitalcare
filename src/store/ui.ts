@@ -1,5 +1,4 @@
 import { reactive, computed } from 'vue';
-
 interface Toast {
   id: string;
   type: 'success' | 'error' | 'info' | 'warning';
@@ -9,7 +8,6 @@ interface Toast {
   actionLabel?: string;
   onAction?: () => void;
 }
-
 interface AlertModal {
   show: boolean;
   type: 'error' | 'success' | 'confirm' | 'maintenance';
@@ -20,11 +18,9 @@ interface AlertModal {
   onConfirm?: () => void;
   onCancel?: () => void;
 }
-
 export const uiStore = reactive({
   // Notifications
   toasts: [] as Toast[],
-  
   // Modals (สวยๆ ให้กด)
   alertModal: {
     show: false,
@@ -34,14 +30,11 @@ export const uiStore = reactive({
     confirmLabel: 'ตกลง',
     cancelLabel: 'ยกเลิก'
   } as AlertModal,
-
   // Page Loaders
   isPageLoading: false,
   loadingMessage: '',
-
   // SEO Management
   pageTitle: 'VitalCare',
-
   // Fatal Error States (หน้า Error พรีเมียม)
   errorState: {
     hasError: false,
@@ -49,16 +42,12 @@ export const uiStore = reactive({
     message: '',
     retryAction: null as null | (() => void)
   },
-
   // Realtime Centralized Tracker
   lastRealtimeUpdate: Date.now(),
-  
   // --- Actions ---
-  
   triggerRealtimeUpdate() {
     this.lastRealtimeUpdate = Date.now();
   },
-  
   toast(type: Toast['type'], title: string, message: string, options?: Partial<Omit<Toast, 'id' | 'type' | 'title' | 'message'>>) {
     const id = Math.random().toString(36).substring(2, 9);
     const newToast: Toast = {
@@ -70,22 +59,17 @@ export const uiStore = reactive({
       actionLabel: options?.actionLabel,
       onAction: options?.onAction
     };
-    
     this.toasts.push(newToast);
-    
     if (newToast.duration !== -1) {
       setTimeout(() => {
         this.removeToast(id);
       }, newToast.duration);
     }
-    
     return id;
   },
-
   removeToast(id: string) {
     this.toasts = this.toasts.filter(t => t.id !== id);
   },
-
   showAlert(type: AlertModal['type'], title: string, message: string, options?: Partial<Omit<AlertModal, 'show' | 'type' | 'title' | 'message'>>) {
     this.alertModal = {
       show: true,
@@ -98,20 +82,17 @@ export const uiStore = reactive({
       onCancel: options?.onCancel
     };
   },
-
   hideAlert() {
     this.alertModal.show = false;
   },
-
   setLoading(state: boolean, message: string = '') {
     this.isPageLoading = state;
     this.loadingMessage = message;
   },
-
   setPageTitle(title: string) {
     this.pageTitle = title ? `${title} | VitalCare` : 'VitalCare';
     if (typeof document !== 'undefined') {
       document.title = this.pageTitle;
     }
   }
-});
+});

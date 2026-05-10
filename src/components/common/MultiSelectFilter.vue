@@ -1,33 +1,26 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { ChevronDown, Check, Circle, X, Settings2 } from 'lucide-vue-next';
-
 const props = defineProps<{
   options: { id: string, label: string }[];
   modelValue: string[];
   label: string;
 }>();
-
 const emit = defineEmits(['update:modelValue', 'clear']);
-
 const isOpen = ref(false);
 const dropdownRef = ref<HTMLElement | null>(null);
 const isMobileScreen = ref(false);
-
 const checkScreen = () => {
   isMobileScreen.value = window.innerWidth <= 768;
 };
-
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value;
 };
-
 const closeDropdown = (e: MouseEvent) => {
   if (dropdownRef.value && !dropdownRef.value.contains(e.target as Node) && !isMobileScreen.value) {
     isOpen.value = false;
   }
 };
-
 const toggleOption = (id: string) => {
   const newValue = [...props.modelValue];
   const index = newValue.indexOf(id);
@@ -38,9 +31,7 @@ const toggleOption = (id: string) => {
   }
   emit('update:modelValue', newValue);
 };
-
 const isSelected = (id: string) => props.modelValue.includes(id);
-
 const toggleAll = () => {
   if (props.modelValue.length === props.options.length) {
     emit('update:modelValue', []);
@@ -48,26 +39,21 @@ const toggleAll = () => {
     emit('update:modelValue', props.options.map(o => o.id));
   }
 };
-
 const clearAll = () => {
   emit('update:modelValue', []);
   emit('clear');
 };
-
 onMounted(() => {
   checkScreen();
   window.addEventListener('resize', checkScreen);
   document.addEventListener('click', closeDropdown);
 });
-
 onUnmounted(() => {
   window.removeEventListener('resize', checkScreen);
   document.removeEventListener('click', closeDropdown);
 });
-
 const activeCount = computed(() => props.modelValue.length);
 </script>
-
 <template>
   <div class="multi-select-container" ref="dropdownRef">
     <button 
@@ -82,11 +68,9 @@ const activeCount = computed(() => props.modelValue.length);
       </div>
       <ChevronDown :size="18" class="chevron" :class="{ 'rotate': isOpen }" />
     </button>
-
     <transition name="fade">
       <div v-if="isOpen" class="filter-backdrop" @click="isOpen = false"></div>
     </transition>
-
     <transition :name="isMobileScreen ? 'slide-down-mobile' : 'slide-up'">
       <div v-if="isOpen" class="filter-panel">
         <div class="panel-header">
@@ -97,7 +81,6 @@ const activeCount = computed(() => props.modelValue.length);
             </button>
           </div>
         </div>
-
         <div class="options-list">
           <div 
             v-for="opt in options" 
@@ -112,7 +95,6 @@ const activeCount = computed(() => props.modelValue.length);
             <span class="option-label">{{ opt.label }}</span>
           </div>
         </div>
-
         <div class="panel-footer">
           <button class="btn-apply" @click="isOpen = false">ตกลง</button>
         </div>
@@ -120,14 +102,12 @@ const activeCount = computed(() => props.modelValue.length);
     </transition>
   </div>
 </template>
-
 <style scoped>
 .multi-select-container {
   position: relative;
   width: 100%;
   max-width: 240px;
 }
-
 .filter-trigger {
   display: flex;
   align-items: center;
@@ -144,12 +124,10 @@ const activeCount = computed(() => props.modelValue.length);
   font-weight: 600;
   font-size: 0.95rem;
 }
-
 .filter-trigger:hover {
   border-color: #cbd5e1;
   background: #f8fafc;
 }
-
 @media (max-width: 768px) {
   .filter-trigger {
     width: 44px;
@@ -173,23 +151,19 @@ const activeCount = computed(() => props.modelValue.length);
     display: none;
   }
 }
-
 .filter-trigger.is-open {
   border-color: #FF6A00;
 }
-
 .filter-trigger.is-active {
   background: rgba(255, 106, 0, 0.05);
   border-color: #FF6A00;
   color: #FF6A00;
 }
-
 .trigger-left {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-
 .badge {
   background: #FF6A00;
   color: white;
@@ -203,16 +177,13 @@ const activeCount = computed(() => props.modelValue.length);
   justify-content: center;
   padding: 0 5px;
 }
-
 .chevron {
   transition: transform 0.3s ease;
   color: #94a3b8;
 }
-
 .chevron.rotate {
   transform: rotate(180deg);
 }
-
 .filter-panel {
   position: absolute;
   top: calc(100% + 8px);
@@ -226,12 +197,10 @@ const activeCount = computed(() => props.modelValue.length);
   overflow: hidden;
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(10px) scale(0.95); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
-
 .panel-header {
   padding: 16px;
   border-bottom: 1px solid #f1f5f9;
@@ -239,7 +208,6 @@ const activeCount = computed(() => props.modelValue.length);
   flex-direction: column;
   gap: 8px;
 }
-
 .header-title {
   font-size: 13px;
   font-weight: 700;
@@ -247,13 +215,11 @@ const activeCount = computed(() => props.modelValue.length);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-
 .header-actions {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-
 .action-btn {
   background: none;
   border: none;
@@ -264,22 +230,18 @@ const activeCount = computed(() => props.modelValue.length);
   cursor: pointer;
   transition: opacity 0.2s;
 }
-
 .action-btn:hover { opacity: 0.7; }
 .action-btn.text-danger { color: #ef4444; }
-
 .divider {
   width: 1px;
   height: 12px;
   background: #e2e8f0;
 }
-
 .options-list {
   max-height: 300px;
   overflow-y: auto;
   padding: 8px;
 }
-
 .option-item {
   display: flex;
   align-items: center;
@@ -289,15 +251,12 @@ const activeCount = computed(() => props.modelValue.length);
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .option-item:hover {
   background: #f8fafc;
 }
-
 .option-item.selected {
   background: rgba(255, 106, 0, 0.03);
 }
-
 .checkbox-circle {
   width: 22px;
   height: 22px;
@@ -310,29 +269,24 @@ const activeCount = computed(() => props.modelValue.length);
   flex-shrink: 0;
   color: white;
 }
-
 .checkbox-circle.checked {
   background: #FF6A00;
   border-color: #FF6A00;
 }
-
 .option-label {
   font-size: 15px;
   font-weight: 500;
   color: #334155;
 }
-
 .option-item.selected .option-label {
   color: #1e293b;
   font-weight: 600;
 }
-
 .panel-footer {
   padding: 12px;
   border-top: 1px solid #f1f5f9;
   background: #f8fafc;
 }
-
 .btn-apply {
   width: 100%;
   height: 40px;
@@ -345,11 +299,9 @@ const activeCount = computed(() => props.modelValue.length);
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .btn-apply:hover {
   background: #E65F00;
 }
-
 /* Animations */
 .slide-up-enter-active, .slide-up-leave-active {
   transition: all 0.3s ease;
@@ -358,7 +310,6 @@ const activeCount = computed(() => props.modelValue.length);
   opacity: 0;
   transform: translateY(10px);
 }
-
 .slide-down-mobile-enter-active, .slide-down-mobile-leave-active {
   transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
 }
@@ -366,14 +317,12 @@ const activeCount = computed(() => props.modelValue.length);
   transform: translateY(-100%);
   opacity: 0;
 }
-
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.3s ease;
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
 }
-
 .filter-backdrop {
   position: fixed;
   inset: 0;
@@ -381,7 +330,6 @@ const activeCount = computed(() => props.modelValue.length);
   backdrop-filter: blur(4px);
   z-index: 999;
 }
-
 .mobile-handle {
   width: 40px;
   height: 4px;
@@ -389,7 +337,6 @@ const activeCount = computed(() => props.modelValue.length);
   border-radius: 2px;
   margin: 12px auto 0;
 }
-
 @media (max-width: 768px) {
   .multi-select-container { max-width: none; }
   .filter-panel { 
@@ -404,4 +351,4 @@ const activeCount = computed(() => props.modelValue.length);
     z-index: 1000;
   }
 }
-</style>
+</style>

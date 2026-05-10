@@ -6,7 +6,6 @@ import {
   ArrowDown, ArrowUp
 } from 'lucide-vue-next';
 import { useAdminOverview } from '../../composables/useAdminOverview';
-
 const {
   loading,
   data,
@@ -24,7 +23,6 @@ const {
   fetchStats,
   formatDate,
   openUserDetail, 
-  
   allParticipants,
   teamsListData,
   highRiskCounts,     
@@ -33,29 +31,23 @@ const {
   goalAchievementStats,
   roleDistributionData 
 } = useAdminOverview();
-
 defineEmits(['change-tab']);
-
 // --- ส่วนจัดการการเลื่อนกราฟการเติบโตไปวันล่าสุด ---
 const chartGrowthScrollRef = ref<HTMLElement | null>(null);
-
 const scrollToLatest = async () => {
   await nextTick();
   if (chartGrowthScrollRef.value) {
     chartGrowthScrollRef.value.scrollLeft = chartGrowthScrollRef.value.scrollWidth;
   }
 };
-
 watch(() => data.value?.userGrowth, () => {
   scrollToLatest();
 }, { deep: true });
-
 onMounted(async () => {
   await fetchStats();
   scrollToLatest();
 });
 // ---------------------------------------------
-
 // ธีมสีสำหรับการ์ดสถิติ
 const kpiThemes = [
   {
@@ -87,14 +79,11 @@ const kpiThemes = [
     arrow: 'text-orange-400 group-hover:text-orange-600'
   }
 ];
-
 const submissionTimeLabels: Record<string, string> = {
   morning: 'เช้า', afternoon: 'บ่าย', evening: 'เย็น', night: 'ดึก'
 };
-
 const ongoingActivitiesSort = ref<'desc' | 'asc'>('desc');
 const bmiRiskSort = ref<'desc' | 'asc'>('desc');
-
 const sortedOngoingActivities = computed(() => {
   const list = [...(ongoingActivities.value || [])];
   return list.sort((a: any, b: any) => {
@@ -103,7 +92,6 @@ const sortedOngoingActivities = computed(() => {
     return ongoingActivitiesSort.value === 'desc' ? bv - av : av - bv;
   });
 });
-
 const sortedBmiRiskUsers = computed(() => {
   const list = [...(bmiRiskUsers.value || [])];
   return list.sort((a: any, b: any) => {
@@ -112,14 +100,12 @@ const sortedBmiRiskUsers = computed(() => {
     return bmiRiskSort.value === 'desc' ? bv - av : av - bv;
   });
 });
-
 const ongoingExtremes = computed(() => {
   const list = [...(ongoingActivities.value || [])];
   if (!list.length) return null;
   const sorted = list.sort((a: any, b: any) => (Number(b.participant_count) || 0) - (Number(a.participant_count) || 0));
   return { max: sorted[0], min: sorted[sorted.length - 1] };
 });
-
 const bmiRiskExtremes = computed(() => {
   const list = [...(bmiRiskUsers.value || [])];
   if (!list.length) return null;
@@ -127,11 +113,9 @@ const bmiRiskExtremes = computed(() => {
   return { max: sorted[0], min: sorted[sorted.length - 1] };
 });
 </script>
-
 <template>
   <div class="min-h-screen bg-white text-slate-800 font-sarabun pb-24">
     <div class="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-6">
-      
       <!-- ส่วนหัวแดชบอร์ด -->
       <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
@@ -140,7 +124,6 @@ const bmiRiskExtremes = computed(() => {
           </h1>
         </div>
       </div>
-
       <!-- ส่วนของการ์ดสถิติ (KPI Cards) -->
       <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div v-for="i in 4" :key="i" class="h-36 bg-slate-50 rounded-3xl animate-pulse soft-shadow"></div>
@@ -149,16 +132,13 @@ const bmiRiskExtremes = computed(() => {
         <div v-for="(s, index) in data.stats" :key="s.label" 
              :class="['border rounded-3xl p-6 relative overflow-hidden transition-all duration-300 hover:-translate-y-1.5 cursor-pointer group soft-shadow hover:soft-shadow-lg', kpiThemes[index % kpiThemes.length].wrapper]"
              @click="s.label === 'คำขอรออนุมัติ' ? $emit('change-tab', 'requests') : undefined">
-          
           <div class="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-40 blur-2xl transition-all duration-500 group-hover:scale-150"
                :class="kpiThemes[index % kpiThemes.length].iconBox.split(' ')[0]"></div>
-
           <div class="flex justify-between items-start relative z-10 pt-1">
             <div :class="['p-3 rounded-2xl transition-all soft-shadow-sm', kpiThemes[index % kpiThemes.length].iconBox]">
               <component :is="getIcon(s.icon)" class="w-6 h-6" />
             </div>
           </div>
-          
           <div class="mt-6 relative z-10">
             <p :class="['text-sm font-semibold mb-1 transition-colors', kpiThemes[index % kpiThemes.length].label]">{{ s.label }}</p>
             <div class="flex items-end justify-between">
@@ -170,7 +150,6 @@ const bmiRiskExtremes = computed(() => {
           </div>
         </div>
       </div>
-
       <!-- กราฟหลัก (การเติบโต และ ช่วงเวลาส่งงาน) -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6">
         <div class="lg:col-span-2 bg-white rounded-3xl soft-shadow p-5 sm:p-6 flex flex-col h-[420px]">
@@ -185,7 +164,6 @@ const bmiRiskExtremes = computed(() => {
             </div>
           </div>
         </div>
-
         <div class="lg:col-span-1 bg-white rounded-3xl soft-shadow p-5 sm:p-6 flex flex-col h-[420px]">
           <div class="flex flex-col mb-3">
             <h2 class="text-lg font-bold text-slate-900">ช่วงเวลาในการส่งงาน</h2>
@@ -210,7 +188,6 @@ const bmiRiskExtremes = computed(() => {
           </div>
         </div>
       </div>
-
       <!-- กราฟรอง (กลุ่มอายุ และ กิจกรรมยอดฮิต) -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
         <div class="bg-white rounded-3xl soft-shadow p-5 sm:p-6 flex flex-col h-[400px]">
@@ -223,7 +200,6 @@ const bmiRiskExtremes = computed(() => {
             <canvas id="chart-demographics"></canvas>
           </div>
         </div>
-
         <div class="bg-white rounded-3xl soft-shadow p-5 sm:p-6 flex flex-col h-[400px]">
           <div class="mb-4">
             <h2 class="text-lg font-bold text-slate-900">กิจกรรมยอดฮิต</h2>
@@ -235,7 +211,6 @@ const bmiRiskExtremes = computed(() => {
           </div>
         </div>
       </div>
-
       <!-- กราฟการทำตามเป้าหมายได้สำเร็จ -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6">
         <div class="lg:col-span-2 bg-white rounded-3xl soft-shadow p-5 sm:p-6 flex flex-col h-[420px]">
@@ -256,13 +231,11 @@ const bmiRiskExtremes = computed(() => {
             <canvas id="chart-goal-achievement"></canvas>
           </div>
         </div>
-
         <div class="lg:col-span-1 bg-white rounded-3xl soft-shadow p-5 sm:p-6 flex flex-col h-[420px]">
           <div class="mb-2">
             <h2 class="text-lg font-bold text-slate-900">อัตราความสำเร็จรวม</h2>
             <p class="text-xs font-medium text-slate-400 mt-0.5">ผู้สำเร็จเป้าหมายต่อผู้เข้าร่วมทั้งหมด</p>
           </div>
-
           <div class="relative flex-1 flex flex-col items-center justify-center">
             <div class="relative w-40 h-40 flex items-center justify-center">
               <svg class="w-full h-full -rotate-90" viewBox="0 0 100 100">
@@ -287,7 +260,6 @@ const bmiRiskExtremes = computed(() => {
               </div>
             </div>
           </div>
-
           <div class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-100/70">
             <div class="text-center bg-emerald-50 rounded-xl py-2.5">
               <div class="font-bold text-xl leading-none text-emerald-600">{{ goalAchievementStats.totalAchievers.toLocaleString() }}</div>
@@ -300,7 +272,6 @@ const bmiRiskExtremes = computed(() => {
           </div>
         </div>
       </div>
-
       <!-- ส่วนรายการด้านล่าง (คงเดิม) -->
       <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 lg:gap-6">
         <!-- 1. กิจกรรมที่ดำเนินการอยู่ -->
@@ -350,7 +321,6 @@ const bmiRiskExtremes = computed(() => {
             </div>
           </div>
         </div>
-
         <!-- 2. ผู้ใช้ที่ไม่มีความเคลื่อนไหว -->
         <div class="bg-white rounded-3xl soft-shadow flex flex-col h-[450px]">
           <div class="p-6 border-b border-slate-100/70 flex items-center justify-between">
@@ -388,7 +358,6 @@ const bmiRiskExtremes = computed(() => {
             </div>
           </div>
         </div>
-
         <!-- 3. ผู้มีความเสี่ยงสุขภาพสูง -->
         <div class="bg-white rounded-3xl soft-shadow flex flex-col h-[450px]">
           <div class="px-6 pt-6 pb-3 border-b border-slate-100/70">
@@ -420,32 +389,26 @@ const bmiRiskExtremes = computed(() => {
             </div>
           </div>
         </div>
-
       </div>
     </div>
   </div>
 </template>
-
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
-
 .font-sarabun,
 .font-sarabun * {
   font-family: 'Sarabun', 'Noto Sans Thai', system-ui, -apple-system, sans-serif !important;
 }
 </style>
-
 <style scoped>
 .custom-scrollbar::-webkit-scrollbar { width: 5px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #CBD5E1; }
-
 .custom-scrollbar-x::-webkit-scrollbar { height: 6px; }
 .custom-scrollbar-x::-webkit-scrollbar-track { background: #f8fafc; border-radius: 10px; }
 .custom-scrollbar-x::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 .custom-scrollbar-x::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
 .soft-shadow-sm { box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 2px 8px -2px rgba(15, 23, 42, 0.06); }
 .soft-shadow { box-shadow: 0 4px 15px -1px rgba(15, 23, 42, 0.05), 0 10px 30px -5px rgba(15, 23, 42, 0.08); }
 .soft-shadow-lg { box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1), 0 25px 50px -12px rgba(15, 23, 42, 0.15); }

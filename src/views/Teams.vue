@@ -9,16 +9,13 @@ import {
 import { uiStore } from "../store/ui";
 import { swal, showSuccess, showError, showConfirm } from "../lib/swal";
 import { useRealtime } from "../composables/useRealtime";
-
 const router = useRouter();
-
 type User = { id: string; name: string; avatar?: string; canCreateActivity: boolean; fname_th?: string; nickname?: string };
 type Room = {
   id: string; code: string; name: string;
   maxMembers: number; isPrivate: boolean;
   password?: string; hostId: string; members: User[];
 };
-
 const currentUser = computed(() => ({
   id: authStore.user?.id ?? null,
   name: authStore.user?.fname_th ?? "คุณ",
@@ -26,22 +23,18 @@ const currentUser = computed(() => ({
   teamId: authStore.user?.team_id ?? null,
   canCreateActivity: authStore.user?.role === 'admin',
 }));
-
 const loading = ref(true);
 const currentView = ref<"lobby">("lobby");
 const currentRoom = ref<Room | null>(null);
 const showSettingsModal = ref(false);
-
 const editRoomForm = ref({
   name: "", maxMembers: 4, isPrivate: false, code: "",
 });
-
 // isHost determines if the current user is the owner/host of this specific team.
 // Admins who create a team are also considered the host of that team.
 const isHost = computed(() => {
   return currentRoom.value?.hostId === currentUser.value.id;
 });
-
 const assertIsHost = (action = 'ดำเนินการนี้'): boolean => {
   if (!isHost.value) {
     showToast('error', `คุณไม่มีสิทธิ์${action} (เฉพาะหัวหน้าทีมนี้เท่านั้น)`);
@@ -49,26 +42,21 @@ const assertIsHost = (action = 'ดำเนินการนี้'): boolean 
   }
   return true;
 };
-
 const showToast = (type: "success" | "error" | "info", message: string) => {
   if (type === "success") showSuccess(message);
   else if (type === "error") showError(message);
   else swal.fire({ icon: "info", title: message, toast: true, position: "top", showConfirmButton: false, timer: 3000 });
 };
-
 const fetchCurrentRoom = async (teamId: any) => {
   if (!currentUser.value.id) return;
   if (!teamId || teamId === "undefined" || teamId === "null") {
-    console.warn("[Teams.vue] fetchCurrentRoom called with invalid teamId:", teamId);
     return;
   }
   try {
-    console.log("[Teams.vue] Fetching team data for ID:", teamId);
     const res = await fetch(`/api/teams/${teamId}`, { headers: { "x-user-id": String(currentUser.value.id) } });
     if (res.ok) {
       const data = await res.json() as Room;
       currentRoom.value = data;
-
       // ── Membership Check ──
       // If we got the room data, but the current user is no longer in the members list, they've been kicked.
       const stillInTeam = data.members.some(m => String(m.id) === String(currentUser.value.id));
@@ -90,16 +78,13 @@ const fetchCurrentRoom = async (teamId: any) => {
   } catch { showToast("error", "โหลดข้อมูลห้องไม่สำเร็จ"); }
   finally { loading.value = false; }
 };
-
 // -------------------------
-
 const formatDateThai = (dateStr: string) => {
   if (!dateStr) return "ไม่ระบุ";
   const d = new Date(dateStr);
   const m = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "เม.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
   return `${d.getDate()} ${m[d.getMonth()]} ${d.getFullYear() + 543}`;
 };
-
 const handleUpdateRoom = async () => {
   // Guard: only the actual team host (not admin, not regular member)
   if (!assertIsHost('แก้ไขข้อมูลทีม')) return;
@@ -122,7 +107,6 @@ const handleUpdateRoom = async () => {
   } catch { showToast("error", "อัปเดตห้องล้มเหลว"); }
   finally { loading.value = false; }
 };
-
 const openSettings = () => {
   // Guard: only the actual team host
   if (!assertIsHost('ตั้งค่าทีม')) return;
@@ -135,18 +119,15 @@ const openSettings = () => {
   };
   showSettingsModal.value = true;
 };
-
 const leaveRoom = async () => {
   let confirmTitle = "คุณต้องการออกจากทีมใช่หรือไม่?";
   let confirmHtml = "ข้อมูลกิจกรรมและสถิติต่างๆ ในทีมนี้ของคุณจะหายไป";
   let confirmButtonText = "ยืนยันการออก";
-
   if (isHost.value) {
     const hasMembers = currentRoom.value && currentRoom.value.members.length > 1;
     confirmTitle = hasMembers 
       ? "ยืนยันการยุบทีมและออกจากระบบ?" 
       : "ยืนยันการลบทีมและออกจากระบบ?";
-    
     confirmHtml = `
       <div style="text-align: left; font-size: 0.95rem; line-height: 1.6; color: #475569;">
         คุณเป็น <b>หัวหน้าทีม</b> การออกครั้งนี้จะส่งผลดังนี้:<br>
@@ -157,7 +138,6 @@ const leaveRoom = async () => {
     `;
     confirmButtonText = hasMembers ? "ยุบทีมและออกจากระบบ" : "ลบทีมและออกจากระบบ";
   }
-  
   const result = await swal.fire({
     title: confirmTitle,
     html: confirmHtml,
@@ -168,10 +148,8 @@ const leaveRoom = async () => {
     confirmButtonColor: "#ef4444",
     cancelButtonColor: "#94a3b8",
   });
-
   if (result.isConfirmed) doLeaveRoom();
 };
-
 const doLeaveRoom = async () => {
   if (!currentUser.value.id || !currentRoom.value) return;
   loading.value = true;
@@ -189,9 +167,6 @@ const doLeaveRoom = async () => {
   } catch { showToast("error", "ออกจากทีมล้มเหลว"); }
   finally { loading.value = false; }
 };
-
-
-
 const kickMember = async (userId: string, memberName: string) => {
   // Guard: only the actual team host can kick members
   if (!assertIsHost('เตะสมาชิก')) return;
@@ -202,7 +177,6 @@ const kickMember = async (userId: string, memberName: string) => {
     "warning"
   )) doKickMember(userId);
 };
-
 const doKickMember = async (userId: string) => {
   // Double-check guard at execution level
   if (!assertIsHost('เตะสมาชิก')) return;
@@ -219,7 +193,6 @@ const doKickMember = async (userId: string) => {
   } catch { showToast("error", "ล้มเหลว"); }
   finally { loading.value = false; }
 };
-
 const transferHost = async (userId: string, memberName: string) => {
   // Guard: only the actual team host can transfer ownership
   if (!assertIsHost('โอนสิทธิ์หัวหน้าทีม')) return;
@@ -230,7 +203,6 @@ const transferHost = async (userId: string, memberName: string) => {
     "info"
   )) doTransferHost(userId);
 };
-
 const doTransferHost = async (targetUserId: string) => {
   // Double-check guard at execution level
   if (!assertIsHost('โอนสิทธิ์หัวหน้าทีม')) return;
@@ -249,26 +221,17 @@ const doTransferHost = async (targetUserId: string) => {
   } catch { showToast("error", "ล้มเหลว"); }
   finally { loading.value = false; }
 };
-
-
-
 const copyCode = async () => {
   if (!currentRoom.value) return;
   try { await navigator.clipboard.writeText(currentRoom.value.code); showToast("success", `คัดลอกรหัส ${currentRoom.value.code} แล้ว`); }
   catch { showToast("error", "คัดลอกไม่สำเร็จ"); }
 };
-
-
-
 onMounted(() => {
-  console.log("[Teams.vue] Mounted. currentUserId:", currentUser.value.id, "teamId:", currentUser.value.teamId);
   if (currentUser.value.teamId) fetchCurrentRoom(currentUser.value.teamId);
   else {
-    console.warn("[Teams.vue] No teamId found, redirecting to /create-teams");
     router.push("/create-teams");
   }
 });
-
 useRealtime({
   onTeamUpdated: (data) => {
     if (currentRoom.value && String(data.id) === String(currentRoom.value.id)) {
@@ -314,33 +277,24 @@ useRealtime({
     }
   }
 });
-
 watch(() => uiStore.lastRealtimeUpdate, () => {
   if (currentRoom.value) fetchCurrentRoom(currentRoom.value.id);
 });
 </script>
-
 <template>
   <div class="teams-root">
-    
     <!-- Background Decor Removed per User Request -->
-
     <!-- No Fixed Header per User Request -->
-
     <main class="body">
-      
       <div v-if="loading && !currentRoom" class="loading-full-screen">
         <div class="w-10 h-10 border-4 border-slate-100 border-t-[#F05A23] rounded-full animate-spin"></div>
       </div>
-
       <Transition name="fade" mode="out-in">
         <div v-if="currentView === 'lobby' && currentRoom" class="lobby-container">
-          
           <!-- INTEGRATED PAGE HEADER (Inside Body) -->
           <!-- MEMBER SELECTION SLOTS -->
           <section class="members-section mt-4">
             <div class="team-grid-container w-full relative">
-              
               <!-- Refined Unified Header -->
               <div class="grid-header-bar flex justify-between items-center py-5 px-6 border-b border-slate-100">
                 <div class="flex items-center gap-3">
@@ -354,13 +308,11 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
                     <span>{{ currentRoom.members.length }} / {{ currentRoom.maxMembers }} คน</span>
                   </div>
                 </div>
-
                 <div class="flex items-center gap-2">
                    <button v-if="isHost" @click="openSettings" class="icon-btn-circle-v2" title="ตั้งค่าทีม"><Settings :size="20"/></button>
                    <button @click="leaveRoom" class="icon-btn-circle-v2 danger" title="ออกจากทีม"><LogOut :size="20"/></button>
                 </div>
               </div>
-
               <!-- Pure Responsive Member Grid -->
               <div class="member-grid-body py-8 px-6">
                 <div class="flex flex-wrap gap-8 justify-center items-start">
@@ -377,12 +329,10 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
                         <Crown :size="10" />
                       </div>
                     </div>
-                    
                     <div class="member-info-minimal">
                       <span class="member-name-minimal">{{ member.fname_th || member.nickname }}</span>
                       <span v-if="member.id === currentUser.id" class="me-text">(ฉัน)</span>
                     </div>
-
                     <!-- Host Actions Overlay -->
                     <div v-if="isHost && member.id !== currentUser.id" class="member-actions-minimal">
                        <button @click="transferHost(member.id, member.fname_th || member.nickname || '')" class="mini-btn" title="โอนสิทธิ์หัวหน้าทีม"><Crown :size="14"/></button>
@@ -393,16 +343,9 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
               </div>
             </div>
           </section>
-
-
-
         </div>
-
-
       </Transition>
-
     </main>
-
     <!-- SETTINGS MODAL -->
     <Teleport to="body">
       <Transition name="modal-fade">
@@ -416,7 +359,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
                <div class="w-full mb-6 text-left">
                   <input class="input-field w-full" v-model="editRoomForm.name" placeholder="ชื่อทีมสุขภาพ" maxlength="40" />
                </div>
-
                <div class="settings-stack w-full mb-6">
                   <div class="setting-row" @click="editRoomForm.isPrivate = !editRoomForm.isPrivate">
                     <div class="setting-info text-left">
@@ -424,12 +366,10 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
                     </div>
                     <div class="fancy-toggle" :class="{ 'on': editRoomForm.isPrivate }"><div class="fancy-knob"></div></div>
                   </div>
-
                   <div v-if="editRoomForm.isPrivate" class="pin-container is-active mt-3">
                     <input class="input-field-sm w-full" v-model="editRoomForm.code" placeholder="PIN 6 หลัก" maxlength="6" style="text-transform: uppercase;" />
                   </div>
                </div>
-
                <div class="w-full mb-8 text-left flex items-center" style="display: flex; align-items: center;">
                   <label class="input-label mb-0" style="margin-bottom:0; min-width: 90px; font-size: 1.05rem; font-weight: 850;">สมาชิกสูงสุด</label>
                   <div class="num-grid" style="flex: 1; margin-left: 12px; display: flex; gap: 8px;">
@@ -438,7 +378,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
                     </button>
                   </div>
                </div>
-
                <button class="primary-btn-solid w-full" @click="handleUpdateRoom" :disabled="loading">
                   <Loader2 v-if="loading" class="spin mr-2" :size="18" />
                   <span class="btn-text">บันทึกการเปลี่ยนแปลง</span>
@@ -448,14 +387,10 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
         </div>
       </Transition>
     </Teleport>
-
-
   </div>
 </template>
-
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap');
-
 .teams-root {
   min-height: 100vh;
   background-color: #ffffff; /* เปลี่ยนเป็นสีขาวตามคำขอ */
@@ -464,13 +399,11 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   overflow-x: hidden;
   color: #1e293b;
 }
-
 /* บังคับใช้ Sarabun กับทุก element ภายใน เพื่อให้มั่นใจว่าทุกที่เป็น Sarabun */
 .teams-root,
 .teams-root * {
   font-family: 'Sarabun', 'Noto Sans Thai', sans-serif !important;
 }
-
 /* Page context header (Inside Flow) */
 .page-context-header { display: flex; align-items: center; justify-content: space-between; padding-top: 10px; }
 .pch-left { display: flex; align-items: center; gap: 16px; }
@@ -480,25 +413,21 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
 .pch-subtitle { font-size: 0.72rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; }
 .pch-title { font-size: 1.45rem; font-weight: 900; color: #0d1f2d; line-height: 1.2; }
 .pch-actions { display: flex; gap: 10px; }
-
 /* Shadows — เพิ่มความเด่นขึ้นเล็กน้อย ให้การ์ดดู "วาง" บนพื้นครีมจริงๆ */
 .shadow-tiny { box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04); }
 .shadow-premium { box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05); }
 .shadow-heavy { box-shadow: 0 24px 40px rgba(15, 23, 42, 0.08); }
 .shadow-hover:hover { box-shadow: 0 15px 35px -8px rgba(15, 23, 42, 0.15); }
 .shadow-inner-soft { box-shadow: inset 0 2px 4px rgba(15, 23, 42, 0.02); }
-
 /* Water Blob Background */
 .water-blob-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
 .blob-svg { position: absolute; top: -10%; left: -20%; width: 1000px; height: 1000px; opacity: 1; animation: blob-float 30s infinite alternate-reverse; will-change: transform; backface-visibility: hidden; transform: translateZ(0); }
 .blob-small { top: 40%; right: -10%; left: auto; width: 600px; height: 600px; opacity: 1; animation: blob-float 25s infinite alternate; will-change: transform; transform: translateZ(0); }
-
 @keyframes blob-float {
   0% { transform: translate(0, 0) scale(1) rotate(0deg); }
   50% { transform: translate(40px, -50px) scale(1.08) rotate(5deg); }
   100% { transform: translate(0, 0) scale(1) rotate(0deg); }
 }
-
 /* Body */
 .body { 
   position: relative; 
@@ -512,7 +441,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   min-height: calc(100vh - 100px);
   justify-content: center;
 }
-
 /* Room Panel */
 .room-panel { 
   background: #fff; 
@@ -534,11 +462,9 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
 .code-box-inline { display: flex; align-items: center; gap: 6px; cursor: pointer; border-radius: 10px; background: #f8fafc; padding: 4px 10px; border: 1px solid #f1f5f9; }
 .code-label { font-size: 0.75rem; font-weight: 700; color: #94a3b8; }
 .code-val { font-size: 1rem; font-weight: 900; color: var(--vp-primary); letter-spacing: 0.05em; font-family: monospace; }
-
 .panel-stats { display: flex; gap: 14px; }
 .stat-item { flex: 1; display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #fff; border-radius: 16px; font-size: 0.9rem; font-weight: 850; color: #475569; border: 1px solid #f1f5f9; }
 .stat-item.active-group { background: #f0fdf4; color: #16a34a; border-color: #dcfce7; }
-
 /* Minimal Member Display (No Backgrounds) */
 .team-grid-container {
   background: #ffffff;
@@ -548,7 +474,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   width: 100%;
   max-width: 900px;
 }
-
 .member-grid-body { min-height: auto; }
 .member-card-minimal {
   position: relative;
@@ -563,14 +488,12 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
 .member-card-minimal:hover {
   transform: translateY(-4px);
 }
-
 .member-avatar-wrap {
   position: relative;
   width: 80px;
   height: 80px;
   flex-shrink: 0;
 }
-
 .avatar-circle-minimal {
   width: 80px;
   height: 80px;
@@ -586,7 +509,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   border: 1px solid #efe6d4;
 }
 .avatar-circle-minimal img { width: 100%; height: 100%; object-fit: cover; }
-
 .host-badge-dot {
   position: absolute;
   bottom: -4px;
@@ -604,11 +526,9 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   box-shadow: 0 4px 10px rgba(255, 107, 0, 0.4);
   z-index: 2;
 }
-
 .member-info-minimal { display: flex; flex-direction: column; align-items: center; gap: 0; }
 .member-name-minimal { font-weight: 850; color: #1e293b; font-size: 1rem; text-align: center; }
 .me-text { font-size: 0.75rem; font-weight: 900; color: #ff6b00; }
-
 .member-actions-minimal {
   position: absolute;
   top: 0;
@@ -620,7 +540,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   transition: opacity 0.2s;
 }
 .member-card-minimal:hover .member-actions-minimal { opacity: 1; }
-
 .mini-btn {
   width: 28px;
   height: 28px;
@@ -637,7 +556,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
 }
 .mini-btn:hover { color: #ff6b00; border-color: #ff6b00; }
 .mini-btn.danger:hover { color: #ef4444; border-color: #ef4444; }
-
 .divider-v { width: 1px; height: 20px; background: #e2e8f0; margin: 0 4px; }
 .member-count-badge {
   display: flex;
@@ -647,13 +565,10 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   font-weight: 850;
   color: #64748b;
 }
-
 .page-btn:not(:disabled):hover { border-color: #ff6b00; color: #ff6b00; background: #fff7ed; }
 .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .page-info { font-weight: 700; color: #64748b; font-size: 0.95rem; }
-
 .m-you { display: none; } /* removed old utility */
-
 .badge-host-v2 {
   font-size: 0.62rem;
   font-weight: 900;
@@ -666,7 +581,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   gap: 4px;
   box-shadow: 0 4px 10px rgba(255, 107, 0, 0.2);
 }
-
 .badge-member-v2 {
   font-size: 0.62rem;
   font-weight: 800;
@@ -675,7 +589,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   padding: 3px 10px;
   border-radius: 8px;
 }
-
 .badge-you-v2 {
   font-size: 0.62rem;
   font-weight: 950;
@@ -685,12 +598,10 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   padding: 2px 10px;
   border-radius: 8px;
 }
-
 /* Icon circle buttons */
 .icon-btn-circle { width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: #fff; border: 1px solid #f1f5f9; color: #64748b; cursor: pointer; transition: 0.2s; }
 .icon-btn-circle:hover { background: #f8fafc; color: #1e293b; transform: translateY(-2px); }
 .icon-btn-circle.danger { background: #fff1f2; color: #ef4444; border-color: #fecaca; }
-
 /* Request Card */
 .request-entry-card { background: linear-gradient(135deg, #fff 0%, #fffbf5 100%); margin-top: 24px; border-radius: 28px; padding: 20px; display: flex; align-items: center; gap: 16px; border: 1.5px solid #ffedd5; transition: transform 0.4s; cursor: pointer; }
 .request-entry-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(255, 107, 0, 0.08); }
@@ -702,7 +613,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
 .rec-btn:hover { background: #e66000; box-shadow: 0 4px 12px rgba(255, 107, 0, 0.3); }
 .status-badge { padding: 6px 14px; border-radius: 10px; font-size: 0.8rem; font-weight: 900; }
 .status-badge.pending { background: #fed7aa; color: #9a3412; }
-
 /* Activities */
 .activity-block { margin-top: 32px; }
 .act-card-premium { background: #fff; border-radius: 24px; padding: 14px; display: flex; gap: 16px; align-items: center; cursor: pointer; transition: 0.2s; border: 1px solid #f1f5f9; position: relative; }
@@ -712,27 +622,21 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
 .meta-line { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #94a3b8; font-weight: 600; }
 .acp-leave { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 10px; border: none; background: #f8fafc; color: #cbd5e1; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .acp-leave:hover { color: #ef4444; background: #fee2e2; }
-
 .empty-placeholder { padding: 48px 0; background: #f8fafc; border-radius: 24px; text-align: center; color: #94a3b8; margin-top: 10px; border: 1.5px dashed #e2e8f0; }
-
 /* Settings elements matching minimal modal */
 .w-full { width: 100%; }
 .text-left { text-align: left; }
 .input-field { width: 100%; height: 58px; background: #f8fafc; border: 2px solid #f1f5f9; border-radius: 16px; padding: 0 20px; font-size: 1.05rem; font-weight: 750; color: #1e293b; outline: none; }
 .input-field-sm { width: 100%; height: 50px; background: #f8fafc; border: 2px solid #f1f5f9; border-radius: 14px; padding: 0 16px; font-size: 1rem; font-weight: 700; color: #1e293b; outline: none; }
-
 .settings-stack { display: flex; flex-direction: column; }
 .setting-row { display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 14px 20px; border-radius: 16px; cursor: pointer; transition: 0.3s; }
 .setting-title { font-weight: 850; font-size: 1.05rem; color: #1e293b; }
-
 .pin-container { height: 50px; opacity: 0.3; pointer-events: none; transition: 0.3s; margin-top: 12px; }
 .pin-container.is-active { opacity: 1; pointer-events: auto; }
-
 .num-btn { flex: 1; min-width: 60px; height: 50px; border-radius: 16px; background: #f8fafc; border: 2px solid transparent; font-weight: 900; color: #64748b; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
 .num-btn.compact { min-width: 42px; height: 42px; border-radius: 14px; font-size: 1.15rem; }
 .num-btn:hover { background: #f1f5f9; color: #1e293b; }
 .num-btn.active { background: #fff7ed; border-color: #ff6b00; color: #ff6b00; box-shadow: 0 4px 10px rgba(255, 107, 0, 0.15); }
-
 .icon-btn-circle-v2 {
   width: 44px;
   height: 44px;
@@ -746,7 +650,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .icon-btn-ghost {
   background: transparent;
   border: none;
@@ -762,59 +665,47 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
 .icon-btn-ghost:hover {
   transform: scale(1.1);
 }
-
 .icon-btn-circle-v2:hover {
   color: #ff6b00;
   transform: scale(1.1);
 }
-
 .icon-btn-circle-v2.danger:hover {
   color: #ef4444;
   transform: scale(1.1);
 }
-
 .fancy-toggle { width: 50px; height: 28px; background: #e2e8f0; border-radius: 20px; position: relative; transition: 0.3s; cursor: pointer; }
 .fancy-toggle.on { background: #ff6b00; }
 .fancy-knob { width: 20px; height: 20px; background: #fff; border-radius: 50%; position: absolute; top: 4px; left: 4px; transition: 0.3s; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
 .fancy-toggle.on .fancy-knob { left: 26px; }
-
 .primary-btn-solid { width: 100%; height: 64px; background: #ff6b00; color: #fff; border: none; border-radius: 20px; font-weight: 950; font-size: 1.25rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
 .primary-btn-solid:hover { background: #e66000; box-shadow: 0 8px 24px rgba(255, 107, 0, 0.2); }
-
 .text-teal-500 { color: #14b8a6; }
 .text-blue-500 { color: #3b82f6; }
-
 .fade-enter-active, .fade-leave-active { transition: opacity 0.25s, transform 0.25s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(12px); }
-
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
 /* Premium Loading UI */
 .loading-full-screen { position: fixed; inset: 0; z-index: 999; display: flex; align-items: center; justify-content: center; background: #ffffff; }
 .loader-premium-card { background: #fff; padding: 48px; border-radius: 44px; display: flex; flex-direction: column; align-items: center; gap: 24px; border: 1.5px solid #f5ecdb; box-shadow: 0 40px 80px rgba(15, 23, 42, 0.08); animation: loader-pop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .loader-icon-wrap { width: 80px; height: 80px; background: #fff7ed; border-radius: 24px; display: flex; align-items: center; justify-content: center; color: #ff6b00; }
 .loader-text { font-size: 1.25rem; font-weight: 900; color: #1e293b; letter-spacing: -0.01em; }
-
 @keyframes loader-pop {
   0% { transform: scale(0.8); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
-
 /* Activities Grid & Cards */
 .activities-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr); /* 2 columns on mobile */
   gap: 12px;
 }
-
 @media (min-width: 640px) {
   .activities-grid {
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 24px;
   }
 }
-
 .activity-flat-card {
   background: white;
   border-radius: 20px; /* Slightly smaller radius for 2-col */
@@ -826,26 +717,22 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   display: flex;
   flex-direction: column;
 }
-
 .activity-flat-card:hover {
   transform: translateY(-8px);
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
   border-color: #e5d9bf;
 }
-
 .card-img-box {
   position: relative;
   width: 100%;
   aspect-ratio: 1/1;
   background: #f8fafc;
 }
-
 .card-img-box img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-
 .card-badge {
   position: absolute;
   top: 12px;
@@ -859,19 +746,16 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   font-weight: 700;
   letter-spacing: 0.05em;
 }
-
 /* Modal tweaks */
 .tn-overlay { position: fixed; inset: 0; z-index: 2000; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 16px; }
 .tn-sheet { background: #fff; border-radius: 32px; width: 100%; max-width: 440px; padding: 32px 24px; border: 1px solid rgba(255,255,255,0.2); }
 .tn-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
 .tn-title { font-size: 1.35rem; font-weight: 900; color: #0f172a; }
 .tn-close { border: none; background: #f1f5f9; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #64748b; }
-
 .heartbeat-me {
   animation: heartbeat-steady 1.2s ease-in-out infinite;
   transform-origin: center;
 }
-
 @keyframes heartbeat-steady {
   0% { transform: scale(1); }
   20% { transform: scale(1.12); }

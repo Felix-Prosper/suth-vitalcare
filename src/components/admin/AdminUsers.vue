@@ -36,7 +36,6 @@ import {
 import { useAdminUsers } from "../../composables/useAdminUsers";
 import { authStore } from "../../store/auth";
 import Swal from 'sweetalert2';
-
 // ดึงตัวแปรและฟังก์ชันทั้งหมดมาจาก Composable
 const {
   roleTypes,
@@ -87,22 +86,18 @@ const {
   showError,
   formatPhone
 } = useAdminUsers();
-
 // --- 🌟 Local State สำหรับจัดการ Table แบบ Native ---
 const localSearchQuery = ref("");
 const dtSortKey = ref("created_at");
 const dtSortDir = ref("desc");
 const dtCurrentPage = ref(1);
 const dtPerPage = ref(10); // ปรับเป็น 10 รายการต่อหน้า
-
 const clearSearch = () => {
   localSearchQuery.value = "";
 };
-
 // --- Process Data (Search & Sort) ---
 const processedUsers = computed(() => {
   let list = [...(filtered.value || [])];
-
   // Search
   if (localSearchQuery.value) {
     const q = localSearchQuery.value.toLowerCase();
@@ -114,40 +109,31 @@ const processedUsers = computed(() => {
       (u.phone || "").toLowerCase().includes(q)
     );
   }
-
   // Sort
   list.sort((a: any, b: any) => {
     let valA = a[dtSortKey.value];
     let valB = b[dtSortKey.value];
-
     // พิเศษ: ถ้าเป็นชื่อ ให้เอาชื่อจริง+นามสกุลมาต่อกันก่อนเรียง
     if (dtSortKey.value === 'fname_th') {
       valA = `${a.fname_th} ${a.lname_th}`;
       valB = `${b.fname_th} ${b.lname_th}`;
     }
-
     if (valA == null) valA = (typeof valB === 'number' ? 0 : "");
     if (valB == null) valB = (typeof valA === 'number' ? 0 : "");
-
     if (typeof valA === 'string') valA = valA.toLowerCase();
     if (typeof valB === 'string') valB = valB.toLowerCase();
-
     if (valA < valB) return dtSortDir.value === 'asc' ? -1 : 1;
     if (valA > valB) return dtSortDir.value === 'asc' ? 1 : -1;
-    
     return b.id - a.id; 
   });
-
   return list;
 });
-
 // --- Pagination ---
 const totalPages = computed(() => Math.ceil(processedUsers.value.length / dtPerPage.value));
 const paginatedUsers = computed(() => {
   const start = (dtCurrentPage.value - 1) * dtPerPage.value;
   return processedUsers.value.slice(start, start + dtPerPage.value);
 });
-
 const setPage = (p: number) => {
   if (p >= 1 && p <= totalPages.value) {
     dtCurrentPage.value = p;
@@ -156,7 +142,6 @@ const setPage = (p: number) => {
     else window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 };
-
 const toggleDtSort = (key: string) => {
   if (dtSortKey.value === key) {
     dtSortDir.value = dtSortDir.value === 'asc' ? 'desc' : 'asc';
@@ -170,9 +155,7 @@ const toggleDtSort = (key: string) => {
     }
   }
 };
-
 watch(localSearchQuery, () => { dtCurrentPage.value = 1; });
-
 const visiblePages = computed(() => {
   const current = dtCurrentPage.value;
   const total = totalPages.value;
@@ -180,13 +163,11 @@ const visiblePages = computed(() => {
   const range = [];
   const rangeWithDots = [];
   let l;
-
   for (let i = 1; i <= total; i++) {
     if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
       range.push(i);
     }
   }
-
   for (let i of range) {
     if (l) {
       if (i - l === 2) {
@@ -198,13 +179,10 @@ const visiblePages = computed(() => {
     rangeWithDots.push(i);
     l = i;
   }
-
   return rangeWithDots;
 });
-
 // --- Selection Logic ---
 const isAllSelected = computed(() => paginatedUsers.value.length > 0 && paginatedUsers.value.every(u => selectedIds.value.includes(u.id)));
-
 const toggleOne = (id: number) => {
   if (selectedIds.value.includes(id)) {
     selectedIds.value = selectedIds.value.filter(i => i !== id);
@@ -212,7 +190,6 @@ const toggleOne = (id: number) => {
     selectedIds.value.push(id);
   }
 };
-
 const toggleAll = () => {
   if (isAllSelected.value) {
     selectedIds.value = selectedIds.value.filter(id => !paginatedUsers.value.some(u => u.id === id));
@@ -224,7 +201,6 @@ const toggleAll = () => {
     selectedIds.value = newIds;
   }
 };
-
 // --- Custom Dropdowns Management ---
 const activeDropdown = ref<string | null>(null);
 const toggleDropdown = (name: string) => {
@@ -234,7 +210,6 @@ const closeAllDropdowns = () => {
   activeDropdown.value = null;
   localActiveMenuId.value = null;
 };
-
 onMounted(() => {
   const handleGlobalClick = (e: MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -253,11 +228,9 @@ onMounted(() => {
   };
   window.addEventListener('click', handleGlobalClick);
 });
-
 // --- Custom Popup Menu (3 Dots) ---
 const localActiveMenuId = ref<number | null>(null);
 const localMenuPos = ref({ top: 0, right: 0, transform: 'none' });
-
 const toggleMenu = (id: number, event?: MouseEvent) => {
   if (localActiveMenuId.value === id) {
     localActiveMenuId.value = null;
@@ -270,7 +243,6 @@ const toggleMenu = (id: number, event?: MouseEvent) => {
     const menuHeight = 250;
     const spaceBelow = window.innerHeight - rect.bottom;
     const right = Math.max(8, window.innerWidth - rect.right);
-
     if (spaceBelow < menuHeight && rect.top > menuHeight) {
       localMenuPos.value = { top: rect.top - menuHeight - 4, right, transform: 'none' };
     } else {
@@ -278,9 +250,7 @@ const toggleMenu = (id: number, event?: MouseEvent) => {
     }
   }
 };
-
 const activeMenuUser = computed(() => paginatedUsers.value.find(u => u.id === localActiveMenuId.value) || null);
-
 const quickAddUser = async () => {
   try {
     const { value: amount } = await Swal.fire({
@@ -303,12 +273,9 @@ const quickAddUser = async () => {
         }
       }
     });
-
-
     if (amount) {
       const numToCreate = parseInt(amount);
       const API_URL = import.meta.env.VITE_API_URL || '/api';
-      
       Swal.fire({
         title: 'กำลังสร้างบัญชี...',
         text: `โปรดรอสักครู่ ระบบกำลังสร้าง ${numToCreate} บัญชี`,
@@ -317,15 +284,12 @@ const quickAddUser = async () => {
           Swal.showLoading();
         }
       });
-
       let successCount = 0;
       let createdEmails = [];
-
       for (let i = 0; i < numToCreate; i++) {
         const randId = Math.floor(10000 + Math.random() * 90000); // 5 digit random
         const genEmail = `VitalCare${randId}@gmail.com`;
         const genPassword = `123456789`;
-
         const res = await fetch(`${API_URL}/users/register-email`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -337,15 +301,12 @@ const quickAddUser = async () => {
             role: "user"
           })
         });
-
         if (res.ok) {
           successCount++;
           createdEmails.push(genEmail);
         }
       }
-
       mutate(); // Reload data
-
       if (successCount > 0) {
         Swal.fire({ 
           icon: 'success', 
@@ -361,12 +322,10 @@ const quickAddUser = async () => {
     Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: err.message, confirmButtonColor: '#f97316' });
   }
 };
-
 const showBulkEnrollMenu = ref(false);
 const toggleBulkEnroll = () => {
   showBulkEnrollMenu.value = !showBulkEnrollMenu.value;
 };
-
 const selectedBulkActivities = ref<number[]>([]);
 const toggleBulkAct = (id: number) => {
   if (selectedBulkActivities.value.includes(id)) {
@@ -375,14 +334,12 @@ const toggleBulkAct = (id: number) => {
     selectedBulkActivities.value.push(id);
   }
 };
-
 const handleBulkEnrollConfirm = async () => {
   if (selectedBulkActivities.value.length === 0) return;
   await bulkEnroll(selectedBulkActivities.value);
   showBulkEnrollMenu.value = false;
   selectedBulkActivities.value = [];
 };
-
 const selectedSingleActivities = ref<number[]>([]);
 const toggleSingleAct = (id: number) => {
   if (selectedSingleActivities.value.includes(id)) {
@@ -391,7 +348,6 @@ const toggleSingleAct = (id: number) => {
     selectedSingleActivities.value.push(id);
   }
 };
-
 const handleSingleEnrollConfirm = async () => {
   if (selectedSingleActivities.value.length === 0) return;
   for (const actId of selectedSingleActivities.value) {
@@ -408,13 +364,10 @@ const filteredActivities = computed(() => {
   if (!query) return available;
   return available.filter(a => a.title.toLowerCase().includes(query));
 });
-
-
 const isAllSingleSelected = computed(() => {
   const current = filteredActivities.value;
   return current.length > 0 && current.every(a => selectedSingleActivities.value.includes(a.id));
 });
-
 const toggleSelectAllSingle = () => {
   if (isAllSingleSelected.value) {
     selectedSingleActivities.value = [];
@@ -430,12 +383,10 @@ const filteredBulkActivities = computed(() => {
   if (!query) return available;
   return available.filter(a => a.title.toLowerCase().includes(query));
 });
-
 const isAllBulkSelected = computed(() => {
   const current = filteredBulkActivities.value;
   return current.length > 0 && current.every(a => selectedBulkActivities.value.includes(a.id));
 });
-
 const toggleSelectAllBulk = () => {
   if (isAllBulkSelected.value) {
     selectedBulkActivities.value = [];
@@ -451,12 +402,10 @@ const filteredCurrentActivities = computed(() => {
   if (!query) return userRegistrations.value;
   return userRegistrations.value.filter(reg => reg.title.toLowerCase().includes(query));
 });
-
 const isAllCurrentSelected = computed(() => {
   const current = filteredCurrentActivities.value;
   return current.length > 0 && current.every(reg => selectedCurrentActivities.value.includes(reg.id));
 });
-
 const toggleSelectAllCurrent = () => {
   if (isAllCurrentSelected.value) {
     selectedCurrentActivities.value = [];
@@ -464,12 +413,10 @@ const toggleSelectAllCurrent = () => {
     selectedCurrentActivities.value = filteredCurrentActivities.value.map(reg => reg.id);
   }
 };
-
 const handleBulkLeaveConfirm = async () => {
   if (selectedCurrentActivities.value.length === 0 || !target.value) return;
   const ok = await showConfirm(`คุณต้องการคัดชื่อออกจาก ${selectedCurrentActivities.value.length} กิจกรรมที่เลือก ใช่หรือไม่?`);
   if (!ok) return;
-  
   submitting.value = true;
   try {
     const userId = target.value.id;
@@ -482,9 +429,7 @@ const handleBulkLeaveConfirm = async () => {
       },
       body: JSON.stringify({ userId, eventIds: selectedCurrentActivities.value })
     });
-    
     if (!r.ok) throw new Error("การดำเนินการไม่สำเร็จ");
-
     showSuccess(`คัดชื่อออกจาก ${selectedCurrentActivities.value.length} กิจกรรมเรียบร้อยแล้ว`);
     selectedCurrentActivities.value = [];
     // Refresh the list once
@@ -496,11 +441,9 @@ const handleBulkLeaveConfirm = async () => {
   }
 };
 </script>
-
 <template>
   <div class="font-sarabun bg-white min-h-screen w-full relative pb-24">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-in">
-
       <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div class="flex items-center gap-2 sm:gap-4 w-full">
           <div class="search-pill-container flex-1 min-w-0 w-full">
@@ -512,24 +455,20 @@ const handleBulkLeaveConfirm = async () => {
           </div>
         </div>
       </div>
-
       <div class="flex items-center justify-between px-1">
         <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
           แสดง {{ paginatedUsers.length }} / {{ processedUsers.length }} รายการ
         </p>
       </div>
-
       <div v-if="loadingUsers" class="space-y-4">
         <div v-for="i in 5" :key="i" class="h-16 bg-white border border-slate-100 animate-pulse rounded-2xl"></div>
       </div>
-      
       <div v-else-if="processedUsers.length === 0" class="py-24 text-center bg-white rounded-3xl border border-dashed border-slate-300 flex flex-col items-center justify-center">
         <div class="w-20 h-20 bg-white border border-slate-100 rounded-full flex items-center justify-center mb-5">
            <Search :size="32" class="text-slate-300" />
         </div>
         <p class="text-slate-800 font-bold text-xl mb-2">ไม่พบข้อมูลผู้ใช้งาน</p>
       </div>
-
       <div v-else class="w-full">
         <div class="overflow-x-auto no-scrollbar pb-32"> <table class="w-full text-left border-collapse whitespace-nowrap text-sm">
             <thead class="bg-white text-slate-600 font-bold border-b border-slate-200">
@@ -597,7 +536,6 @@ const handleBulkLeaveConfirm = async () => {
                     <Check v-if="selectedIds.includes(u.id)" :size="12" class="text-white" stroke-width="4" />
                   </div>
                 </td>
-                
                 <td class="p-4 sticky left-14 bg-white transition-colors z-10 border-r border-slate-50 max-w-[240px]">
                   <div class="flex items-center gap-3">
                     <img :src="avatar(u)" class="w-10 h-10 rounded-full border border-slate-200 object-cover bg-white shrink-0" @error="($event.target as any).src = getInitialsAvatar(u)"/>
@@ -611,9 +549,7 @@ const handleBulkLeaveConfirm = async () => {
                     </div>
                   </div>
                 </td>
-                
               <td class="p-4 hidden lg:table-cell" :class="{'max-w-[200px]': u.email || u.phone, 'text-center': !(u.email || u.phone)}">
-                  
                   <div v-if="u.email || u.phone" class="flex flex-col text-[12px] text-slate-600 min-w-0 gap-0.5 text-left">
                     <div v-if="u.email" class="flex items-center gap-1.5 truncate" :title="u.email">
                       <span class="truncate">{{ u.email }}</span>
@@ -623,38 +559,31 @@ const handleBulkLeaveConfirm = async () => {
                       <span class="truncate">{{ formatPhone(u.phone) }}</span>
                     </div>
                   </div>
-                  
-                  
                   <div v-else class="flex items-center justify-center w-full text-[12px] text-slate-400 italic">
                     ไม่มีข้อมูล
                   </div>
                 </td>
-                
                 <td class="p-4 text-center hidden sm:table-cell">
                   <span class="border text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider inline-block" :class="roleBadge(u.role)">
                     {{ roleLabel(u) }}
                   </span>
                 </td>
-                
                 <td class="p-4 text-center hidden sm:table-cell">
                   <span class="border text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider inline-block" :class="statusBadge(u)">
                     {{ statusLabel(u) }}
                   </span>
                 </td>
-                
                 <td class="p-4 text-center hidden md:table-cell">
                   <div class="inline-flex flex-col items-center leading-none">
                     <span class="text-lg font-black text-slate-800">{{ u.registrations_count || 0 }}</span>
                     <span class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">กิจกรรม</span>
                   </div>
                 </td>
-                
                 <td class="p-4 hidden lg:table-cell">
                   <span class="text-[11px] font-medium text-slate-500 flex items-center gap-1.5">
                     {{ fmtDate(u.created_at) }}
                   </span>
                 </td>
-                
                 <td class="p-4 text-center sticky right-0 bg-white transition-colors z-10 border-l border-slate-50">
                   <button @click.stop="toggleMenu(u.id, $event)" 
                     class="w-10 h-10 mx-auto flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all action-menu-wrapper"
@@ -667,7 +596,6 @@ const handleBulkLeaveConfirm = async () => {
           </table>
         </div>
       </div>
-
       <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 pt-4 pb-4">
         <button @click="setPage(dtCurrentPage - 1)" :disabled="dtCurrentPage === 1"
           class="rounded-full border border-slate-200 bg-white text-slate-500 hover:text-orange-500 hover:border-orange-500 disabled:opacity-30 disabled:hover:text-slate-500 disabled:hover:border-slate-200 transition-all flex items-center justify-center flex-shrink-0"
@@ -695,15 +623,12 @@ const handleBulkLeaveConfirm = async () => {
       </div>
       <div class="h-32"></div> <!-- Space for dropdown menus and floating action bar -->
     </div>
-
     <!-- Persistent Bottom Actions Bar -->
     <div class="fixed bottom-0 right-0 z-[40] flex items-center justify-end gap-3 p-4 sm:p-6"
       :style="{ left: selectedIds.length > 0 ? 'var(--sidebar-width, 0)' : 'auto' }">
-      
       <!-- Selection Mode -->
       <template v-if="selectedIds.length > 0">
         <div class="flex items-center gap-3 w-full justify-between bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl px-4 py-3 max-w-7xl mx-auto overflow-hidden">
-          
           <div class="flex items-center gap-2 sm:gap-3 shrink-0">
             <div class="bg-orange-500 text-white px-3 sm:px-4 py-2 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap">
               เลือกไว้ {{ selectedIds.length }} รายการ
@@ -712,14 +637,12 @@ const handleBulkLeaveConfirm = async () => {
               ยกเลิก
             </button>
           </div>
-          
           <!-- Right side actions, horizontally scrollable on small screens to prevent overflow -->
           <div class="flex items-center gap-2 overflow-x-auto custom-scrollbar no-scrollbar py-1" style="scrollbar-width: none;">
             <div class="relative bulk-enroll-container shrink-0">
               <button @click.stop="toggleBulkEnroll" :disabled="submitting" class="h-9 sm:h-10 px-3 sm:px-4 flex items-center justify-center gap-1.5 sm:gap-2 bg-white border border-slate-200 text-slate-700 text-xs sm:text-[13px] font-bold rounded-xl hover:bg-slate-50 transition-all disabled:opacity-50" :class="{ 'border-orange-500 ring-2 ring-orange-500/10': showBulkEnrollMenu }">
                 <UserPlus :size="16" /> <span class="hidden sm:inline">ย้ายเข้ากิจกรรม</span><span class="sm:hidden">ย้ายเข้า</span>
               </button>
-              
               <!-- Bulk Enroll Dropdown -->
               <transition name="fade">
                 <div v-if="showBulkEnrollMenu" class="absolute bottom-full right-0 mb-3 w-[280px] sm:w-80 bg-white border border-slate-200 rounded-3xl p-4 z-50 animate-in zoom-in-95 origin-bottom">
@@ -737,12 +660,10 @@ const handleBulkLeaveConfirm = async () => {
                     </button>
                     <button @click="showBulkEnrollMenu = false" class="p-1.5 hover:bg-slate-100 rounded-full transition-colors text-slate-400"><X :size="14" /></button>
                   </div>
-
                   <div class="relative group mb-3">
                     <Search :size="14" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
                     <input v-model="bulkActSearch" type="text" placeholder="ค้นหาชื่อกิจกรรม..." class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-100 rounded-2xl text-xs focus:border-orange-500 transition-all outline-none" />
                   </div>
-                  
                   <div class="max-h-64 overflow-y-auto custom-scrollbar flex flex-col gap-1 mb-4">
                     <div v-for="act in filteredBulkActivities" :key="act.id" @click="toggleBulkAct(act.id)" class="flex items-center gap-3 p-2.5 rounded-2xl cursor-pointer transition-all border border-transparent" :class="selectedBulkActivities.includes(act.id) ? 'bg-orange-50 border-orange-100 text-orange-700' : 'text-slate-600'">
                       <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all" :class="selectedBulkActivities.includes(act.id) ? 'bg-orange-500 border-orange-500' : 'bg-white border-slate-200'">
@@ -751,7 +672,6 @@ const handleBulkLeaveConfirm = async () => {
                       <span class="text-sm font-bold truncate">{{ act.title }}</span>
                     </div>
                   </div>
-
                   <button @click="handleBulkEnrollConfirm" :disabled="selectedBulkActivities.length === 0 || submitting" class="w-full py-4 bg-orange-500 text-white rounded-2xl text-sm font-extrabold hover:bg-orange-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-2">
                     <Loader2 v-if="submitting" :size="20" class="animate-spin" />
                     <Check v-else :size="20" stroke-width="3" />
@@ -760,7 +680,6 @@ const handleBulkLeaveConfirm = async () => {
                 </div>
               </transition>
             </div>
-            
             <button @click="bulkBan" :disabled="submitting" class="bg-amber-100 text-amber-700 border border-amber-200 px-3 h-9 sm:h-10 rounded-xl text-xs sm:text-[13px] font-bold flex items-center gap-1.5 sm:gap-2 hover:bg-amber-200 transition-all shrink-0 disabled:opacity-50">
               <Loader2 v-if="submitting" :size="16" class="animate-spin" />
               <Ban v-else :size="16" />
@@ -774,7 +693,6 @@ const handleBulkLeaveConfirm = async () => {
           </div>
         </div>
       </template>
-
       <!-- Default Mode (Add Button) -->
       <template v-else>
        <button @click="quickAddUser" 
@@ -784,19 +702,15 @@ const handleBulkLeaveConfirm = async () => {
       </button>
       </template>
     </div>
-
     <Teleport to="body">
       <div v-if="localActiveMenuId !== null && activeMenuUser">
         <div @click="localActiveMenuId = null" class="fixed inset-0 z-[9998]"></div>
-        
         <div class="fixed z-[9999] w-56 bg-white border border-slate-200 rounded-2xl flex flex-col overflow-hidden transition-all duration-200 animate-in fade-in zoom-in-95"
              :style="{ top: localMenuPos.top + 'px', right: localMenuPos.right + 'px', transform: localMenuPos.transform }" @click.stop>
-          
           <div class="overflow-y-auto max-h-[280px] custom-scrollbar py-2">
             <div class="px-4 py-2 mb-1 border-b border-slate-100">
               <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">จัดการข้อมูล</p>
             </div>
-            
             <button @click="openModal('edit', activeMenuUser); localActiveMenuId = null" class="w-full px-4 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600 transition-colors flex items-center gap-3">
               <div class="p-1.5 bg-slate-50 rounded-lg text-slate-500"><Pencil :size="16" /></div> แก้ไขข้อมูล
             </button>
@@ -813,11 +727,9 @@ const handleBulkLeaveConfirm = async () => {
               </div> 
               {{ submitting ? 'กำลังเตะ...' : 'เตะออกระบบ' }}
             </button>
-
             <div class="px-4 py-2 mt-2 mb-1 border-b border-slate-100">
               <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">จัดการบัญชี</p>
             </div>
-
             <button v-if="activeMenuUser.is_suspended > 0" @click="unban(activeMenuUser); localActiveMenuId = null" :disabled="submitting" class="w-full px-4 py-2.5 text-left text-sm font-bold text-emerald-600 hover:bg-emerald-50 transition-colors flex items-center gap-3 disabled:opacity-50">
               <div class="p-1.5 bg-emerald-100/50 rounded-lg text-emerald-500">
                 <Loader2 v-if="submitting" :size="16" class="animate-spin" />
@@ -840,11 +752,9 @@ const handleBulkLeaveConfirm = async () => {
         </div>
       </div>
     </Teleport>
-
     <teleport to="body">
       <transition name="fade">
         <div v-if="modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4 font-sarabun" @click.self="closeModal">
-          
           <!-- View Modal -->
           <div v-if="modal === 'view' && target" class="modal-window max-w-[650px]" style="animation: modalIn 0.2s ease">
             <div class="modal-header">
@@ -854,7 +764,6 @@ const handleBulkLeaveConfirm = async () => {
               </h3>
               <button @click="closeModal" class="p-2 text-slate-400 hover:text-slate-700 rounded-full transition-colors"><X :size="20" /></button>
             </div>
-
             <div class="modal-body flex flex-col gap-12 bg-white px-10 py-12 font-sarabun">
               <!-- Profile Header Section -->
               <div class="flex items-center gap-8 pb-10 border-b border-slate-100">
@@ -869,7 +778,6 @@ const handleBulkLeaveConfirm = async () => {
                   </div>
                 </div>
               </div>
-
               <!-- Section: Personal Info -->
               <div class="flex flex-col gap-8">
                 <h5 class="text-base font-bold text-slate-800 flex items-center gap-3">
@@ -889,7 +797,6 @@ const handleBulkLeaveConfirm = async () => {
                   </div>
                 </div>
               </div>
-
              <!-- Section: Contact Info -->
               <div class="flex flex-col gap-8">
                 <h5 class="text-base font-bold text-slate-800 flex items-center gap-3">
@@ -903,12 +810,10 @@ const handleBulkLeaveConfirm = async () => {
                       { label: 'โทรศัพท์', val: formatPhone(target.phone) },
                     ]" :key="field.label" class="flex items-baseline gap-2">
                     <span class="text-slate-700 text-[13px] font-bold flex-shrink-0">{{ field.label }}:</span>
-                    
                     <!-- 💡 แก้ไขตรงบรรทัดนี้: เพิ่มคลาส 'break-all' ลงไปใน class ฝั่ง text-slate-800 -->
                     <span :class="field.val ? 'text-slate-800 text-base break-all' : 'text-slate-300 italic text-base'">
                       {{ field.val || 'ไม่ระบุ' }}
                     </span>
-                    
                   </div>
                   <div class="sm:col-span-2 flex flex-col gap-2">
                     <span class="text-slate-700 text-[13px] font-bold">ที่อยู่ปัจจุบัน:</span>
@@ -916,7 +821,6 @@ const handleBulkLeaveConfirm = async () => {
                   </div>
                 </div>
               </div>
-
               <!-- Section: Health Goals -->
               <div class="flex flex-col gap-8">
                 <h5 class="text-base font-bold text-slate-800 flex items-center gap-3">
@@ -935,7 +839,6 @@ const handleBulkLeaveConfirm = async () => {
                   </div>
                 </div>
               </div>
-
               <!-- Section: System info -->
               <div class="flex flex-col gap-8">
                 <h5 class="text-base font-bold text-slate-800 flex items-center gap-3">
@@ -956,7 +859,6 @@ const handleBulkLeaveConfirm = async () => {
                 </div>
               </div>
             </div>
-
             <div class="modal-footer">
               <button @click="closeModal" class="flex-1 sm:flex-none px-6 py-3 text-sm font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">ปิดหน้าต่าง</button>
               <button @click="openModal('edit', target)" class="flex-1 sm:flex-none px-8 py-3 text-sm font-bold text-white bg-orange-500 rounded-xl hover:bg-orange-600 transition-colors flex items-center justify-center gap-2">
@@ -964,7 +866,6 @@ const handleBulkLeaveConfirm = async () => {
               </button>
             </div>
           </div>
-
           <!-- Edit Modal -->
           <div v-if="modal === 'edit' && target" class="modal-window max-w-[650px]" style="animation: modalIn 0.2s ease">
             <div class="modal-header">
@@ -975,7 +876,6 @@ const handleBulkLeaveConfirm = async () => {
               </h3>
               <button @click="closeModal" class="p-2 text-slate-400 hover:text-slate-700 rounded-full transition-colors"><X :size="20" /></button>
             </div>
-
             <div class="modal-body flex flex-col gap-12 bg-white px-10 py-12 font-sarabun">
               <!-- Section: Personal Info -->
               <div class="flex flex-col gap-8">
@@ -1011,7 +911,6 @@ const handleBulkLeaveConfirm = async () => {
                         </span>
                         <ChevronDown :size="18" class="text-slate-400 transition-transform duration-200" :class="{ 'rotate-180': activeDropdown === 'gender' }" />
                       </button>
-                      
                       <transition name="fade">
                         <div v-if="activeDropdown === 'gender'" class="absolute z-[100] mt-2 w-full bg-white border border-slate-100 rounded-2xl shadow-xl py-2 animate-in fade-in zoom-in-95">
                           <button v-for="opt in [{v:'',l:'-ไม่ระบุ-'}, {v:'male',l:'ชาย'}, {v:'female',l:'หญิง'}]" :key="opt.v"
@@ -1030,7 +929,6 @@ const handleBulkLeaveConfirm = async () => {
                   </div>
                 </div>
               </div>
-
               <!-- Section: Contact Info -->
               <div class="flex flex-col gap-8">
                 <h5 class="text-base font-bold text-slate-800 flex items-center gap-3">
@@ -1052,7 +950,6 @@ const handleBulkLeaveConfirm = async () => {
                   </div>
                 </div>
               </div>
-
               <!-- Section: Health Goals -->
               <div class="flex flex-col gap-8">
                 <h5 class="text-base font-bold text-slate-800 flex items-center gap-3">
@@ -1071,7 +968,6 @@ const handleBulkLeaveConfirm = async () => {
                         </span>
                         <ChevronDown :size="18" class="text-slate-400 transition-transform duration-200" :class="{ 'rotate-180': activeDropdown === 'main_goal' }" />
                       </button>
-                      
                       <transition name="fade">
                         <div v-if="activeDropdown === 'main_goal'" class="absolute z-[100] mt-2 w-full bg-white border border-slate-100 rounded-2xl shadow-xl py-2 max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95">
                           <button @click="editForm.main_goal = ''; activeDropdown = null" class="w-full px-5 py-2.5 text-left text-sm font-bold text-slate-400 hover:bg-slate-50">- เลือกเป้าหมาย -</button>
@@ -1099,7 +995,6 @@ const handleBulkLeaveConfirm = async () => {
                   </div>
                 </div>
               </div>
-
               <!-- Section: System & Role -->
               <div class="flex flex-col gap-8">
                 <h5 class="text-base font-bold text-slate-800 flex items-center gap-3">
@@ -1116,7 +1011,6 @@ const handleBulkLeaveConfirm = async () => {
                         <span>{{ editForm.role === 'admin' ? 'Admin (ผู้ดูแลระบบ)' : 'User (ผู้ใช้งานทั่วไป)' }}</span>
                         <ChevronDown :size="18" class="text-orange-400 transition-transform duration-200" :class="{ 'rotate-180': activeDropdown === 'role' }" />
                       </button>
-                      
                       <transition name="fade">
                         <div v-if="activeDropdown === 'role'" class="absolute z-[100] mt-2 w-full bg-white border border-slate-100 rounded-2xl shadow-xl py-2 animate-in fade-in zoom-in-95">
                           <button @click="editForm.role = 'user'; activeDropdown = null" 
@@ -1140,7 +1034,6 @@ const handleBulkLeaveConfirm = async () => {
                         </span>
                         <ChevronDown :size="18" class="text-slate-400 transition-transform duration-200" :class="{ 'rotate-180': activeDropdown === 'role_type' }" />
                       </button>
-                      
                       <transition name="fade">
                         <div v-if="activeDropdown === 'role_type'" class="absolute z-[100] mt-2 w-full bg-white border border-slate-100 rounded-2xl shadow-xl py-2 max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95">
                           <button @click="editForm.role_type = ''; activeDropdown = null" class="w-full px-5 py-2.5 text-left text-sm font-bold text-slate-400 hover:bg-slate-50">- เลือก -</button>
@@ -1167,7 +1060,6 @@ const handleBulkLeaveConfirm = async () => {
                         </span>
                         <ChevronDown :size="18" class="text-slate-400 transition-transform duration-200" :class="{ 'rotate-180': activeDropdown === 'role_detail_1' }" />
                       </button>
-                      
                       <transition name="fade">
                         <div v-if="activeDropdown === 'role_detail_1'" class="absolute z-[100] mt-2 w-full bg-white border border-slate-100 rounded-2xl shadow-xl py-2 max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95">
                           <button @click="editForm.role_detail_1 = ''; activeDropdown = null" class="w-full px-5 py-2.5 text-left text-sm font-bold text-slate-400 hover:bg-slate-50">- เลือก -</button>
@@ -1189,43 +1081,34 @@ const handleBulkLeaveConfirm = async () => {
                   <div v-if="editForm.role_type === 'นักศึกษา'" class="col-span-1">
                   <label class="block text-[13px] font-bold text-slate-700 mb-2.5">ชั้นปีที่ศึกษา</label>
                   <div class="relative custom-select-container">
-                    
                     <!-- 1. ปรับปรุงปุ่ม Toggle -->
                     <button @click.stop="toggleDropdown('role_detail_2')" type="button" 
                       class="w-full px-5 py-3.5 bg-white border-2 rounded-2xl outline-none text-base transition-all flex items-center justify-between"
                       :class="activeDropdown === 'role_detail_2' ? 'border-orange-500' : 'border-slate-200 hover:border-slate-300'">
-                      
                       <!-- เปลี่ยนสีข้อความให้ชัดเจนเมื่อถูกเลือก -->
                       <span :class="editForm.role_detail_2 ? 'text-slate-900 font-bold' : 'text-slate-400 font-normal'">
                         {{ editForm.role_detail_2 || '- เลือกชั้นปี -' }}
                       </span>
-                      
                       <!-- หมุนลูกศรและเปลี่ยนสีเมื่อ Active -->
                       <ChevronDown :size="18" class="transition-transform duration-200" 
                         :class="activeDropdown === 'role_detail_2' ? 'text-orange-500 rotate-180' : 'text-slate-400'" />
                     </button>
-                    
                     <!-- 2. ปรับปรุงรายการ Dropdown -->
                     <transition name="fade">
                       <div v-if="activeDropdown === 'role_detail_2'" 
                           class="absolute z-[110] mt-2 w-full bg-white border border-slate-200 rounded-2xl py-2 max-h-60 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95">
-                        
                         <button @click="editForm.role_detail_2 = ''; activeDropdown = null" 
                                 class="w-full px-5 py-3 text-left text-sm font-medium text-slate-400 transition-colors">
                           - ไม่ระบุ / ยกเลิกการเลือก -
                         </button>
-                        
                         <!-- ลูปรายการจาก uniYears -->
                         <button v-for="y in uniYears" :key="y" 
                           @click="editForm.role_detail_2 = y; activeDropdown = null"
                           class="w-full px-5 py-3 text-sm font-bold transition-all flex items-center justify-between group"
                           :class="editForm.role_detail_2 === y ? 'text-orange-700 bg-orange-50' : 'text-slate-700 hover:text-orange-600'">
-                          
                           <span>{{ y }}</span>
-                          
                           <!-- เพิ่มไอคอน Check เมื่อรายการนี้ตรงกับค่าที่เลือก -->
                           <Check v-if="editForm.role_detail_2 === y" :size="16" class="text-orange-500" stroke-width="3" />
-                          
                         </button>
                       </div>
                     </transition>
@@ -1242,7 +1125,6 @@ const handleBulkLeaveConfirm = async () => {
                 </div>
               </div>
             </div>
-
             <div class="modal-footer">
               <button @click="closeModal" class="flex-1 sm:flex-none px-6 py-3 text-sm font-bold text-slate-600 bg-slate-100 rounded-xl hover:bg-slate-200 transition-colors">ยกเลิก</button>
               <button @click="saveEdit" :disabled="submitting" class="flex-1 sm:flex-none px-8 py-3 text-sm font-bold text-white bg-orange-500 rounded-xl hover:bg-orange-600 transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50">
@@ -1250,7 +1132,6 @@ const handleBulkLeaveConfirm = async () => {
               </button>
             </div>
           </div>
-
           <div v-if="modal === 'ban' && target" class="bg-white w-full max-w-sm border border-slate-200 flex flex-col rounded-2xl" style="animation: modalIn 0.2s ease">
             <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-red-50 rounded-t-2xl">
               <h3 class="font-bold text-red-800 text-base flex items-center gap-2"><Ban :size="18" /> ยืนยันการแบนผู้ใช้</h3>
@@ -1276,14 +1157,12 @@ const handleBulkLeaveConfirm = async () => {
               </button>
             </div>
           </div>
-
           <!-- Activity Enrollment Modal -->
           <div v-if="modal === 'enroll' && target" class="bg-white w-full max-w-md border border-slate-200 flex flex-col rounded-3xl overflow-hidden" style="animation: modalIn 0.2s ease">
             <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-white">
               <h3 class="font-bold text-orange-800 text-base flex items-center gap-2"><Calendar :size="18" /> จัดการกิจกรรมที่เข้าร่วม</h3>
               <button @click="closeModal" class="p-1.5 text-orange-400 hover:text-orange-800 bg-white rounded-full"><X :size="18" /></button>
             </div>
-            
             <div class="modal-body !p-6 flex flex-col gap-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
               <div class="flex items-center gap-3 p-4 bg-white rounded-2xl border border-slate-100">
                 <img :src="avatar(target)" class="w-12 h-12 rounded-full object-cover border-2 border-white" />
@@ -1292,7 +1171,6 @@ const handleBulkLeaveConfirm = async () => {
                   <p class="text-[11px] text-slate-400 mt-0.5 tracking-wide">{{ target.email || target.id_code || 'ไม่มีข้อมูลติดต่อ' }}</p>
                 </div>
               </div>
-
               <!-- Current Registrations -->
               <div class="space-y-4">
                 <div class="flex items-center justify-between px-1">
@@ -1305,7 +1183,6 @@ const handleBulkLeaveConfirm = async () => {
                     </div>
                   </button>
                 </div>
-
                 <!-- Search Current Registrations -->
                 <div v-if="userRegistrations.length > 5" class="relative group">
                   <Search :size="14" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
@@ -1316,7 +1193,6 @@ const handleBulkLeaveConfirm = async () => {
                     class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-100 rounded-2xl text-xs focus:border-orange-500 transition-all outline-none"
                   />
                 </div>
-
                 <div v-if="loadingRegistrations" class="flex justify-center py-10">
                   <Loader2 class="animate-spin text-orange-500" :size="32" />
                 </div>
@@ -1329,13 +1205,11 @@ const handleBulkLeaveConfirm = async () => {
                       @click="selectedCurrentActivities.includes(reg.id) ? selectedCurrentActivities = selectedCurrentActivities.filter(id => id !== reg.id) : selectedCurrentActivities.push(reg.id)"
                       class="group flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-2xl hover:border-orange-200 transition-all cursor-pointer"
                       :class="{ 'bg-orange-50/30 border-orange-200': selectedCurrentActivities.includes(reg.id) }">
-                      
                       <!-- Circular Toggle -->
                       <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
                         :class="selectedCurrentActivities.includes(reg.id) ? 'bg-orange-500 border-orange-500' : 'bg-white border-slate-200 group-hover:border-slate-300'">
                         <Check v-if="selectedCurrentActivities.includes(reg.id)" :size="14" class="text-white" stroke-width="4" />
                       </div>
-
                       <div v-if="reg.poster" class="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-slate-100">
                         <img :src="reg.poster" class="w-full h-full object-cover" />
                       </div>
@@ -1349,7 +1223,6 @@ const handleBulkLeaveConfirm = async () => {
                       </button>
                     </div>
                   </div>
-
                   <!-- Bulk Removal Button -->
                   <transition name="fade">
                     <button 
@@ -1365,7 +1238,6 @@ const handleBulkLeaveConfirm = async () => {
                   </transition>
                 </div>
               </div>
-
               <!-- Add to New Activity (Checklist Mode) -->
               <div v-if="allActivities.length > userRegistrations.length" class="pt-6 border-t border-slate-100 space-y-4">
                 <div class="flex items-center justify-between px-1">
@@ -1378,7 +1250,6 @@ const handleBulkLeaveConfirm = async () => {
                     </div>
                   </button>
                 </div>
-
                 <!-- Search Input -->
                 <div class="relative group">
                   <Search :size="16" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
@@ -1392,7 +1263,6 @@ const handleBulkLeaveConfirm = async () => {
                     <X :size="14" />
                   </button>
                 </div>
-
                 <div class="flex flex-col gap-2 max-h-60 overflow-y-auto custom-scrollbar pr-2 py-1">
                   <div 
                     v-for="act in filteredActivities" 
@@ -1411,7 +1281,6 @@ const handleBulkLeaveConfirm = async () => {
                     {{ singleActSearch ? 'ไม่พบกิจกรรมที่ค้นหา' : 'ไม่มีกิจกรรมใหม่ให้เข้าร่วมแล้ว' }}
                   </p>
                 </div>
-
                 <!-- Confirm Action -->
                 <transition name="fade">
                   <button 
@@ -1426,7 +1295,6 @@ const handleBulkLeaveConfirm = async () => {
                   </button>
                 </transition>
               </div>
-
               <!-- Message when all activities joined -->
               <div v-else class="pt-8 pb-4 flex flex-col items-center justify-center text-center space-y-3 border-t border-slate-100">
                 <div class="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center">
@@ -1438,7 +1306,6 @@ const handleBulkLeaveConfirm = async () => {
                 </div>
               </div>
             </div>
-
             <div class="p-6 bg-white border-t border-slate-100">
               <button @click="closeModal" class="w-full py-4 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all">ปิดหน้าต่าง</button>
             </div>
@@ -1446,24 +1313,19 @@ const handleBulkLeaveConfirm = async () => {
         </div>
       </transition>
     </teleport>
-
   </div>
 </template>
-
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
-
 .font-sarabun {
   font-family: 'Sarabun', sans-serif;
 }
 .font-sarabun input, .font-sarabun select, .font-sarabun button, .font-sarabun textarea {
   font-family: 'Sarabun', sans-serif;
 }
-
 /* Transitions */
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
-
 @keyframes zoomIn {
   from { opacity: 0; transform: scale(0.98); }
   to { opacity: 1; transform: scale(1); }
@@ -1471,15 +1333,12 @@ const handleBulkLeaveConfirm = async () => {
 .animate-in { 
   animation: zoomIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
 @keyframes modalIn {
   from { opacity: 0; transform: scale(0.98) translateY(4px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
-
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
 /* ─── Search Pill ─── */
 .search-pill-container { 
   display: flex; 
@@ -1521,26 +1380,22 @@ const handleBulkLeaveConfirm = async () => {
   transition: all 0.2s;
 }
 .btn-clear-search:hover { background: #E5E7EB; color: #1e293b; }
-
 /* Base sticky header styling */
 thead th.sticky {
   z-index: 20;
 }
-
 @media (max-width: 768px) {
   /* Tighter table for mobile */
   table th, table td {
     padding: 12px 10px !important;
     font-size: 12px !important;
   }
-  
   /* Sticky columns adjustments for mobile */
   .sticky.left-0 { 
     width: 45px !important;
     min-width: 45px !important; 
     border-right: none !important;
   }
-  
   /* Offset to perfectly cover the first column */
   .sticky.left-14 { 
     left: 44px !important;
@@ -1548,19 +1403,16 @@ thead th.sticky {
     max-width: 160px !important; 
     border-left: none !important;
   }
-  
   /* Manage column - narrower */
   th.w-20, td.sticky.right-0 {
     width: 50px !important;
     min-width: 50px !important;
   }
-  
   /* Remove all extra shadows */
   .sticky.left-14, .sticky.right-0 {
     box-shadow: none !important;
   }
 }
-
 /* ─── Premium Modal System ─── */
 .modal-window {
   background: white;
@@ -1572,7 +1424,6 @@ thead th.sticky {
   overflow: hidden;
   border: 1px solid #f1f5f9;
 }
-
 .modal-header {
   padding: 16px 24px;
   border-bottom: 1px solid #f1f5f9;
@@ -1583,7 +1434,6 @@ thead th.sticky {
   flex-shrink: 0;
   z-index: 10;
 }
-
 .modal-body {
   flex: 1;
   overflow-y: auto;
@@ -1591,7 +1441,6 @@ thead th.sticky {
   scrollbar-width: thin;
   scrollbar-color: #e2e8f0 transparent;
 }
-
 .modal-body::-webkit-scrollbar {
   width: 6px;
 }
@@ -1602,7 +1451,6 @@ thead th.sticky {
   background: #e2e8f0;
   border-radius: 10px;
 }
-
 .modal-footer {
   padding: 16px 24px;
   border-top: 1px solid #f1f5f9;
@@ -1613,7 +1461,6 @@ thead th.sticky {
   gap: 12px;
   flex-shrink: 0;
 }
-
 @media (max-width: 640px) {
   .modal-window {
     height: 92vh;
@@ -1630,7 +1477,6 @@ thead th.sticky {
     flex-wrap: wrap;
   }
 }
-
 /* Custom Scrollbar for Popup */
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;

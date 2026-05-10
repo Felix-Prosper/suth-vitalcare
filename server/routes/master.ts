@@ -14,7 +14,7 @@ router.get("/", async (req, res) => {
 
     res.json(rows);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -28,7 +28,7 @@ router.get("/:category", async (req, res) => {
 
     res.json(rows);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -63,7 +63,7 @@ router.post("/", requireAdmin, async (req, res) => {
     res.json(results);
   } catch (error: any) {
     console.error("[ERROR] Master Config Update Failed:", error);
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   }
 });
 
@@ -80,7 +80,7 @@ router.patch("/:id/toggle", requireAdmin, async (req, res) => {
     const [rows]: any = await pool.query('SELECT * FROM master_configs WHERE id = ?', [req.params.id]);
     res.json(rows[0] || {});
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   }
 });
 

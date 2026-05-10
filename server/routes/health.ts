@@ -56,7 +56,7 @@ router.get("/forms", async (req, res) => {
     res.json(data);
   } catch (error: any) {
     console.error("MySQL error fetching forms:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -67,7 +67,7 @@ router.get("/forms/:id", async (req, res) => {
     if (data.length === 0) return res.status(404).json({ error: "Form Not Found" });
     res.json(data[0]);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -123,7 +123,7 @@ router.post("/forms", async (req, res) => {
     res.json({ success: true, id: targetFormId });
   } catch (error: any) {
     await connection.rollback();
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   } finally {
     connection.release();
   }
@@ -177,7 +177,7 @@ router.post("/submissions", async (req, res) => {
   } catch (error: any) {
     await connection.rollback();
     console.error("Submission failed:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   } finally {
     connection.release();
   }
@@ -245,7 +245,7 @@ router.get("/check-submission/:eventId/:userId/:type", async (req, res) => {
     );
     res.json({ completed: rows.length > 0, submission: rows[0] || null });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -339,7 +339,7 @@ router.get("/pending-activity-tests/:userId", async (req, res) => {
     res.json(pending);
   } catch (error: any) {
     console.error("Pending tests error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

@@ -11,22 +11,29 @@ const router = express.Router();
 router.get("/", async (req, res) => {
   try {
     const { active, position } = req.query;
-    let query = "SELECT * FROM banners ORDER BY sort_order ASC, created_at DESC";
-    
+    let query =
+      "SELECT * FROM banners ORDER BY sort_order ASC, created_at DESC";
+
     if (active === "true") {
-      query = "SELECT * FROM banners WHERE is_active = TRUE AND (start_date IS NULL OR start_date <= CURDATE()) AND (end_date IS NULL OR end_date >= CURDATE()) ORDER BY sort_order ASC, created_at DESC";
+      query =
+        "SELECT * FROM banners WHERE is_active = TRUE AND (start_date IS NULL OR start_date <= CURDATE()) AND (end_date IS NULL OR end_date >= CURDATE()) ORDER BY sort_order ASC, created_at DESC";
     }
 
     const [rows]: any = await pool.query(query);
-    
+
     // Parse positions JSON and optionally filter by position
     const parsed = rows.map((r: any) => ({
       ...r,
-      positions: typeof r.positions === 'string' ? JSON.parse(r.positions) : (r.positions || ['hero'])
+      positions:
+        typeof r.positions === "string"
+          ? JSON.parse(r.positions)
+          : r.positions || ["hero"],
     }));
 
     if (position && active === "true") {
-      return res.json(parsed.filter((b: any) => b.positions.includes(position)));
+      return res.json(
+        parsed.filter((b: any) => b.positions.includes(position)),
+      );
     }
 
     res.json(parsed);
@@ -40,16 +47,19 @@ router.get("/", async (req, res) => {
 router.patch("/:id/toggle", async (req, res) => {
   try {
     const { id } = req.params;
-    await pool.query("UPDATE banners SET is_active = NOT is_active WHERE id = ?", [id]);
-    
+    await pool.query(
+      "UPDATE banners SET is_active = NOT is_active WHERE id = ?",
+      [id],
+    );
+
     // Log the action
     await logAudit({
-      userId: req.headers['x-user-id'] as string,
-      action: 'toggle_banner',
-      targetType: 'banner',
+      userId: req.headers["x-user-id"] as string,
+      action: "toggle_banner",
+      targetType: "banner",
       targetId: id,
       description: `เปลี่ยนสถานะการใช้งานแบนเนอร์ ID: ${id}`,
-      req
+      req,
     });
 
     // ✅ Emit realtime event
@@ -65,27 +75,48 @@ router.patch("/:id/toggle", async (req, res) => {
 // Create banner
 router.post("/", async (req, res) => {
   try {
-    const { title, subtitle, image_url, link_url, link_type, link_activity_id, position, positions, sort_order, is_active, start_date, end_date } = req.body;
-    const finalPositions = positions || (position ? [position] : ['hero']);
+    const {
+      title,
+      subtitle,
+      image_url,
+      link_url,
+      link_type,
+      link_activity_id,
+      position,
+      positions,
+      sort_order,
+      is_active,
+      start_date,
+      end_date,
+    } = req.body;
+    const finalPositions = positions || (position ? [position] : ["hero"]);
     const query = `
       INSERT INTO banners (title, subtitle, image_url, link_url, link_type, link_activity_id, positions, sort_order, is_active, start_date, end_date)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const [result]: any = await pool.query(query, [
-      title, subtitle || null, image_url, link_url || null, link_type || 'none', link_activity_id || null,
+      title,
+      subtitle || null,
+      image_url,
+      link_url || null,
+      link_type || "none",
+      link_activity_id || null,
       JSON.stringify(finalPositions),
-      sort_order || 0, is_active !== false, start_date || null, end_date || null
+      sort_order || 0,
+      is_active !== false,
+      start_date || null,
+      end_date || null,
     ]);
 
     // Log the action
     await logAudit({
-      userId: req.headers['x-user-id'] as string,
-      action: 'create_banner',
-      targetType: 'banner',
+      userId: req.headers["x-user-id"] as string,
+      action: "create_banner",
+      targetType: "banner",
       targetId: result.insertId,
       description: `สร้างแบนเนอร์: ${title}`,
       metadata: { title },
-      req
+      req,
     });
 
     // ✅ Emit realtime event
@@ -99,19 +130,39 @@ router.post("/", async (req, res) => {
 });
 
 // Update banner
-router.route("/:id")
-  .patch(async (req, res) => { updateHandler(req, res); })
-  .put(async (req, res) => { updateHandler(req, res); });
+router
+  .route("/:id")
+  .patch(async (req, res) => {
+    updateHandler(req, res);
+  })
+  .put(async (req, res) => {
+    updateHandler(req, res);
+  });
 
 async function updateHandler(req: any, res: any) {
-  console.log(`[DEBUG] Update /api/banners/${req.params.id} body:`, JSON.stringify(req.body));
+  console.log(
+    `[DEBUG] Update /api/banners/${req.params.id} body:`,
+    JSON.stringify(req.body),
+  );
   try {
     const { id } = req.params;
     const updates = req.body;
-    const allowedFields = ['title', 'subtitle', 'image_url', 'link_url', 'link_type', 'link_activity_id', 'positions', 'sort_order', 'is_active', 'start_date', 'end_date'];
-    
+    const allowedFields = [
+      "title",
+      "subtitle",
+      "image_url",
+      "link_url",
+      "link_type",
+      "link_activity_id",
+      "positions",
+      "sort_order",
+      "is_active",
+      "start_date",
+      "end_date",
+    ];
+
     const filteredUpdates: Record<string, any> = {};
-    
+
     // Map position to positions if present
     if (updates.position && !updates.positions) {
       updates.positions = [updates.position];
@@ -119,7 +170,7 @@ async function updateHandler(req: any, res: any) {
 
     for (const key of allowedFields) {
       if (key in updates) {
-        if (key === 'positions') {
+        if (key === "positions") {
           filteredUpdates[key] = JSON.stringify(updates[key]);
         } else {
           filteredUpdates[key] = updates[key];
@@ -128,22 +179,23 @@ async function updateHandler(req: any, res: any) {
     }
 
     const keys = Object.keys(filteredUpdates);
-    if (keys.length === 0) return res.status(400).json({ error: "No valid updates provided" });
+    if (keys.length === 0)
+      return res.status(400).json({ error: "No valid updates provided" });
 
-    const fields = keys.map(k => `${k} = ?`).join(", ");
+    const fields = keys.map((k) => `${k} = ?`).join(", ");
     const values = [...Object.values(filteredUpdates), id];
 
     await pool.query(`UPDATE banners SET ${fields} WHERE id = ?`, values);
-    
+
     // Log the action
     await logAudit({
-      userId: req.headers['x-user-id'] as string,
-      action: 'edit_banner',
-      targetType: 'banner',
+      userId: req.headers["x-user-id"] as string,
+      action: "edit_banner",
+      targetType: "banner",
       targetId: id,
       description: `แก้ไขแบนเนอร์ ID: ${id}`,
       metadata: { updates: Object.keys(filteredUpdates) },
-      req
+      req,
     });
 
     // ✅ Emit realtime event
@@ -162,7 +214,10 @@ router.delete("/:id", async (req, res) => {
     const { id } = req.params;
 
     // 1. Get image_url first to delete file from disk
-    const [rows]: any = await pool.query("SELECT image_url FROM banners WHERE id = ?", [id]);
+    const [rows]: any = await pool.query(
+      "SELECT image_url FROM banners WHERE id = ?",
+      [id],
+    );
     if (rows.length > 0) {
       const imageUrl = rows[0].image_url;
       if (imageUrl && imageUrl.startsWith('/uploads/')) {
@@ -173,22 +228,25 @@ router.delete("/:id", async (req, res) => {
             console.log(`[banner] Deleted physical file: ${filePath}`);
           }
         } catch (err: any) {
-          console.warn(`[banner] Failed to delete physical file: ${imageUrl}`, err.message);
+          console.warn(
+            `[banner] Failed to delete physical file: ${imageUrl}`,
+            err.message,
+          );
         }
       }
     }
 
     // 2. Delete from database
     await pool.query("DELETE FROM banners WHERE id = ?", [id]);
-    
+
     // Log the action
     await logAudit({
-      userId: req.headers['x-user-id'] as string,
-      action: 'delete_banner',
-      targetType: 'banner',
+      userId: req.headers["x-user-id"] as string,
+      action: "delete_banner",
+      targetType: "banner",
       targetId: id,
       description: `ลบแบนเนอร์ ID: ${id}`,
-      req
+      req,
     });
 
     // ✅ Emit realtime event

@@ -1,31 +1,23 @@
 <template>
   <div class="rank-app">
-    
     <!-- Backdrop for dropdown -->
     <div v-if="isDropdownOpen" class="dropdown-backdrop" @click="isDropdownOpen = false"></div>
-
     <div class="detail-view">
-      
       <div class="layout-wrapper">
-        
         <!-- Breadcrumb Header (Inside the main wrapper now) -->
         <header class="detail-header">
           <div class="breadcrumb-container relative">
-            
             <div class="breadcrumb-flat">
               <span class="bc-root-flat">VitalCare</span>
               <ChevronRight class="bc-separator-flat" :size="14" />
-              
               <div class="bc-dropdown-wrapper">
                 <button class="bc-active-flat" @click="isDropdownOpen = !isDropdownOpen" :class="{ 'is-open': isDropdownOpen }">
                   <span class="bc-text-flat">{{ currentActivityTitle }}</span>
                   <ChevronDown class="bc-chevron-flat" :size="14" :class="{ 'rotate-180': isDropdownOpen }" />
                 </button>
-
                 <!-- Dropdown Menu -->
                 <transition name="dropdown-fade">
                   <div v-if="isDropdownOpen" class="activity-dropdown-card">
-                    
                     <div class="dropdown-search">
                       <Search class="search-icon" :size="16" />
                       <input 
@@ -35,13 +27,11 @@
                         class="dropdown-search-input" 
                       />
                     </div>
-
                     <div class="dropdown-list" @scroll="handleDropdownScroll">
                       <div class="dropdown-item" :class="{ 'is-selected': !selectedActivityId }" @click="handleSelectActivity(null)">
                         <div class="di-name text-primary font-bold">อันดับรวมทั้งหมด</div>
                         <div class="di-desc">VitalCare System</div>
                       </div>
-
                       <div 
                         v-for="act in visibleActivities" 
                         :key="act.id"
@@ -52,11 +42,9 @@
                         <div class="di-name">{{ act.title }}</div>
                         <div class="di-desc">กิจกรรมท้าทาย</div>
                       </div>
-
                       <div v-if="filteredActivities.length === 0 && activitySearch" class="empty-search">
                         ไม่พบกิจกรรม
                       </div>
-                      
                       <div v-if="visibleActivities.length < filteredActivities.length" class="loading-more">
                         กำลังโหลดเพิ่ม...
                       </div>
@@ -65,10 +53,8 @@
                 </transition>
               </div>
             </div>
-            
           </div>
         </header>
-
         <main class="main-content">
           <div class="page-banner">
             <div class="banner-text">
@@ -76,7 +62,6 @@
               <p>แข่งขันกับเพื่อนๆ และทำลายสถิติของตัวคุณเอง</p>
             </div>
           </div>
-
           <div class="tabs-container">
             <button class="tab-btn" :class="{ active: activeTab === 'individual' }" @click="switchTab('individual')">
               อันดับบุคคล
@@ -85,19 +70,16 @@
               อันดับทีม
             </button>
           </div>
-
           <div class="leaderboard-card">
             <div class="list-header">
               <div class="col-rank">อันดับ</div>
               <div class="col-name">ชื่อ{{ activeTab === 'individual' ? 'ผู้ใช้งาน' : 'ทีม' }}</div>
               <div class="col-score">{{ isPoints ? 'แต้ม' : rankingUnitLong }}</div>
             </div>
-
             <div v-if="loading" class="loading-state">
               <div class="spinner"></div>
               <p>กำลังโหลดข้อมูล...</p>
             </div>
-
             <div v-else-if="tableRows.length === 0 || !tableRows[0]" class="empty-state">
               <div class="empty-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48" height="48">
@@ -106,21 +88,18 @@
               </div>
               <p>ยังไม่มีข้อมูลในกิจกรรมนี้</p>
             </div>
-
             <div v-else class="list-body">
               <template v-for="(item, idx) in tableRows" :key="idx">
                 <div v-if="item" 
                      class="list-row" 
                      :class="{ 'is-me': isCurrentUser(item), 'top-3': item.rank <= 3 }"
                      @click="handleItemClick(item)">
-                  
                   <div class="col-rank">
                     <span v-if="item.rank === 1" class="medal gold">1</span>
                     <span v-else-if="item.rank === 2" class="medal silver">2</span>
                     <span v-else-if="item.rank === 3" class="medal bronze">3</span>
                     <span v-else class="rank-num">{{ item.rank || (currentPage-1)*PAGE_SIZE + idx + 1 }}</span>
                   </div>
-
                   <div class="col-name">
                     <div v-if="activeTab === 'individual'" class="avatar">
                       <img v-if="getImage(item)" :src="getImage(item)" />
@@ -128,7 +107,6 @@
                     </div>
                     <div class="name-text">{{ getName(item) }}</div>
                   </div>
-
                   <div class="col-score">
                     <span class="score-val">{{ formatDist(getDistance(item)) }}</span>
                     <span class="score-unit">{{ isPoints ? 'คะแนน' : rankingUnitShort }}</span>
@@ -136,7 +114,6 @@
                 </div>
               </template>
             </div>
-
             <div v-if="!loading && tableRows[0]" class="flex justify-center pt-6 pb-6 border-t border-slate-100">
               <AppPagination 
                 :currentPage="currentPage" 
@@ -150,13 +127,11 @@
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRankings } from '../composables/useRankings'; 
 import { ChevronRight, ChevronDown, Search } from 'lucide-vue-next';
 import AppPagination from '../components/common/AppPagination.vue';
-
 const {
   PAGE_SIZE, authStore, activitySearch, selectedActivityId, 
   filteredActivities, visibleActivities,
@@ -166,33 +141,26 @@ const {
   isCurrentUser, changePage, switchTab, handleItemClick, scrollToMyRank,
   loadMoreActivities
 } = useRankings();
-
 const isDropdownOpen = ref(false);
-
 const handleDropdownScroll = (e) => {
   const target = e.target;
   if (target.scrollTop + target.clientHeight >= target.scrollHeight - 20) {
     loadMoreActivities();
   }
 };
-
-
 const currentActivityTitle = computed(() => {
   if (!selectedActivityId.value) return 'อันดับรวมทั้งหมด';
   const act = filteredActivities.value.find(a => String(a.id) === String(selectedActivityId.value));
   return act ? act.title : 'จัดอันดับผู้ท้าชิง';
 });
-
 const handleSelectActivity = (id) => {
   selectActivity(id);
   isDropdownOpen.value = false; 
 };
 </script>
-
 <style scoped>
 /* นำเข้าฟอนต์ Sarabun จาก Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
-
 .rank-app {
   --primary: #FF6A00;
   --primary-light: #FFF0E6;
@@ -205,9 +173,7 @@ const handleSelectActivity = (id) => {
   --radius-lg: 16px;
   --radius-md: 12px;
 }
-
 * { box-sizing: border-box; }
-
 .rank-app {
   background-color: var(--bg-color);
   min-height: 100vh;
@@ -215,21 +181,17 @@ const handleSelectActivity = (id) => {
   /* เปลี่ยนให้ใช้ฟอนต์ Sarabun เป็นหลัก */
   font-family: 'Sarabun', sans-serif;
 }
-
 .dropdown-backdrop {
   position: fixed;
   inset: 0;
   z-index: 30; /* Changed from 90 to 30 so it sits behind the header (z-index 40) */
   cursor: default;
 }
-
 .relative { position: relative; }
-
 .detail-view {
   background-color: var(--bg-color);
   min-height: 100vh;
 }
-
 .layout-wrapper {
   max-width: 1000px;
   margin: 0 auto;
@@ -238,40 +200,33 @@ const handleSelectActivity = (id) => {
   min-height: 100vh;
   /* Make it look like a large card if needed, but keeping it flat white is closer to the image */
 }
-
 /* Breadcrumb Styling - Flat style matching image */
 .detail-header {
   padding: 12px 0 24px 0;
   position: relative;
   z-index: 40;
 }
-
 .breadcrumb-container {
   display: flex;
   align-items: center;
 }
-
 .breadcrumb-flat {
   display: flex;
   align-items: center;
   gap: 8px;
   width: max-content;
 }
-
 .bc-root-flat {
   font-weight: 500;
   color: #3B82F6; /* Blueish color like the image */
   font-size: 0.95rem;
 }
-
 .bc-separator-flat {
   color: #94A3B8;
 }
-
 .bc-dropdown-wrapper {
   position: relative;
 }
-
 .bc-active-flat {
   display: flex;
   align-items: center;
@@ -286,7 +241,6 @@ const handleSelectActivity = (id) => {
 .bc-active-flat:hover {
   opacity: 0.8;
 }
-
 .bc-text-flat {
   font-weight: 700;
   font-size: 1rem;
@@ -295,14 +249,12 @@ const handleSelectActivity = (id) => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
 .bc-chevron-flat {
   transition: transform 0.3s;
   color: #6B7280;
   margin-top: 1px;
 }
 .rotate-180 { transform: rotate(180deg); }
-
 /* Dropdown Menu Styling */
 .activity-dropdown-card {
   position: absolute;
@@ -318,7 +270,6 @@ const handleSelectActivity = (id) => {
   display: flex;
   flex-direction: column;
 }
-
 /* Transitions */
 .dropdown-fade-enter-active,
 .dropdown-fade-leave-active {
@@ -329,7 +280,6 @@ const handleSelectActivity = (id) => {
   opacity: 0;
   transform: translateY(-10px);
 }
-
 .dropdown-search {
   padding: 12px 16px;
   border-bottom: 1px solid #F1F5F9;
@@ -347,7 +297,6 @@ const handleSelectActivity = (id) => {
   color: var(--text-main);
 }
 .dropdown-search-input::placeholder { color: #94A3B8; }
-
 .dropdown-list {
   max-height: 350px;
   overflow-y: auto;
@@ -358,7 +307,6 @@ const handleSelectActivity = (id) => {
 .dropdown-list::-webkit-scrollbar { width: 6px; }
 .dropdown-list::-webkit-scrollbar-track { background: transparent; }
 .dropdown-list::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 4px; }
-
 .dropdown-item {
   padding: 10px 12px;
   border-radius: 8px;
@@ -372,7 +320,6 @@ const handleSelectActivity = (id) => {
 .dropdown-item.is-selected {
   background: var(--primary-light);
 }
-
 .di-name {
   font-weight: 600;
   color: var(--text-main);
@@ -383,28 +330,22 @@ const handleSelectActivity = (id) => {
   text-overflow: ellipsis;
 }
 .dropdown-item.is-selected .di-name { color: var(--primary); }
-
 .di-desc {
   font-size: 0.8rem;
   color: var(--text-muted);
 }
-
 .empty-search {
   padding: 24px;
   text-align: center;
   color: var(--text-muted);
   font-size: 0.9rem;
 }
-
 .loading-more {
   padding: 12px;
   text-align: center;
   font-size: 0.85rem;
   color: #94A3B8;
 }
-
-
-
 .hamburger-btn {
   display: inline-flex;
   align-items: center;
@@ -427,11 +368,7 @@ const handleSelectActivity = (id) => {
 }
 .hamburger-btn svg { width: 20px; height: 20px; }
 .hamburger-text { margin-top: 2px; }
-
-
-
 .main-content { min-width: 0; }
-
 .page-banner {
   background: linear-gradient(135deg, #FF9A44 0%, #FF6A00 100%);
   border-radius: var(--radius-lg);
@@ -441,7 +378,6 @@ const handleSelectActivity = (id) => {
 }
 .banner-text h2 { margin: 0 0 8px 0; font-size: 1.8rem; font-weight: 700; color: #FFFFFF; }
 .banner-text p { margin: 0; opacity: 0.9; font-size: 1.05rem; }
-
 .tabs-container {
   display: flex; background: var(--surface); padding: 6px; border-radius: var(--radius-md);
   margin-bottom: 20px;
@@ -454,7 +390,6 @@ const handleSelectActivity = (id) => {
 }
 .tab-btn.active { background: var(--primary); color: white;
   box-shadow: 0 4px 12px rgba(255, 106, 0, 0.3); }
-
 .leaderboard-card {
   background: var(--surface); border-radius: var(--radius-lg); box-shadow: 0 4px 20px rgba(0,0,0,0.03);
   overflow: hidden;
@@ -467,7 +402,6 @@ const handleSelectActivity = (id) => {
 .col-rank { width: 60px; text-align: center; flex-shrink: 0; }
 .col-name { flex: 1; min-width: 0; }
 .col-score { width: 120px; text-align: right; flex-shrink: 0; }
-
 .list-row {
   display: flex; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); transition: 0.2s;
 }
@@ -477,7 +411,6 @@ const handleSelectActivity = (id) => {
   border-left: 4px solid var(--primary);
 }
 .list-row.is-me:hover { background: #FFEDD5; }
-
 .medal { 
   display: inline-flex; align-items: center; justify-content: center; 
   width: 28px; height: 28px;
@@ -490,7 +423,6 @@ const handleSelectActivity = (id) => {
 .medal.silver { background: #9CA3AF; box-shadow: 0 2px 4px rgba(156, 163, 175, 0.3); }
 .medal.bronze { background: #D97706; box-shadow: 0 2px 4px rgba(217, 119, 6, 0.3); }
 .rank-num { font-weight: 600; color: var(--text-muted); }
-
 .col-name { display: flex; align-items: center; gap: 16px; overflow: hidden; }
 .avatar {
   width: 40px; height: 40px; min-width: 40px; min-height: 40px;
@@ -503,29 +435,22 @@ const handleSelectActivity = (id) => {
 .col-score { display: flex; justify-content: flex-end; align-items: baseline; gap: 4px; }
 .score-val { font-weight: 700; font-size: 1.1rem; }
 .score-unit { font-size: 0.85rem; color: var(--text-muted); }
-
 .loading-state, .empty-state { padding: 60px 20px; text-align: center; color: var(--text-muted); }
 .spinner { width: 30px; height: 30px; min-width: 30px; min-height: 30px;
   border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; flex-shrink: 0;
   aspect-ratio: 1/1; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty-icon { color: var(--text-muted); opacity: 0.5; margin-bottom: 12px; display: flex; justify-content: center; }
-
-
 /* --- Responsive Adjustments --- */
-
 @media (max-width: 1024px) {
   .layout-wrapper { padding: 16px; padding-bottom: 100px; }
 }
-
 @media (max-width: 768px) {
   .page-banner { padding: 24px 16px; }
   .banner-text h2 { font-size: 1.5rem; }
-  
   .col-rank { width: 50px; }
   .col-score { width: 90px; }
   .score-val { font-size: 1.05rem; }
-  
   .activity-dropdown-card {
     position: fixed;
     top: 72px; /* right below header */
@@ -535,22 +460,17 @@ const handleSelectActivity = (id) => {
     max-width: none;
   }
 }
-
 @media (max-width: 480px) {
   .list-header { padding: 12px 16px; font-size: 0.8rem; }
   .list-row { padding: 12px 16px; }
-  
   .col-rank { width: 40px; }
   .col-name { gap: 10px; }
   .avatar { width: 32px; height: 32px; min-width: 32px; min-height: 32px; }
   .name-text { font-size: 0.95rem; }
-  
   .col-score { width: auto; min-width: 70px; }
   .score-val { font-size: 1rem; }
   .score-unit { font-size: 0.75rem; }
-  
   .tab-btn { font-size: 0.9rem; padding: 10px; }
-  
   .bc-root-flat { display: none; } /* Hide "VitalCare" on very small screens */
   .bc-separator-flat { display: none; }
 }

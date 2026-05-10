@@ -74,7 +74,7 @@ router.get("/", async (req, res) => {
   } catch (error: any) {
     await connection.rollback();
     console.error("Fetch teams error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   } finally {
     connection.release();
   }
@@ -140,7 +140,7 @@ router.post("/", async (req, res) => {
     res.json({ success: true, teamId: newTeamId });
   } catch (error: any) {
     await connection.rollback();
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   } finally {
     connection.release();
   }
@@ -183,7 +183,7 @@ router.post("/join", async (req, res) => {
 
     res.json({ success: true });
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   }
 });
 
@@ -221,7 +221,7 @@ router.post("/join-by-code", async (req, res) => {
 
     res.json({ success: true, teamId: team.id });
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   }
 });
 
@@ -301,7 +301,7 @@ router.post("/leave", async (req, res) => {
     res.json({ success: true });
   } catch (error: any) {
     await connection.rollback();
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   } finally {
     connection.release();
   }
@@ -366,7 +366,7 @@ router.post("/kick", async (req, res) => {
     res.json({ success: true });
   } catch (error: any) {
     await connection.rollback();
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   } finally {
     connection.release();
   }
@@ -453,7 +453,7 @@ router.put("/:id", async (req, res) => {
     res.json({ success: true });
   } catch (error: any) {
     await connection.rollback();
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   } finally {
     connection.release();
   }
@@ -536,7 +536,7 @@ router.delete("/:id", async (req, res) => {
     res.json({ success: true });
   } catch (error: any) {
     await connection.rollback();
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   } finally {
     connection.release();
   }

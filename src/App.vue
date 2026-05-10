@@ -10,16 +10,12 @@ import {
   AlertTriangle, CheckCircle, Info, X, 
   RotateCcw, ShieldAlert, WifiOff, RefreshCcw, Loader2 
 } from 'lucide-vue-next';
-
 const route = useRoute();
 const router = useRouter();
 const appError = ref<any>(null);
 const isRouterReady = ref(false);
-
-
 // Error Boundary Handler: เปลี่ยน "จอขาว" ให้เป็น "หน้าสวยๆ ให้กด"
 onErrorCaptured((err, instance, info) => {
-  console.error('[GLOBAL ERROR CAPTURED]:', err, info);
   uiStore.errorState = {
     hasError: true,
     title: 'ขออภัย มีบางอย่างไม่ถูกต้อง',
@@ -28,17 +24,9 @@ onErrorCaptured((err, instance, info) => {
   };
   return false; // Stop error from bubbling
 });
-
 function reloadApp() {
   window.location.reload();
 }
-
-
-
-
-
-
-
 // Init Realtime Listeners (Centralized)
 useRealtime({
   onUserUpdated: (updatedUser) => {
@@ -49,11 +37,9 @@ useRealtime({
       if (updatedUser.role) authStore.user.role = updatedUser.role;
       if (updatedUser.team_id !== undefined) authStore.user.team_id = updatedUser.team_id;
       authStore.saveUser();
-
       // If role changed from admin/host to user, and we are in admin route -> KICK OUT!
       const isNowAdmin = updatedUser.role === 'admin' || updatedUser.role === 'host';
       const wasAdmin = oldRole === 'admin' || oldRole === 'host';
-      
       if (wasAdmin && !isNowAdmin && route.path.startsWith('/admin')) {
         uiStore.showAlert('error', 'สิทธิ์การใช้งานเปลี่ยนไป', 'บัญชีของคุณถูกปรับลดสิทธิ์การใช้งาน กรุณาติดต่อผู้ดูแลระบบหากคิดว่าเป็นข้อผิดพลาด', {
           confirmLabel: 'รับทราบ',
@@ -124,13 +110,11 @@ useRealtime({
     }
   }
 });
-
 onMounted(async () => {
   // Sync page title with route meta
   watch(() => route.meta?.title, (title) => {
     uiStore.setPageTitle(title as string);
   }, { immediate: true });
-
   // รอให้ Router เตรียมความพร้อมเพื่อป้องกัน UI กระตุก/เนฟบาร์แวบ
   // เพิ่ม Safety Timeout 5 วินาที เดี๋ยวมันค้างหน้าโหลด (แก้ปัญหาเครื่องช้า/เน็ตเน่า)
   const safetyTimer = setTimeout(() => {
@@ -139,7 +123,6 @@ onMounted(async () => {
       authStore.loading = false;
     }
   }, 5000);
-
   try {
     await router.isReady();
     isRouterReady.value = true;
@@ -147,17 +130,14 @@ onMounted(async () => {
     clearTimeout(safetyTimer);
   }
 });
-
 onUnmounted(() => {
 });
 </script>
-
 <template>
   <!-- Full Screen Initial Loading - แสดงจนกว่า Auth และ Router จะพร้อมจริงๆ -->
   <div v-if="authStore.loading || !isRouterReady" class="flex flex-col items-center justify-center min-h-screen bg-white">
     <div class="w-10 h-10 border-4 border-slate-100 border-t-[#F05A23] rounded-full animate-spin"></div>
   </div>
-
   <div v-else class="app-container">
       <!-- Global Error Screen (Error Boundary) -->
       <div v-if="appError" class="fixed inset-0 z-[9999] bg-white flex flex-col items-center justify-center p-6 text-center">
@@ -166,7 +146,6 @@ onUnmounted(() => {
         </div>
         <h1 class="text-2xl font-bold text-slate-800 mb-3">{{ appError.title }}</h1>
         <p class="text-slate-500 max-w-md mb-10 leading-relaxed">{{ appError.message }}</p>
-        
         <div class="flex flex-col gap-3 w-full max-w-xs">
           <button @click="reloadApp" class="flex items-center justify-center gap-2 bg-[#1d9e75] text-white font-bold py-4 px-8 rounded-2xl shadow-lg shadow-emerald-700/20 active:scale-95 transition-all">
             <RefreshCcw :size="20" /> ลองใหม่อีกครั้ง
@@ -175,12 +154,10 @@ onUnmounted(() => {
             ย้อนกลับไปหน้าหลัก
           </button>
         </div>
-        
         <div class="mt-12 text-slate-300 font-mono text-[10px] break-all max-w-xs cursor-help">
           Error Log: {{ appError.details.substring(0, 50) }}...
         </div>
       </div>
-
       <!-- Navigation & Main Content -->
       <Navbar v-if="!route.meta.hideNavbar" />
       <!-- Global Error Screen (พรีเมียมหน้า Error) -->
@@ -200,11 +177,9 @@ onUnmounted(() => {
           </button>
         </div>
       </Transition>
-
       <main class="main-content" :class="{ 'has-bottom-nav': !route.meta.hideNavbar }">
         <RouterView />
       </main>
-
       <!-- Global Toasts Stack -->
       <div class="fixed top-20 right-4 z-[9995] flex flex-col gap-3 items-end pointer-events-none">
         <TransitionGroup name="toast">
@@ -232,7 +207,6 @@ onUnmounted(() => {
           </div>
         </TransitionGroup>
       </div>
-
       <!-- Global Alert Modal -->
       <Transition name="modal-fade">
         <div v-if="uiStore.alertModal.show" class="fixed inset-0 z-[9998] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-6">
@@ -265,7 +239,6 @@ onUnmounted(() => {
           </div>
         </div>
       </Transition>
-
       <!-- Global Loading Overlay -->
       <Transition name="fade">
         <div v-if="uiStore.isPageLoading" class="fixed inset-0 z-[10000] bg-white flex flex-col items-center justify-center">
@@ -274,63 +247,50 @@ onUnmounted(() => {
       </Transition>
     </div>
 </template>
-
 <style>
 :root {
   --font-main: var(--font-sans);
   --primary: #1d9e75;
 }
-
 body {
   font-family: var(--font-main);
   background: #ffffff;
   color: #1e293b;
   -webkit-font-smoothing: antialiased;
 }
-
 .app-container { min-height: 100vh; }
-
 @media (max-width: 767px) {
   .main-content.has-bottom-nav {
     padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
 }
-
 /* Transitions */
 .toast-enter-from { transform: translateX(100px); opacity: 0; }
 .toast-leave-to   { transform: translateX(100px); opacity: 0; }
 .toast-item { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-
 .modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.3s ease; }
 .modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
-
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
-
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .animate-spin { animation: spin 0.8s linear infinite; }
-
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
 .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-
 @keyframes fade-in-up {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 .animate-fade-in-up { animation: fade-in-up 0.8s ease-out both; }
-
 @keyframes pop-in {
   from { transform: scale(0.85); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
 .animate-pop-in { animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-
 @keyframes bounce-soft { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 .animate-bounce-soft { animation: bounce-soft 3s ease-in-out infinite; }
-
 /* Status Classes */
 .success { background: #ecfdf5; }
 .error   { background: #fef2f2; }
 .maintenance { background: #fffbeb; }
 .info    { background: #eff6ff; }
-</style>
+</style>

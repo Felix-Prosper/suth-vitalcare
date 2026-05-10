@@ -65,7 +65,7 @@ router.get("/templates/:eventId", async (req, res) => {
     );
     res.json(rows[0] || null);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -155,11 +155,7 @@ router.post("/templates", async (req, res) => {
     res.status(200).json({ message: "Template saved successfully" });
   } catch (error: any) {
     console.error("[Cert] Save Error:", error);
-    res.status(500).json({ 
-      error: "Internal Server Error", 
-      message: error.message,
-      code: error.code
-    });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -416,7 +412,7 @@ router.get("/check/:eventId/:userId", async (req, res) => {
       }
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -770,7 +766,7 @@ router.post("/generate", async (req, res) => {
     res.status(201).json({ success: true, url: publicUrl });
   } catch (error: any) {
     console.error("Generate Error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -827,7 +823,7 @@ router.get("/download/:eventId/:userId", async (req, res) => {
     // Redirect to the actual file or serve it
     res.redirect(publicUrl);
   } catch (error: any) {
-    res.status(500).send(error.message);
+    res.status(500).send("Internal Server Error");
   }
 });
 
@@ -876,7 +872,7 @@ router.get("/available/:userId", async (req, res) => {
     // For simplicity, we return IDs where a template exists but hasn't been claimed.
     res.json(rows.map((r: any) => r.id));
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

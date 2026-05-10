@@ -11,14 +11,11 @@ import {
 } from 'lucide-vue-next';
 import * as fabric from 'fabric';
 import { authStore } from '../../store/auth';
-
 const props = defineProps<{ eventId: number; isOpen: boolean; }>();
 const emit  = defineEmits(['close', 'saved']);
-
 const canvasEl      = ref<HTMLCanvasElement | null>(null);
 const containerRef  = ref<HTMLElement | null>(null);
 let   canvas: fabric.Canvas | null = null;
-
 const loading       = ref(false);
 const saving        = ref(false);
 const saveSuccess   = ref(false);
@@ -30,22 +27,18 @@ const rightPanelOpen= ref(true);
 const toastMsg      = ref('');
 const toastType     = ref<'success'|'error'|'info'>('info');
 let   toastTimer: ReturnType<typeof setTimeout> | null = null;
-
 const isDirty       = ref(false);
 const lastSavedJson = ref('');
 const templateVersion = ref<number | null>(null);
-
 const historyStack  = ref<string[]>([]);
 const historyIndex  = ref(-1);
 const MAX_HISTORY   = 50;
 const MAX_W         = 900;
 const canvasWidth   = ref(800);
 const canvasHeight  = ref(565);
-
 const selectedObject  = ref<any>(null);
 const selectedProps   = reactive<Record<string,any>>({});
 const layers          = ref<any[]>([]);
-
 const eventData       = ref<any>(null);
 const liveDataMode    = ref(false);
 const sampleUsers     = ref<any[]>([]);
@@ -55,23 +48,19 @@ const showUserPicker  = ref(false);
 const userSearchQ     = ref('');
 const loadingUsers    = ref(false);
 const fontsReady      = ref(false);
-
 const fontDropdownOpen = ref(false);
 const fontDdRef = ref<HTMLElement | null>(null);
 const fontDdStyle = ref<Record<string, string>>({});
-
 const isMobile = computed(() => {
   if (typeof window === 'undefined') return false;
   return window.innerWidth < 768;
 });
 const showMobileWarn = ref(isMobile.value);
-
 const fontFamilies = [
   'Kanit','Sarabun','Prompt','Mitr','Chakra Petch',
   'Noto Sans Thai','IBM Plex Sans Thai','Thasadith',
   'Georgia','Playfair Display','Montserrat','Oswald',
 ];
-
 const colorPresets = [
   '#111827','#374151','#6b7280','#9ca3af',
   '#dc2626','#ea580c','#d97706','#16a34a',
@@ -79,7 +68,6 @@ const colorPresets = [
   '#ffffff','#f9fafb','#f3f4f6','#e5e7eb',
   '#ffd700','#c0392b','#8e44ad','#1abc9c',
 ];
-
 const placeholders = [
   { id:'user_fullname',   label:'ชื่อ-นามสกุล',  icon:User,       category:'user'  },
   { id:'user_nickname',   label:'ชื่อเล่น',       icon:User,       category:'user'  },
@@ -92,31 +80,26 @@ const placeholders = [
   { id:'event_location',  label:'สถานที่',        icon:MapPin,     category:'event' },
   { id:'issued_date',     label:'วันที่ออกใบ',    icon:Calendar,   category:'event' },
 ];
-
 const userPlaceholders  = computed(() => placeholders.filter(p => p.category==='user'));
 const eventPlaceholders = computed(() => placeholders.filter(p => p.category==='event'));
 const isText  = computed(() => ['i-text','textbox'].includes(selectedObject.value?.type));
 const canUndo = computed(() => historyIndex.value > 0);
 const canRedo = computed(() => historyIndex.value < historyStack.value.length - 1);
-
 function showToast(msg: string, type: 'success'|'error'|'info' = 'info') {
   toastMsg.value  = msg;
   toastType.value = type;
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { toastMsg.value = ''; }, 3000);
 }
-
 function sanitizeInput(str: string): string {
   return String(str).slice(0, 500).replace(/<[^>]*>/g, '');
 }
-
 const formatDateThai = (d: string) => {
   if (!d) return '';
   const dt = new Date(d);
   const m  = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   return `${dt.getDate()} ${m[dt.getMonth()]} ${dt.getFullYear()+543}`;
 };
-
 const toSafeUrl = (url: string) => {
   if (!url || typeof url !== 'string') return '';
   if (!url.startsWith('http') && !url.startsWith('/')) return '';
@@ -129,7 +112,6 @@ const toSafeUrl = (url: string) => {
     return url;
   } catch { return ''; }
 };
-
 const patchJsonForCORS = (obj: any): void => {
   if (!obj || typeof obj !== 'object') return;
   if (typeof obj.src === 'string') {
@@ -139,19 +121,16 @@ const patchJsonForCORS = (obj: any): void => {
   if (Array.isArray(obj.objects)) obj.objects.forEach(patchJsonForCORS);
   if (obj.backgroundImage) patchJsonForCORS(obj.backgroundImage);
 };
-
 const getPlaceholderDisplayText = (fieldId: string): string => {
   const found = placeholders.find(p => p.id === fieldId);
   return found ? `[ ${found.label} ]` : `[ ${fieldId} ]`;
 };
-
 const resolveCanvasText = (obj: any): string => {
   const raw: string = obj.text || '';
   const token = raw.match(/^\{\{(.+?)\}\}$/)?.[1];
   if (token) return getPlaceholderDisplayText(token);
   return raw;
 };
-
 function syncSelectedProps() {
   const obj = canvas?.getActiveObject() as any;
   if (!obj) { Object.keys(selectedProps).forEach(k => delete selectedProps[k]); return; }
@@ -171,12 +150,10 @@ function syncSelectedProps() {
   selectedProps.type        = obj.type;
   selectedProps.data        = obj.data;
 }
-
 function continueOnMobile() {
   showMobileWarn.value = false;
   setTimeout(initEditor, 100);
 }
-
 const waitFonts = async () => {
   try {
     await document.fonts.ready;
@@ -185,13 +162,11 @@ const waitFonts = async () => {
     fontsReady.value = true;
   }
 };
-
 onMounted(async () => {
   await waitFonts();
   if (props.isOpen && !isMobile.value) initEditor();
   window.addEventListener('beforeunload', handleBeforeUnload);
 });
-
 watch(() => props.isOpen, v => {
   if (v) {
     setTimeout(initEditor, 100);
@@ -199,19 +174,16 @@ watch(() => props.isOpen, v => {
     disposeCanvas();
   }
 });
-
 onUnmounted(() => {
   disposeCanvas();
   window.removeEventListener('beforeunload', handleBeforeUnload);
 });
-
 const handleBeforeUnload = (e: BeforeUnloadEvent) => {
   if (isDirty.value) {
     e.preventDefault();
     e.returnValue = '';
   }
 };
-
 const handleClose = async () => {
   if (isDirty.value) {
     const ok = window.confirm('มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก ต้องการออกโดยไม่บันทึกหรือไม่?');
@@ -219,7 +191,6 @@ const handleClose = async () => {
   }
   emit('close');
 };
-
 const initEditor = async () => {
   if (!canvasEl.value) return;
   if (canvas) { canvas.dispose(); canvas = null; }
@@ -228,7 +199,6 @@ const initEditor = async () => {
     backgroundColor: '#ffffff', preserveObjectStacking: true,
     fireRightClick: false, stopContextMenu: true,
   });
-
   canvas.on('selection:created', () => { selectedObject.value = canvas?.getActiveObject(); syncSelectedProps(); });
   canvas.on('selection:updated', () => { selectedObject.value = canvas?.getActiveObject(); syncSelectedProps(); });
   canvas.on('selection:cleared',  () => { selectedObject.value = null; syncSelectedProps(); });
@@ -237,22 +207,18 @@ const initEditor = async () => {
   canvas.on('object:moving',      () => syncSelectedProps());
   canvas.on('object:added',       () => { updateLayers(); markDirty(); });
   canvas.on('object:removed',     () => { updateLayers(); markDirty(); });
-
   await fetchTemplate();
   pushHistory();
 };
-
 const markDirty = () => {
   const current = canvas ? JSON.stringify((canvas as any).toObject(['data'])) : '';
   isDirty.value = current !== lastSavedJson.value;
 };
-
 function disposeCanvas() {
   if (canvas) { canvas.dispose(); canvas = null; selectedObject.value = null; }
   eventData.value = null;
   isDirty.value = false;
 }
-
 const pushHistory = () => {
   if (!canvas) return;
   const json = JSON.stringify(canvas.toObject(['data']));
@@ -262,7 +228,6 @@ const pushHistory = () => {
   if (historyStack.value.length > MAX_HISTORY) historyStack.value.shift();
   historyIndex.value = historyStack.value.length - 1;
 };
-
 const restoreJSON = async (json: string) => {
   if (!canvas) return;
   const parsed = JSON.parse(json);
@@ -275,7 +240,6 @@ const restoreJSON = async (json: string) => {
   selectedObject.value = null;
   syncSelectedProps();
 };
-
 const refreshDisplayTexts = () => {
   if (!canvas || liveDataMode.value) return;
   canvas.getObjects().forEach((obj: any) => {
@@ -287,7 +251,6 @@ const refreshDisplayTexts = () => {
   });
   canvas.renderAll();
 };
-
 const undo = async () => {
   if (!canUndo.value) return;
   if (liveDataMode.value) await toggleLiveMode();
@@ -295,7 +258,6 @@ const undo = async () => {
   await restoreJSON(historyStack.value[historyIndex.value]);
   showToast('ย้อนกลับแล้ว', 'info');
 };
-
 const redo = async () => {
   if (!canRedo.value) return;
   if (liveDataMode.value) await toggleLiveMode();
@@ -303,7 +265,6 @@ const redo = async () => {
   await restoreJSON(historyStack.value[historyIndex.value]);
   showToast('ทำซ้ำแล้ว', 'info');
 };
-
 const setBackgroundFit = (img: fabric.Image) => {
   if (!canvas) return;
   let w = img.width || 800, h = img.height || 565;
@@ -320,7 +281,6 @@ const setBackgroundFit = (img: fabric.Image) => {
   canvas.backgroundImage = img;
   canvas.renderAll();
 };
-
 const fetchTemplate = async () => {
   loading.value = true;
   try {
@@ -346,14 +306,12 @@ const fetchTemplate = async () => {
     updateLayers();
     lastSavedJson.value = canvas ? JSON.stringify((canvas as any).toObject(['data'])) : '';
     isDirty.value = false;
-  } catch (e) {
-    console.error('[fetchTemplate]', e);
+  } catch {
     showToast('โหลดเทมเพลตไม่สำเร็จ', 'error');
   } finally {
     loading.value = false;
   }
 };
-
 const checkConflict = async (): Promise<boolean> => {
   if (!templateVersion.value) return false;
   try {
@@ -367,14 +325,12 @@ const checkConflict = async (): Promise<boolean> => {
     return false;
   } catch { return false; }
 };
-
 const getTokenFromDisplayText = (text: string): string => {
   const match = text.match(/^\[ (.+?) \]$/);
   if (!match) return text;
   const found = placeholders.find(p => p.label === match[1]);
   return found ? `{{${found.id}}}` : text;
 };
-
 const serializeCanvasWithTokens = (): any => {
   if (!canvas) return null;
   const json = (canvas as any).toObject(['data']);
@@ -388,28 +344,24 @@ const serializeCanvasWithTokens = (): any => {
   }
   return json;
 };
-
 const saveTemplate = async () => {
   if (!canvas || saving.value) return;
   const wasLive = liveDataMode.value;
   if (wasLive) await toggleLiveMode();
-
   const hasConflict = await checkConflict();
   if (hasConflict) {
     const ok = window.confirm('มีผู้อื่นแก้ไขเทมเพลตนี้ไปแล้ว ต้องการบันทึกทับหรือไม่?');
     if (!ok) { showToast('ยกเลิกการบันทึก', 'info'); return; }
   }
-
   saving.value = true;
   try {
     const json   = serializeCanvasWithTokens();
     const bgImg  = canvas.backgroundImage as fabric.Image;
     const bgUrl  = bgImg ? bgImg.getSrc() : '';
-    const config = typeof eventData.value?.certificate_config === 'string' 
-      ? JSON.parse(eventData.value.certificate_config) 
+    const config = typeof eventData.value?.certificate_config === 'string'
+      ? JSON.parse(eventData.value.certificate_config)
       : (eventData.value?.certificate_config || {});
     const currentMode = config.issue_mode || 'immediately';
-
     const res    = await fetch('/api/certificates/templates', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -441,7 +393,6 @@ const saveTemplate = async () => {
     saving.value = false;
   }
 };
-
 const fetchSampleUsers = async () => {
   loadingUsers.value = true;
   try {
@@ -452,17 +403,16 @@ const fetchSampleUsers = async () => {
         selectedSampleUser.value = sampleUsers.value[0];
       }
     }
-  } catch (e) { console.error('[fetchSampleUsers]', e); }
-  finally { loadingUsers.value = false; }
+  } catch {
+    // intentionally silent (no console output in browser)
+  } finally { loadingUsers.value = false; }
 };
-
 const fetchEventData = async () => {
   try {
     const res = await fetch(`/api/activities/${props.eventId}`);
     if (res.ok) eventData.value = await res.json();
   } catch {}
 };
-
 const filteredUsers = computed(() => {
   const q = userSearchQ.value.toLowerCase().trim();
   if (!q) return sampleUsers.value.slice(0, 100);
@@ -473,7 +423,6 @@ const filteredUsers = computed(() => {
     (u.line_id  || '').toLowerCase().includes(q)
   ).slice(0, 100);
 });
-
 async function toggleLiveMode() {
   if (!canvas) return;
   if (liveDataMode.value) {
@@ -487,13 +436,11 @@ async function toggleLiveMode() {
     await applyLivePreview();
   }
 }
-
 const applyLivePreview = async () => {
   if (!canvas) return;
   const u   = selectedSampleUser.value || authStore.user || {};
   const ev  = eventData.value || {};
   const today = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' });
-
   const rep: Record<string,string> = {
     '{{user_fullname}}':   [u.fname_th,u.lname_th].filter(Boolean).join(' ') || 'ชื่อ-นามสกุล',
     '{{user_nickname}}':   u.nickname       || 'ชื่อเล่น',
@@ -505,20 +452,17 @@ const applyLivePreview = async () => {
     '{{event_location}}':  ev.location_name || 'สถานที่',
     '{{issued_date}}':     today,
   };
-
   const objs = canvas.getObjects();
   for (const obj of objs) {
     const o = obj as any;
     if (['i-text','text','textbox'].includes(o.type)) {
       const field = o.data?.field;
       const token = field ? `{{${field}}}` : null;
-      
       // Use a unique ID for the map key
       const objId = o.id || o.get('id') || String(o) + (o.left || 0) + (o.top || 0);
       if (!originalDataMap.has(objId)) {
         originalDataMap.set(objId, token || o.text);
       }
-
       // Force use token as base if field exists (Robust replacement)
       let txt = token || o.text || '';
       for (const [k,v] of Object.entries(rep)) {
@@ -528,7 +472,6 @@ const applyLivePreview = async () => {
       }
       o.set({ text: txt });
     }
-
     if (o.data?.field === 'user_picture') {
       const picUrl = toSafeUrl(u.picture_url || u.pictureUrl || u.avatar || '');
       if (picUrl) {
@@ -547,18 +490,18 @@ const applyLivePreview = async () => {
           });
           o.set({ visible: false });
           canvas.add(img);
-        } catch(e) { console.error('Live profile pic error', e); }
+        } catch {
+          // intentionally silent (no console output in browser)
+        }
       }
     }
   }
   canvas.renderAll();
 };
-
 const revertLivePreview = async () => {
   if (!canvas) return;
   const objs = canvas.getObjects();
   const toRemove: any[] = [];
-
   for (const obj of objs) {
     const o = obj as any;
     if (o.data?.isLivePreview) { toRemove.push(o); continue; }
@@ -574,12 +517,10 @@ const revertLivePreview = async () => {
       }
     }
   }
-
   toRemove.forEach(rm => canvas?.remove(rm));
   originalDataMap.clear();
   canvas.renderAll();
 };
-
 const selectSampleUser = async (user: any) => {
   selectedSampleUser.value = user;
   showUserPicker.value = false;
@@ -588,7 +529,6 @@ const selectSampleUser = async (user: any) => {
     await applyLivePreview();
   }
 };
-
 const addText = () => {
   if (!canvas) return;
   const t = new fabric.IText('พิมพ์ข้อความ', {
@@ -598,7 +538,6 @@ const addText = () => {
   });
   canvas.add(t); canvas.setActiveObject(t); canvas.renderAll(); pushHistory();
 };
-
 const addPlaceholder = (p: typeof placeholders[0]) => {
   if (!canvas) return;
   if (p.id === 'user_picture') {
@@ -620,14 +559,12 @@ const addPlaceholder = (p: typeof placeholders[0]) => {
   t.set('data', { field:p.id });
   canvas.add(t); canvas.setActiveObject(t); canvas.renderAll(); pushHistory();
 };
-
 const deleteSelected = () => {
   const a = canvas?.getActiveObject();
   if (!a) return;
   canvas?.remove(a); canvas?.discardActiveObject(); canvas?.renderAll();
   selectedObject.value = null; syncSelectedProps(); pushHistory();
 };
-
 const duplicateSelected = async () => {
   const a = canvas?.getActiveObject();
   if (!a) return;
@@ -636,7 +573,6 @@ const duplicateSelected = async () => {
   cloned.set({ left:(a.left||0)+20, top:(a.top||0)+20 });
   canvas?.add(cloned); canvas?.setActiveObject(cloned); canvas?.renderAll(); pushHistory();
 };
-
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -645,7 +581,6 @@ const fileToBase64 = (file: File): Promise<string> => {
     reader.readAsDataURL(file);
   });
 };
-
 const handleBgUpload = async (e: any) => {
   const file = e.target.files?.[0];
   if (!file) return;
@@ -655,25 +590,22 @@ const handleBgUpload = async (e: any) => {
   if (file.size > 10 * 1024 * 1024) {
     showToast('ไฟล์ต้องไม่เกิน 10MB', 'error'); return;
   }
-  
   loading.value = true;
   try {
     const b64 = await fileToBase64(file);
     const img = await (fabric.Image as any).fromURL(b64, { crossOrigin:'anonymous' });
-    if (canvas) { 
-      setBackgroundFit(img); 
-      pushHistory(); 
-      showToast('อัปโหลดพื้นหลังสำเร็จ', 'success'); 
+    if (canvas) {
+      setBackgroundFit(img);
+      pushHistory();
+      showToast('อัปโหลดพื้นหลังสำเร็จ', 'success');
     }
   } catch (err: any) {
     showToast('อัปโหลดล้มเหลว: ' + err.message, 'error');
   } finally { loading.value = false; }
 };
-
 const setZoom = (z: number) => { zoom.value = Math.max(0.3, Math.min(2, z)); };
 const zoomIn  = () => setZoom(zoom.value + 0.1);
 const zoomOut = () => setZoom(zoom.value - 0.1);
-
 const updateLayers = () => {
   if (!canvas) return;
   layers.value = [...canvas.getObjects()].reverse().map((obj:any, i) => ({
@@ -684,14 +616,12 @@ const updateLayers = () => {
     type: obj.type, visible: obj.visible!==false,
   }));
 };
-
 const bringToFront = () => { const a=canvas?.getActiveObject(); if(a&&canvas){(canvas as any).bringObjectToFront(a); canvas.renderAll();updateLayers();} };
 const bringForward = () => { const a=canvas?.getActiveObject(); if(a&&canvas){(canvas as any).bringObjectForward(a);canvas.renderAll();updateLayers();} };
 const sendBackward = () => { const a=canvas?.getActiveObject(); if(a&&canvas){(canvas as any).sendObjectBackwards(a);canvas.renderAll();updateLayers();} };
 const sendToBack   = () => { const a=canvas?.getActiveObject(); if(a&&canvas){(canvas as any).sendObjectToBack(a);  canvas.renderAll();updateLayers();} };
 const selectLayer  = (obj:any) => { if(!canvas)return; canvas.setActiveObject(obj);canvas.renderAll();selectedObject.value=obj;syncSelectedProps(); };
 const toggleVisible= (obj:any) => { obj.set({visible:!obj.visible});canvas?.renderAll();updateLayers(); };
-
 const updateStyle = (key: string, val: any) => {
   const obj = canvas?.getActiveObject() as any;
   if (!obj) return;
@@ -699,17 +629,14 @@ const updateStyle = (key: string, val: any) => {
   (selectedProps as any)[key] = val;
   canvas?.renderAll();
 };
-
 const updateFill = (val: string) => {
   if (!/^#[0-9A-Fa-f]{3,8}$/.test(val) && !/^rgba?\(/.test(val)) return;
   updateStyle('fill', val);
 };
-
 const toggleBold      = () => updateStyle('fontWeight', selectedProps.fontWeight==='bold' ? 'normal' : 'bold');
 const toggleItalic    = () => updateStyle('fontStyle',  selectedProps.fontStyle==='italic'? 'normal' : 'italic');
 const toggleUnderline = () => updateStyle('underline',  !selectedProps.underline);
 const setAlign        = (al:string) => updateStyle('textAlign', al);
-
 const onKeyDown = (e: KeyboardEvent) => {
   if (!props.isOpen) return;
   const tgt = e.target as HTMLElement;
@@ -721,7 +648,6 @@ const onKeyDown = (e: KeyboardEvent) => {
   if (ctrl && e.key==='d') { e.preventDefault(); duplicateSelected(); return; }
   if (!inInput && (e.key==='Delete'||e.key==='Backspace')) deleteSelected();
 };
-
 function openFontDropdown() {
   if (fontDdRef.value) {
     const rect = fontDdRef.value.getBoundingClientRect();
@@ -753,7 +679,6 @@ function selectFont(f: string) {
   fontDropdownOpen.value = false;
 }
 function onDocClickForDd() { fontDropdownOpen.value = false; }
-
 onMounted(() => {
   window.addEventListener('keydown', onKeyDown);
   document.addEventListener('click', onDocClickForDd);
@@ -764,12 +689,10 @@ onUnmounted(() => {
   if (toastTimer) clearTimeout(toastTimer);
 });
 </script>
-
 <template>
   <Teleport to="body">
     <Transition name="er-fade">
     <div v-if="isOpen" class="er">
-
     <Transition name="toast-slide">
     <div v-if="toastMsg" class="toast" :class="toastType">
       <Check         v-if="toastType==='success'" :size="14"/>
@@ -778,7 +701,6 @@ onUnmounted(() => {
       <span>{{ toastMsg }}</span>
     </div>
     </Transition>
-
     <header class="top-bar">
       <div class="tb-l">
         <button class="tb-back" @click="handleClose" title="กลับ">
@@ -791,7 +713,6 @@ onUnmounted(() => {
         <span class="tb-tag">Event #{{ eventId }}</span>
         <span v-if="isDirty" class="tb-dirty" title="มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก">●</span>
       </div>
-
       <div class="tb-c">
         <button class="tb-btn" :class="{dim:!canUndo}" @click="undo" title="Undo (Ctrl+Z)">
           <RotateCcw :size="14"/>
@@ -825,7 +746,6 @@ onUnmounted(() => {
           <User :size="14"/>
           <span v-if="!isMobile" class="live-lbl">{{ liveDataMode ? 'โหมดจำลอง' : 'จำลองข้อมูล' }}</span>
         </button>
-
         <div v-if="liveDataMode" class="user-sel-pill" @click="showUserPicker = true">
           <img
             :src="selectedSampleUser?.picture_url || 'https://api.dicebear.com/7.x/initials/svg?seed=U'"
@@ -835,7 +755,6 @@ onUnmounted(() => {
           <ChevronDown :size="10"/>
         </div>
       </div>
-
       <div class="tb-r">
         <button class="btn-save" :class="{saving,ok:saveSuccess}" @click="saveTemplate" :disabled="saving" title="บันทึก (Ctrl+S)">
           <Transition name="ico" mode="out-in">
@@ -850,9 +769,7 @@ onUnmounted(() => {
         <button class="tb-btn" :class="{'tb-on':rightPanelOpen}" @click="rightPanelOpen=!rightPanelOpen" title="แสดง/ซ่อน แผงขวา"><PanelRight :size="14"/></button>
       </div>
     </header>
-
     <div class="er-body">
-
       <Transition name="sl">
       <aside v-if="leftPanelOpen" class="panel pl">
         <div class="p-tabs">
@@ -863,7 +780,6 @@ onUnmounted(() => {
             <Move :size="12"/> Layers
           </button>
         </div>
-
         <div v-if="activeTab==='elements'" class="p-body">
           <section class="ps">
             <p class="ps-h">พื้นหลัง</p>
@@ -874,7 +790,6 @@ onUnmounted(() => {
               <input type="file" class="hidden" accept="image/png,image/jpeg" @change="handleBgUpload"/>
             </label>
           </section>
-
           <section class="ps">
             <p class="ps-h">ข้อความ</p>
             <button class="el-row" @click="addText" title="เพิ่มข้อความอิสระ">
@@ -885,7 +800,6 @@ onUnmounted(() => {
               </div>
             </button>
           </section>
-
           <section class="ps">
             <p class="ps-h">ข้อมูลผู้เข้าร่วม</p>
             <div class="ph-list">
@@ -899,7 +813,6 @@ onUnmounted(() => {
               </button>
             </div>
           </section>
-
           <section class="ps">
             <p class="ps-h">ข้อมูลกิจกรรม</p>
             <div class="ph-list">
@@ -914,7 +827,6 @@ onUnmounted(() => {
             </div>
           </section>
         </div>
-
         <div v-else class="p-body">
           <p class="lc">{{ layers.length }} layers</p>
           <div v-if="layers.length" class="llist">
@@ -944,7 +856,6 @@ onUnmounted(() => {
         </div>
       </aside>
       </Transition>
-
       <main class="cw" ref="containerRef">
         <div class="cs">
           <Transition name="fade">
@@ -953,7 +864,6 @@ onUnmounted(() => {
             <p>กำลังโหลดเทมเพลต...</p>
           </div>
           </Transition>
-
           <div
             v-if="showGrid"
             class="gl"
@@ -963,7 +873,6 @@ onUnmounted(() => {
               backgroundSize:`${40*zoom}px ${40*zoom}px`,
             }"
           ></div>
-
           <div
             class="cf"
             :style="{
@@ -975,17 +884,14 @@ onUnmounted(() => {
             <canvas ref="canvasEl"></canvas>
           </div>
         </div>
-
         <div class="zpill">
           <button @click="zoomOut" title="ย่อ"><ZoomOut :size="13"/></button>
           <span>{{ Math.round(zoom*100) }}%</span>
           <button @click="zoomIn"  title="ขยาย"><ZoomIn :size="13"/></button>
         </div>
       </main>
-
       <Transition name="sr">
       <aside v-if="rightPanelOpen" class="panel pr">
-
         <div v-if="selectedObject" class="p-body props">
           <div class="ph">
             <span class="pt">{{ isText?'ข้อความ':'องค์ประกอบ' }}</span>
@@ -994,7 +900,6 @@ onUnmounted(() => {
               <button class="ab red" title="ลบ (Del)"    @click="deleteSelected">  <Trash2 :size="11"/></button>
             </div>
           </div>
-
           <div class="pb">
             <p class="pl">ตำแหน่งและขนาด</p>
             <div class="coord-grid">
@@ -1034,7 +939,6 @@ onUnmounted(() => {
               </label>
             </div>
           </div>
-
           <div class="pb">
             <p class="pl">ลำดับชั้น</p>
             <div class="obs">
@@ -1048,9 +952,7 @@ onUnmounted(() => {
               </button>
             </div>
           </div>
-
           <div class="pdiv"></div>
-
           <template v-if="isText">
             <div class="pb">
               <p class="pl">ฟอนต์</p>
@@ -1078,7 +980,6 @@ onUnmounted(() => {
                 </Teleport>
               </div>
             </div>
-
             <!-- ส่วนที่ปรับปรุง: ขยายช่องกรอกข้อมูลให้เรียงแนวตั้งและกว้างขึ้น -->
             <div class="r-stack">
               <div class="pf">
@@ -1096,7 +997,6 @@ onUnmounted(() => {
                 />
               </div>
             </div>
-
             <div class="pb">
               <p class="pl">สไตล์</p>
               <div class="srow">
@@ -1110,7 +1010,6 @@ onUnmounted(() => {
               </div>
             </div>
           </template>
-
           <div class="pb">
             <p class="pl">{{ isText?'สีตัวอักษร':'สี' }}</p>
             <div class="crow">
@@ -1143,7 +1042,6 @@ onUnmounted(() => {
               </button>
             </div>
           </div>
-
           <div class="pb">
             <div class="pl-r">
               <p class="pl">ความโปร่งใส</p>
@@ -1156,14 +1054,12 @@ onUnmounted(() => {
               class="pr-range"
             />
           </div>
-
           <div class="pdiv"></div>
           <button class="del-btn" @click="deleteSelected" title="ลบ element นี้ (Del)">
             <Trash2 :size="13"/>
             <span>ลบ element นี้</span>
           </button>
         </div>
-
         <div v-else class="props-empty">
           <div class="em-rings">
             <div class="em-r r1"></div>
@@ -1180,11 +1076,9 @@ onUnmounted(() => {
             <div class="sc"><kbd>Del</kbd><span>Delete</span></div>
           </div>
         </div>
-
       </aside>
       </Transition>
     </div>
-
     <Transition name="modal">
     <div v-if="showUserPicker" class="modal-bg" @click.self="showUserPicker=false">
       <div class="user-picker-box">
@@ -1222,7 +1116,6 @@ onUnmounted(() => {
       </div>
     </div>
     </Transition>
-
     <Transition name="modal">
     <div v-if="showMobileWarn" class="modal-bg">
       <div class="mobile-warn-box">
@@ -1242,17 +1135,13 @@ onUnmounted(() => {
       </div>
     </div>
     </Transition>
-
   </div>
   </Transition>
   </Teleport>
 </template>
-
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 .er {
   position: fixed; inset: 0; z-index: 9999;
   background: #f8fafc;
@@ -1260,7 +1149,6 @@ onUnmounted(() => {
   font-family: 'Kanit', system-ui, sans-serif;
   color: #1e293b; overflow: hidden;
 }
-
 .toast {
   position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
   z-index: 10100;
@@ -1273,7 +1161,6 @@ onUnmounted(() => {
 .toast.success { background: #fff; color: #1d9e75; border-color: #1d9e75; }
 .toast.error   { background: #fff; color: #ef4444; border-color: #ef4444; }
 .toast.info    { background: #fff; color: #F05A23; border-color: #F05A23; }
-
 .top-bar {
   height: 60px; flex-shrink: 0;
   background: #fff; border-bottom: 1px solid #e2e8f0;
@@ -1329,9 +1216,7 @@ onUnmounted(() => {
 .btn-save.saving  { background: #94a3b8; box-shadow: none; }
 .btn-save.ok      { background: #1d9e75; box-shadow: 0 2px 6px rgba(29, 158, 117, .25); }
 .btn-save:disabled { cursor: not-allowed; opacity: 0.6; }
-
 .er-body { flex: 1; display: flex; overflow: hidden; min-height: 0; max-height: 100%; }
-
 .panel {
   width: 260px; flex-shrink: 0;
   background: #fff; display: flex; flex-direction: column; overflow: hidden;
@@ -1356,7 +1241,6 @@ onUnmounted(() => {
 .p-body::-webkit-scrollbar-track { background: transparent; }
 .p-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; border: none; }
 .p-body::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
-
 .ps { margin-bottom: 22px; }
 .ps-h {
   font-size: 10px; font-weight: 700; text-transform: uppercase;
@@ -1393,12 +1277,10 @@ onUnmounted(() => {
 .ph-row:hover { border-color: #fbcfb6; background: #fff7f3; color: #F05A23; }
 .ph-row:hover .ph-ico { color: #F05A23; }
 .ph-ico { color: #F05A23; flex-shrink: 0; transition: color .15s; }
-
 .hint-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px 12px; }
 .hint-list { list-style: none; display: flex; flex-direction: column; gap: 5px; margin-top: 6px; }
 .hint-list li { font-size: 11px; color: #6b7280; display: flex; align-items: center; gap: 6px; }
 .hint-list kbd { padding: 1px 5px; background: #fff; border: 1px solid #d1d5db; border-bottom-width: 2px; border-radius: 5px; font-size: 9px; font-family: monospace; color: #374151; }
-
 .lc   { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #9ca3af; margin-bottom: 10px; }
 .llist { display: flex; flex-direction: column; gap: 2px; }
 .lrow  {
@@ -1417,7 +1299,6 @@ onUnmounted(() => {
 .le  { display: flex; flex-direction: column; align-items: center; gap: 8px; height: 140px; justify-content: center; color: #d1d5db; }
 .le span { font-size: 12px; }
 .le-hint { font-size: 10px; color: #e5e7eb; text-align: center; }
-
 .cw {
   flex: 1; background: #f1f5f9; position: relative;
   overflow: auto; display: flex; flex-direction: column; align-items: center;
@@ -1464,7 +1345,6 @@ canvas { display: block; }
   color: #6b7280; transition: all .12s; border: none; background: none; cursor: pointer;
 }
 .zpill button:hover { background: #fff1ea; color: #F05A23; }
-
 .props { padding: 10px 10px; }
 .ph    { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .pt    { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #9ca3af; }
@@ -1489,7 +1369,6 @@ canvas { display: block; }
 .pi::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .pi:focus     { border-color: #F05A23; background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(240, 90, 35, .12); }
 .pi[readonly] { color: #9ca3af; cursor: default; }
-
 /* Position & size grid */
 .coord-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
@@ -1537,7 +1416,6 @@ canvas { display: block; }
   font-size: 12px; color: #111827; font-family: inherit; appearance: none; cursor: pointer;
 }
 .psel:focus { border-color: #F05A23; outline: none; box-shadow: 0 0 0 3px rgba(240, 90, 35, .12); }
-
 /* Custom dropdown (AdminActivities-style) */
 .dd { position: relative; width: 100%; }
 .dd-trigger {
@@ -1559,7 +1437,6 @@ canvas { display: block; }
 }
 .dd-chevron { color: #9ca3af; transition: transform .2s, color .15s; flex-shrink: 0; }
 .dd.open .dd-chevron { transform: rotate(180deg); color: #F05A23; }
-
 /* Dropdown menu (teleported to body, position:fixed via inline style) */
 .dd-menu {
   z-index: 10050;
@@ -1583,7 +1460,6 @@ canvas { display: block; }
 .dd-item:hover  { background: #fff7f3; color: #F05A23; }
 .dd-item.active { background: #fff1ea; color: #F05A23; font-weight: 700; }
 .dd-check { color: #F05A23; flex-shrink: 0; }
-
 /* Dropdown enter/leave */
 .dd-enter-active, .dd-leave-active { transition: opacity .15s ease, transform .15s ease; transform-origin: top center; }
 .dd-enter-from, .dd-leave-to { opacity: 0; transform: translateY(-4px); }
@@ -1631,7 +1507,6 @@ canvas { display: block; }
   cursor: pointer; font-family: inherit; text-transform: uppercase;
 }
 .del-btn:hover { background: #ef4444; color: #fff; }
-
 .props-empty {
   height: 100%; display: flex; flex-direction: column;
   align-items: center; justify-content: center; text-align: center; padding: 24px; gap: 6px;
@@ -1651,16 +1526,13 @@ kbd  {
   border: 1px solid #e5e7eb; border-bottom-width: 2px;
   border-radius: 5px; font-size: 9px; font-family: monospace; color: #6b7280;
 }
-
 .ring { width: 32px; height: 32px; border: 2px solid #e5e7eb; border-top-color: #F05A23; border-radius: 50%; animation: spin .7s linear infinite; }
-
 .modal-bg {
   position: fixed; inset: 0; z-index: 10000;
   background: rgba(0,0,0,.5);
   display: flex; align-items: center; justify-content: center;
   padding: 20px; backdrop-filter: none;
 }
-
 .mobile-warn-box {
   background: #fff; border-radius: 18px; padding: 40px 32px;
   max-width: 360px; width: 100%; text-align: center;
@@ -1685,11 +1557,9 @@ kbd  {
   box-shadow: 0 2px 6px rgba(240, 90, 35, .25);
 }
 .mw-back:hover { background: #d14a17; box-shadow: 0 4px 12px rgba(240, 90, 35, .35); }
-
 .spin { animation: spin .7s linear infinite; }
 @keyframes spin  { to { transform: rotate(360deg); } }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-
 .er-fade-enter-active, .er-fade-leave-active { transition: opacity .2s; }
 .er-fade-enter-from,   .er-fade-leave-to     { opacity: 0; }
 .sl-enter-active, .sl-leave-active { transition: all .22s cubic-bezier(.4,0,.2,1); }
@@ -1705,7 +1575,6 @@ kbd  {
 .ico-enter-from,     .ico-leave-to       { opacity: 0; transform: scale(.6); }
 .toast-slide-enter-active, .toast-slide-leave-active { transition: all .25s cubic-bezier(.4,0,.2,1); }
 .toast-slide-enter-from, .toast-slide-leave-to { opacity: 0; transform: translateX(-50%) translateY(-8px); }
-
 .live-btn {
   width: auto !important;
   height: 34px;
@@ -1733,7 +1602,6 @@ kbd  {
 .user-sel-pill:hover .usp-name { color: #F05A23; }
 .usp-img { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1.5px solid #fff; box-shadow: 0 0 0 1px #e2e8f0; }
 .usp-name { font-size: 12px; font-weight: 700; color: #1e293b; transition: color .15s; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
-
 .user-picker-box {
   width: 100%; max-width: 440px; background: #fff; border-radius: 18px;
   display: flex; flex-direction: column; max-height: 80vh; overflow: hidden;
@@ -1743,7 +1611,6 @@ kbd  {
 .uph h3 { font-size: 14px; font-weight: 700; color: #1e293b; }
 .upc { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #9ca3af; transition: all .15s; border: none; background: none; cursor: pointer; }
 .upc:hover { background: #fff7f3; color: #F05A23; }
-
 .up-search { padding: 12px 16px; position: relative; border-bottom: 1px solid #f3f4f6; }
 .ups-ico { position: absolute; left: 26px; top: 50%; transform: translateY(-50%); color: #9ca3af; }
 .up-search input {
@@ -1751,7 +1618,6 @@ kbd  {
   border-radius: 12px; font-size: 13px; font-family: inherit; outline: none; transition: all .15s;
 }
 .up-search input:focus { border-color: #F05A23; background: #fff; box-shadow: 0 0 0 3px rgba(240, 90, 35, .12); }
-
 .up-list { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
 .up-loading { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 40px; color: #9ca3af; font-size: 13px; }
 .u-row {
@@ -1765,10 +1631,8 @@ kbd  {
 .u-name { font-size: 13px; font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .u-meta { font-size: 11px; color: #9ca3af; margin-top: 1px; }
 .u-check { color: #16a34a; flex-shrink: 0; }
-
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .spin { animation: spin 1s linear infinite; }
-
 /* เพิ่ม CSS สำหรับช่องพิมพ์แบบขยายกว้าง */
 .r-stack { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 .pi-expanded {
@@ -1781,4 +1645,4 @@ kbd  {
 .pi-expanded::-webkit-inner-spin-button,
 .pi-expanded::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .pi-expanded:focus { border-color: #F05A23; background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(240, 90, 35, .12); }
-</style>
+</style>
