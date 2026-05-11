@@ -17,7 +17,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "npx playwright test",
-    "test:e2e:ui": "npx playwright test --ui"
+    "test:e2e:ui": "npx playwright test --ui",
+    "seed:event-random": "tsx scripts/test-random-event.ts"
   },
   "dependencies": {
     "@line/bot-sdk": "^10.6.0",
