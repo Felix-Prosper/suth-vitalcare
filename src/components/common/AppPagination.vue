@@ -1,74 +1,59 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, onUnmounted } from 'vue';
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
-
 const props = defineProps<{
   currentPage: number;
   totalPages: number;
   maxVisible?: number;
 }>();
-
 const emit = defineEmits<{
   (e: 'change', page: number): void;
 }>();
-
 const isMobile = ref(false);
 function checkScreen() {
   isMobile.value = window.innerWidth <= 480;
 }
-
 onMounted(() => {
   checkScreen();
   window.addEventListener('resize', checkScreen);
 });
-
 onUnmounted(() => {
   window.removeEventListener('resize', checkScreen);
 });
-
 const pagesArray = computed(() => {
   const arr: (number | string)[] = [];
   // Reduce max visible on mobile to prevent overflow
   const maxVisible = isMobile.value ? 3 : (props.maxVisible || 5);
   const current = props.currentPage;
   const total = props.totalPages;
-
   if (total <= maxVisible) {
     for (let i = 1; i <= total; i++) arr.push(i);
     return arr;
   }
-
   const sidePages = isMobile.value ? 1 : 2;
   let start = Math.max(1, current - sidePages);
   let end = Math.min(total, start + (maxVisible - 1));
-  
   if (end - start < (maxVisible - 1)) {
     start = Math.max(1, end - (maxVisible - 1));
   }
-
   if (start > 1) {
     arr.push(1);
     if (start > 2) arr.push('...');
   }
-
   for (let i = start; i <= end; i++) {
     arr.push(i);
   }
-
   if (end < total) {
     if (end < total - 1) arr.push('...');
     arr.push(total);
   }
-
   return arr;
 });
-
 const setPage = (p: number) => {
   if (p < 1 || p > props.totalPages) return;
   emit('change', p);
 };
 </script>
-
 <template>
   <div v-if="totalPages > 1" class="pagination-container animate-in fade-in duration-500">
     <!-- Previous Button -->
@@ -79,7 +64,6 @@ const setPage = (p: number) => {
     >
       <ChevronLeft :size="isMobile ? 16 : 18" />
     </button>
-    
     <!-- Page Numbers -->
     <div class="page-numbers">
       <button 
@@ -96,7 +80,6 @@ const setPage = (p: number) => {
         {{ p }}
       </button>
     </div>
-
     <!-- Next Button -->
     <button 
       @click="setPage(currentPage + 1)" 
@@ -107,7 +90,6 @@ const setPage = (p: number) => {
     </button>
   </div>
 </template>
-
 <style scoped>
 .pagination-container {
   display: flex;
@@ -118,13 +100,11 @@ const setPage = (p: number) => {
   width: 100%;
   box-sizing: border-box;
 }
-
 .page-numbers {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-
 .page-btn {
   display: flex;
   align-items: center;
@@ -146,24 +126,20 @@ const setPage = (p: number) => {
   padding: 0;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
-
 .page-btn.active {
   background: #FF6A00;
   border-color: #FF6A00;
   color: #fff;
   box-shadow: 0 4px 12px rgba(255, 106, 0, 0.2);
 }
-
 .page-btn.inactive:hover {
   border-color: #FF6A00;
   color: #FF6A00;
 }
-
 .page-btn:disabled:not(.ellipsis) {
   opacity: 0.3;
   cursor: not-allowed;
 }
-
 .page-btn.ellipsis {
   border-color: transparent;
   background: transparent;
@@ -172,7 +148,6 @@ const setPage = (p: number) => {
   width: 24px;
   min-width: 24px;
 }
-
 @media (max-width: 480px) {
   .pagination-container {
     gap: 4px;
@@ -192,4 +167,4 @@ const setPage = (p: number) => {
     min-width: 18px;
   }
 }
-</style>
+</style>

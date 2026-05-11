@@ -8,7 +8,6 @@ import {
   FolderOpen, Target, Clock, Wand2, ChevronDown,
   Activity, Heart, ImageIcon, CalendarDays, Users, Star
 } from 'lucide-vue-next'
-
 // ดึง Logic จาก Composable
 const route = useRoute()
 const {
@@ -48,7 +47,6 @@ const {
   textResponse,
   isTaskAllowedOnDate
 } = useMissions()
-
 // ฟังก์ชันคำนวณแต้มแยกตามกิจกรรม
 const getActivityPoints = (title: string) => {
   return userSubmissions.value
@@ -58,49 +56,38 @@ const getActivityPoints = (title: string) => {
       return sum + taskPts
     }, 0)
 }
-
 // ---- ระบบ 3 สเตป ----
 const router = useRouter()
 const currentStep = ref<1 | 2 | 3>(1) 
 const selectedActivity = ref<any>(null) 
 const selectedActivityId = ref<string | null>(null)
 const taskSearch = ref('') 
-
 // ฟังก์ชันสำหรับนับจำนวนภารกิจในแต่ละกิจกรรม
 const getTaskCount = (title: string) => {
   return filteredTableData.value.filter((row: any) => row.evt === title).length
 }
-
 const step1Activities = computed(() => {
   if (!taskSearch.value.trim()) return activities.value
   const kw = taskSearch.value.toLowerCase()
   return activities.value.filter(a => a.title.toLowerCase().includes(kw))
 })
-
 const step2Tasks = computed(() => {
   if (!selectedActivity.value) return []
   return filteredTableData.value.filter(row => row.evt === selectedActivity.value.title)
 })
-
 function updateUrlQuery(isPush = false) {
   const query: any = { ...route.query }
-  
   if (currentStep.value > 1) query.step = String(currentStep.value)
   else delete query.step
-
   if (selectedActivityId.value) query.activityId = selectedActivityId.value
   else delete query.activityId
-
   if (step1Page.value > 1) query.page1 = String(step1Page.value)
   else delete query.page1
-
   if (step2Page.value > 1) query.page2 = String(step2Page.value)
   else delete query.page2
-
   if (isPush) router.replace({ query }).catch(() => {})
   else router.replace({ query }).catch(() => {})
 }
-
 function goStep1() {
   currentStep.value = 1
   selectedActivity.value = null
@@ -109,7 +96,6 @@ function goStep1() {
   closeDetailModal()
   updateUrlQuery(true)
 }
-
 function goStep2(act: any) {
   selectedActivity.value = act
   selectedActivityId.value = String(act.id)
@@ -117,19 +103,16 @@ function goStep2(act: any) {
   closeDetailModal()
   updateUrlQuery(true)
 }
-
 function goStep3(row: any) {
   handleManage(row) 
   currentStep.value = 3
   updateUrlQuery(true)
 }
-
 function backToStep2() {
   currentStep.value = 2
   closeDetailModal()
   updateUrlQuery(true)
 }
-
 watch(showDetailModal, (val) => {
   if (val) {
     currentStep.value = 3
@@ -140,12 +123,10 @@ watch(showDetailModal, (val) => {
     currentStep.value = 2
   }
 })
-
 // Watch for URL changes to restore state
 watch(() => route.query, (q) => {
   if (q.step) currentStep.value = Number(q.step) as any
   else currentStep.value = 1
-
   if (q.activityId) {
     selectedActivityId.value = String(q.activityId)
     // Restore selectedActivity object from activities list
@@ -153,11 +134,9 @@ watch(() => route.query, (q) => {
       selectedActivity.value = activities.value.find(a => String(a.id) === String(q.activityId)) || null
     }
   }
-
   if (q.page1) step1Page.value = Number(q.page1)
   if (q.page2) step2Page.value = Number(q.page2)
 }, { immediate: true })
-
 // Sync selectedActivity when activities list loads/updates
 watch(activities, (acts) => {
   if (acts.length > 0 && selectedActivityId.value) {
@@ -167,24 +146,20 @@ watch(activities, (acts) => {
     }
   }
 })
-
 // ---- ระบบ Pagination (เพิ่มใหม่) ----
 const itemsPerPage = 10
 const step1Page = ref(1)
 const step2Page = ref(1)
-
 const step1TotalPages = computed(() => Math.ceil(step1Activities.value.length / itemsPerPage))
 const paginatedStep1 = computed(() => {
   const start = (step1Page.value - 1) * itemsPerPage
   return step1Activities.value.slice(start, start + itemsPerPage)
 })
-
 const step2TotalPages = computed(() => Math.ceil(step2Tasks.value.length / itemsPerPage))
 const paginatedStep2 = computed(() => {
   const start = (step2Page.value - 1) * itemsPerPage
   return step2Tasks.value.slice(start, start + itemsPerPage)
 })
-
 // รีเซ็ตหน้าเมื่อค้นหา
 watch(taskSearch, () => {
   step1Page.value = 1
@@ -195,25 +170,20 @@ watch(selectedActivity, () => {
   step2Page.value = 1
   updateUrlQuery()
 })
-
 // Sync pagination changes to URL
 watch(step1Page, () => updateUrlQuery(true))
 watch(step2Page, () => updateUrlQuery(true))
-
 // ---- ระบบเวลาและสถานะกิจกรรม ----
 const now = ref(Date.now())
 let timer: any = null
-
 onMounted(() => {
   timer = setInterval(() => {
     now.value = Date.now()
   }, 1000)
 })
-
 onUnmounted(() => {
   if (timer) clearInterval(timer)
 })
-
 const getActivityStatus = (act: any) => {
   const endMs = act.end_date ? new Date(act.end_date).getTime() : 0
   if (endMs > 0 && endMs < now.value) return 'ended'
@@ -221,10 +191,8 @@ const getActivityStatus = (act: any) => {
   return 'ongoing'
 }
 </script>
-
 <template>
   <div class="rank-app mission-adapted">
-    
     <transition name="fade">
       <div v-if="isAnalyzing" class="ai-loading-overlay">
         <div class="ai-loading-content">
@@ -248,15 +216,12 @@ const getActivityStatus = (act: any) => {
         </div>
       </div>
     </transition>
-
     <div v-if="currentStep === 1" class="modern-list-view">
-      
       <div class="top-actions-wrapper justify-end">
         <div class="text-slate-500 font-bold">
           <span class="text-orange-600">{{ totalPoints.toLocaleString() }}</span> แต้มรวม
         </div>
       </div>
-
       <div class="search-header">
         <div class="modern-search-box">
           <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -270,12 +235,10 @@ const getActivityStatus = (act: any) => {
           />
         </div>
       </div>
-
       <div class="mission-grid-wrapper">
         <div class="section-title-row mb-4">
           <h3 class="text-xl font-bold">กิจกรรมของคุณ ({{ step1Activities.length }})</h3>
         </div>
-
         <div v-if="paginatedStep1.length > 0" class="flat-grid">
             <div 
               v-for="act in paginatedStep1" 
@@ -289,28 +252,23 @@ const getActivityStatus = (act: any) => {
                 <div v-else class="img-fallback">
                   <ImageIcon :size="32" class="fallback-icon" />
                 </div>
-                
                 <div class="dark-badge" :class="getActivityStatus(act)">
                   <template v-if="getActivityStatus(act) === 'ended'">สิ้นสุดกิจกรรม</template>
                   <template v-else>กำลังดำเนินการ</template>
                 </div>
               </div>
-
             <div class="info-box">
               <h4 class="card-title">{{ act.title }}</h4>
-              
               <div class="meta-row text-orange-600">
                 <Target :size="14" class="meta-icon" />
                 <span>มีทั้งหมด: {{ getTaskCount(act.title) }} ภารกิจ</span>
               </div>
-              
               <div class="points-badge-row mt-2">
                 <div class="points-badge">
                   <Star :size="12" class="fill-current" />
                   <span>{{ getActivityPoints(act.title).toLocaleString() }} แต้มสะสม</span>
                 </div>
               </div>
-              
               <div class="meta-row">
                 <CalendarDays :size="14" class="meta-icon" />
                 <span>จัดกิจกรรม: {{ formatDateDDMMYYYY(act.start_date) }} - {{ formatDateDDMMYYYY(act.end_date) }}</span>
@@ -318,11 +276,9 @@ const getActivityStatus = (act: any) => {
             </div>
           </div>
         </div>
-
         <div v-else class="shop-empty py-20">
           <h3 class="text-slate-500 font-medium">ไม่พบกิจกรรมที่ค้นหา</h3>
         </div>
-
         <div class="pagination mt-8" v-if="step1TotalPages > 1">
           <button :disabled="step1Page === 1" @click="step1Page--" class="pag-btn">« ก่อนหน้า</button>
           <span class="page-info">หน้า {{ step1Page }} / {{ step1TotalPages }}</span>
@@ -330,29 +286,23 @@ const getActivityStatus = (act: any) => {
         </div>
       </div>
     </div>
-
-
     <div v-else-if="currentStep === 2" class="modern-list-view">
-      
       <div class="mb-6 px-mobile">
         <button class="back-btn" @click="goStep1">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-5 h-5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
           กลับไปหน้ากิจกรรม
         </button>
       </div>
-
       <div class="page-banner mb-6">
         <div class="banner-text">
           <h2 class="text-2xl font-bold truncate" :title="selectedActivity?.title">{{ selectedActivity?.title }}</h2>
           <p class="opacity-90 mt-1">เลือกภารกิจที่คุณต้องการส่งผลงาน</p>
         </div>
       </div>
-
       <div class="activity-list-container">
         <div class="list-header-bar">
           <div class="list-title">ภารกิจที่มีให้ทำ ({{ step2Tasks.length }})</div>
         </div>
-
         <div class="activity-list-body">
           <template v-if="paginatedStep2.length > 0">
             <div 
@@ -364,7 +314,6 @@ const getActivityStatus = (act: any) => {
               <div class="ar-left">
                 <div class="ar-system-name">{{ row.dateLabel }} • +{{ row.points }} แต้ม</div>
               </div>
-              
               <div class="ar-middle">
                 <div class="flex items-center gap-3">
                   <span class="ar-subject">{{ row.taskName }}</span>
@@ -377,7 +326,6 @@ const getActivityStatus = (act: any) => {
             ไม่มีภารกิจให้ทำในขณะนี้
           </div>
         </div>
-
         <div class="pagination" v-if="step2TotalPages > 1">
           <button :disabled="step2Page === 1" @click="step2Page--">« ก่อนหน้า</button>
           <span class="page-info">หน้า {{ step2Page }} / {{ step2TotalPages }}</span>
@@ -385,10 +333,7 @@ const getActivityStatus = (act: any) => {
         </div>
       </div>
     </div>
-
-
     <div v-else-if="currentStep === 3" class="detail-view">
-      
       <header class="detail-header">
         <div class="header-container">
           <button class="back-btn" @click="backToStep2">
@@ -397,10 +342,8 @@ const getActivityStatus = (act: any) => {
           </button>
         </div>
       </header>
-
       <div class="layout-wrapper" v-if="activeTask">
         <main class="main-content">
-         
           <div class="page-banner banner-task mb-6">
             <div class="banner-text">
               <h2>{{ activeTask.note }}</h2>
@@ -420,10 +363,8 @@ const getActivityStatus = (act: any) => {
               </div>
             </div>
           </div>
-
           <div class="task-form-content">
             <div class="detail-body">
-                
                 <div v-if="editingSubmissionId && !isEditingMode" class="readonly-view">
                   <div class="success-banner">
                     <CheckCircle2 class="w-6 h-6" /> ส่งภารกิจเรียบร้อยแล้ว
@@ -449,7 +390,6 @@ const getActivityStatus = (act: any) => {
                     แก้ไขข้อมูลการส่ง
                   </button>
                 </div>
-
                 <template v-else-if="isToday(selectedDate) && isTaskAllowedOnDate(activeTask, selectedDate)">
                   <!-- === PHOTO type: upload area only === -->
                   <template v-if="activeTask?.submission_type === 'photo' || activeTask?.submission_type === 'both' || !activeTask?.submission_type || activeTask?.submission_type === 'manual'">
@@ -464,7 +404,6 @@ const getActivityStatus = (act: any) => {
                       <div v-if="isUploading" class="upload-overlay"><span class="loader"></span></div>
                     </div>
                   </template>
-
                   <!-- === TEXT response area === -->
                   <template v-if="activeTask?.submission_type === 'text' || activeTask?.submission_type === 'both'">
                     <div class="input-group shadow-sm" style="margin-top: 12px;">
@@ -477,7 +416,6 @@ const getActivityStatus = (act: any) => {
                       ></textarea>
                     </div>
                   </template>
-
                   <!-- === MANUAL numeric input (manual, photo, both) === -->
                   <template v-if="['manual', 'photo', 'both'].includes(activeTask?.submission_type) || (!activeTask?.submission_type)">
                     <div class="input-group shadow-sm">
@@ -504,12 +442,10 @@ const getActivityStatus = (act: any) => {
                       </div>
                     </div>
                   </template>
-
                   <!-- === AI hint for photo-based types === -->
                   <div v-if="isAnalyzing" class="ai-status-hint">
                     <span>Typhoon AI กำลังช่วยคุณวิเคราะห์หลักฐาน...</span>
                   </div>
-
                   <div class="action-footer">
                     <button class="action-btn primary-btn shadow-md" :disabled="isSubmitting || isAnalyzing" @click="submitTask">
                       <span v-if="isSubmitting" class="loader"></span>
@@ -520,7 +456,6 @@ const getActivityStatus = (act: any) => {
                     </button>
                   </div>
                 </template>
-
                 <div v-else class="expired-notice shadow-sm">
                   <div class="expired-icon"><Clock class="w-10 h-10 text-slate-400" /></div>
                   <template v-if="isToday(selectedDate) && !isTaskAllowedOnDate(activeTask, selectedDate)">
@@ -532,17 +467,13 @@ const getActivityStatus = (act: any) => {
                     <p>ภารกิจนี้สามารถส่งได้เฉพาะในวันที่กำหนดเท่านั้น</p>
                   </template>
                 </div>
-
               </div>
             </div>
-
         </main>
       </div>
     </div>
-
   </div>
 </template>
-
 <style scoped>
 /* ================= CSS VARIABLES & BASE ================= */
 .rank-app {
@@ -561,23 +492,19 @@ const getActivityStatus = (act: any) => {
   --radius-lg: 16px;
   --radius-md: 12px;
 }
-
 * { box-sizing: border-box; }
 .rotate-180 { transform: rotate(180deg); }
 .line-through { text-decoration: line-through; }
-
 .rank-app {
   background-color: var(--bg-color);
   min-height: 100vh;
   color: var(--text-main);
   font-family: 'Prompt', 'Noto Sans Thai', sans-serif;
 }
-
 /* ================= MODERN LIST VIEW ================= */
 .modern-list-view { max-width: 1000px; margin: 0 auto; padding: 24px; }
 .justify-end { display: flex; justify-content: flex-end; }
 .top-actions-wrapper { margin-bottom: 24px; }
-
 /* โครงสร้าง Activity List Box แบบบาลาบิง */
 .activity-list-container {
   background: var(--surface);
@@ -586,13 +513,11 @@ const getActivityStatus = (act: any) => {
   overflow: hidden;
   border: 1px solid var(--border);
 }
-
 .list-header-bar {
   padding: 16px 24px;
   border-bottom: 1px solid var(--border);
   background: #F8FAFC;
 }
-
 .list-header-bar .list-title {
   font-size: 0.9rem;
   font-weight: 600;
@@ -600,7 +525,6 @@ const getActivityStatus = (act: any) => {
   margin-bottom: 0;
   padding: 0;
 }
-
 .search-header { margin-bottom: 24px; }
 .modern-search-box {
   display: flex; align-items: center; background: var(--surface);
@@ -618,7 +542,6 @@ const getActivityStatus = (act: any) => {
   font-size: 0.95rem; color: var(--text-main); outline: none;
 }
 .modern-search-input::placeholder { color: #94A3B8; }
-
 /* 🌟 Grid & Card System (Match Activities.vue) 🌟 */
 .flat-grid {
   display: grid;
@@ -638,7 +561,6 @@ const getActivityStatus = (act: any) => {
     gap: 12px; 
   }
 }
-
 .flat-card {
   display: flex;
   flex-direction: column;
@@ -654,7 +576,6 @@ const getActivityStatus = (act: any) => {
   filter: grayscale(1);
   opacity: 0.7;
 }
-
 .img-box {
   position: relative;
   width: 100%;
@@ -673,7 +594,6 @@ const getActivityStatus = (act: any) => {
 .flat-card:hover .img-box img {
   transform: scale(1.05);
 }
-
 .dark-badge {
   position: absolute;
   top: 10px;
@@ -694,7 +614,6 @@ const getActivityStatus = (act: any) => {
 .dark-badge.ended {
   background: rgba(107, 114, 128, 0.9); /* Gray */
 }
-
 .img-fallback {
   width: 100%;
   height: 100%;
@@ -703,14 +622,12 @@ const getActivityStatus = (act: any) => {
   justify-content: center;
   color: #CBD5E1;
 }
-
 .info-box { 
   padding: 8px 4px 0; 
   display: flex; 
   flex-direction: column; 
   gap: 4px; 
 }
-
 .card-title {
   font-size: 15px;
   font-weight: 600;
@@ -723,7 +640,6 @@ const getActivityStatus = (act: any) => {
   overflow: hidden;
   line-height: 1.4;
 }
-
 .points-badge {
   display: inline-flex;
   align-items: center;
@@ -736,7 +652,6 @@ const getActivityStatus = (act: any) => {
   font-weight: 800;
   border: 1px solid #A7F3D0;
 }
-
 .meta-row { 
   display: flex; 
   align-items: flex-start; 
@@ -747,17 +662,14 @@ const getActivityStatus = (act: any) => {
   line-height: 1.4;
 }
 .meta-row.text-orange-600 { color: var(--primary); font-weight: 600; }
-
 .meta-icon { 
   flex-shrink: 0; 
   margin-top: 2px; 
 }
-
 .shop-empty {
   text-align: center;
   padding: 60px 20px;
 }
-
 .activity-row {
   display: flex;
   align-items: center;
@@ -769,7 +681,6 @@ const getActivityStatus = (act: any) => {
 }
 .activity-row:last-child { border-bottom: none; }
 .activity-row:hover { background: #F8FAFC; }
-
 .ar-left {
   display: flex;
   align-items: center;
@@ -777,19 +688,15 @@ const getActivityStatus = (act: any) => {
   width: 240px;
   flex-shrink: 0;
 }
-
 .ar-system-name { font-size: 0.95rem; color: var(--text-muted); font-weight: 500; }
-
 .ar-middle { flex: 1; min-width: 0; padding-right: 24px; }
 .ar-subject { font-size: 1rem; font-weight: 500; color: var(--text-main); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
 .status-pill { padding: 0.25rem 0.75rem; border-radius: 100px; font-size: 0.75rem; font-weight: 700; display: inline-block; flex-shrink: 0;}
 .status-pill.done { background: #ecfdf5; color: #10b981; }
 .status-pill.pending { background: #fff7ed; color: #f97316; }
 .status-pill.rejected { background: #fef2f2; color: #ef4444; }
 .status-pill.none { background: #f1f5f9; color: #64748b; }
 .empty-search { padding: 60px 20px; text-align: center; color: var(--text-muted); font-weight: 600; font-size: 1.1rem; }
-
 .pagination { display: flex; justify-content: center; align-items: center; padding: 20px; gap: 16px; border-top: 1px solid var(--border); }
 @media (max-width: 768px) {
   .pagination { border-top: none; padding-top: 0; }
@@ -816,7 +723,6 @@ const getActivityStatus = (act: any) => {
 }
 .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
 .page-info { font-weight: 600; color: var(--text-muted); }
-
 /* Back Button */
 .back-btn {
   display: flex; align-items: center; gap: 6px; background: none; border: none;
@@ -824,7 +730,6 @@ const getActivityStatus = (act: any) => {
   padding: 4px 0; transition: 0.2s;
 }
 .back-btn:hover { color: var(--primary); }
-
 /* Banners */
 .page-banner {
   background: linear-gradient(135deg, #FF9A44 0%, #FF6A00 100%);
@@ -833,7 +738,6 @@ const getActivityStatus = (act: any) => {
 }
 .banner-task { background: linear-gradient(135deg, #FF9A44 0%, #FF6A00 100%); }
 .banner-text h2 { margin: 0; font-size: 1.6rem; font-weight: 800; color: #FFFFFF; line-height: 1.3;}
-
 .flex-col { display: flex; flex-direction: column; }
 .gap-2 { gap: 0.5rem; }
 .text-white\/70 { color: rgba(255, 255, 255, 0.7); }
@@ -841,13 +745,11 @@ const getActivityStatus = (act: any) => {
 .decoration-2 { text-decoration-thickness: 2px; }
 .underline-offset-4 { text-underline-offset: 4px; }
 .mb-6 { margin-bottom: 1.5rem; }
-
 /* ================= DETAIL VIEW (สเตป 3) ================= */
 .detail-view { background-color: #FFFFFF; min-height: 100vh; }
 .detail-header { padding: 24px 0 16px; position: relative; z-index: 40; }
 .header-container { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
 .layout-wrapper { max-width: 1000px; margin: 0 auto; padding: 0 24px 40px; }
-
 .task-form-content { background: white; border: none; padding: 0; }
 .detail-body { display: flex; flex-direction: column; gap: 1.5rem; }
 .upload-area { height: 220px; border: 2px dashed #cbd5e1; border-radius: var(--radius-lg); background: #FFFFFF; display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; overflow: hidden; transition: all 0.2s; }
@@ -857,9 +759,7 @@ const getActivityStatus = (act: any) => {
 .upload-placeholder { text-align: center; color: var(--text-muted); }
 .icon-circle { width: 64px; height: 64px; min-width: 64px; min-height: 64px; flex-shrink: 0; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem; aspect-ratio: 1/1; }
 .upload-placeholder p { margin: 0; color: var(--text-main); font-size: 1.1rem;}
-
 /* ================= ช่องกรอกผลลัพธ์ (Minimalist Style) ================= */
-
 .input-group { 
   background: transparent !important; 
   padding: 1rem 0; 
@@ -871,7 +771,6 @@ const getActivityStatus = (act: any) => {
   display: block; font-weight: 700; color: var(--text-main); 
   margin-bottom: 0.75rem; font-size: 1.05rem; 
 }
-
 /* กล่องกรอกตัวเลขปกติ (ทรงโค้งเหมือน Search Bar) */
 .field-row { 
   display: flex; align-items: center; 
@@ -903,7 +802,6 @@ const getActivityStatus = (act: any) => {
   line-height: 1.6; color: var(--text-main); padding: 4px 0;
 }
 .field-unit { font-size: 1rem; font-weight: 600; color: var(--text-muted); margin-left: 12px; }
-
 /* กล่องกรอกแบบเวลา (เผื่อใช้ในกิจกรรมอื่น ปรับให้เป็นทรงแคปซูลเหมือนกัน) */
 .time-inputs { 
   display: flex; align-items: center; justify-content: center; gap: 8px; 
@@ -924,7 +822,6 @@ const getActivityStatus = (act: any) => {
 .time-box span { font-size: 0.95rem; color: var(--text-muted); font-weight: 600; }
 .colon { font-size: 1.5rem; font-weight: 800; color: #CBD5E1; margin: 0 4px; }
 .text-center { text-align: center; }
-
 /* Buttons */
 .action-footer { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem; }
 .action-btn { width: 100%; padding: 1.1rem; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; display: flex; justify-content: center; align-items: center; border: none; }
@@ -933,7 +830,6 @@ const getActivityStatus = (act: any) => {
 .primary-btn:disabled { background-color: #cbd5e1 !important; color: #64748b !important; cursor: not-allowed; }
 .outline-btn { background-color: var(--orange-50) !important; border: 2px solid var(--primary) !important; color: var(--primary) !important; }
 .ghost-btn { background-color: #f1f5f9 !important; color: #475569 !important; border: 1px solid #e2e8f0 !important; }
-
 /* Readonly View / Utils */
 .readonly-view { display: flex; flex-direction: column; gap: 1.25rem; }
 .success-banner { background: #ecfdf5; color: #10b981; border: 1px solid #a7f3d0; padding: 1rem; border-radius: 12px; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; }
@@ -943,15 +839,12 @@ const getActivityStatus = (act: any) => {
 .recorded-data label { font-size: 0.95rem; color: var(--text-muted); font-weight: 600; display: block;}
 .val-display { font-size: 2.5rem; font-weight: 800; color: var(--text-main); margin-top: 0.5rem; }
 .val-display .unit { font-size: 1.2rem; color: var(--text-muted); font-weight: 600; margin-left: 0.5rem; }
-
 .expired-notice { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; color: var(--text-muted); text-align: center; }
 .expired-icon { background: #f1f5f9; padding: 1.5rem; border-radius: 50%; margin-bottom: 1rem; flex-shrink: 0; }
 .expired-notice h3 { margin: 0 0 0.5rem; font-weight: 700; color: var(--text-main); font-size: 1.5rem; }
-
 .shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 .loader { width: 24px; height: 24px; border: 3px solid rgba(255,255,255,0.3); border-bottom-color: #fff; border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
 @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
 /* AI Overlay */
 .ai-loading-overlay { position: fixed; inset: 0; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(12px); z-index: 9999; display: flex; align-items: center; justify-content: center; color: var(--text-main); }
 .ai-loading-content { width: 100%; max-width: 400px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
@@ -961,7 +854,6 @@ const getActivityStatus = (act: any) => {
 @keyframes ai-pulse { 0% { transform: scale(0.8); opacity: 0.3; } 50% { transform: scale(1.2); opacity: 0.6; } 100% { transform: scale(0.8); opacity: 0.3; } }
 .ai-progress-bar-wrap { width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 0.75rem; }
 .ai-progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--orange-600)); transition: width 0.4s ease-out; }
-
 /* AI Input Integration */
 .field-ai-wrapper {
   display: flex;
@@ -998,28 +890,23 @@ const getActivityStatus = (act: any) => {
   gap: 8px;
 }
 .mr-2 { margin-right: 0.5rem; }
-
 /* ================= MEDIA QUERIES (Mobile) ================= */
 @media (max-width: 768px) {
   /* ปรับ Padding แนวนอนให้ไม่ติดขอบ */
   .modern-list-view { padding: 12px 16px 100px 16px; background-color: #fff; }
-  
   /* ส่วนบน Search และปุ่มกลับ */
   .top-actions-wrapper, .search-header, .px-mobile { padding: 0; }
   .search-header { margin-bottom: 16px; }
   .modern-search-box { padding: 0 16px; height: 38px; }
   .search-icon { width: 16px; height: 16px; }
   .modern-search-input { font-size: 0.9rem; }
-  
   /* ปรับ Banner ให้เท่ากันทุกหน้าบนมือถือ */
   .modern-list-view .page-banner { margin: 0 0 24px; }
   .detail-view .page-banner { margin: 0 0 24px; }
   .page-banner { padding: 24px 20px; }
   .banner-text h2 { font-size: 1.4rem; }
-
   /* นำขอบโค้งและเส้นกรอบซ้ายขวาออก เพื่อให้ตีเต็มจอเป๊ะๆ */
   .activity-list-container { border-radius: 0; border: none; box-shadow: none; }
-  
   /* จัดตำแหน่ง Row และเว้นระยะให้ตรงกับหน้าอันดับบาลาบิง */
   .activity-row {
     flex-direction: column;
@@ -1038,7 +925,6 @@ const getActivityStatus = (act: any) => {
     padding-left: 0; /* เอาเว้นระยะเดิมที่เผื่อไว้สำหรับดาวออกไปแล้วครับ */
   }
   .ar-subject { white-space: normal; overflow: visible; font-size: 0.95rem; }
-  
   .layout-wrapper { padding: 0 16px; }
 }
 </style>

@@ -79,7 +79,7 @@ router.get("/", requireAdmin, async (req, res) => {
       limit: Number(limit)
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -108,7 +108,7 @@ router.get("/stats", requireAdmin, async (req, res) => {
             daily: dailyStats
         });
     } catch (error: any) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
@@ -119,7 +119,7 @@ router.post("/cleanup", requireAdmin, async (req, res) => {
         const removed = await cleanupLogs(Number(days));
         res.json({ success: true, removed, message: `ลบข้อมูล log ที่เก่ากว่า ${days} วัน เรียบร้อยแล้ว (${removed} รายการ)` });
     } catch (error: any) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: "Internal Server Error" });
     }
 });
 

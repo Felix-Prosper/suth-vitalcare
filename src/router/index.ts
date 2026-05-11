@@ -1,13 +1,11 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { watch } from "vue";
 import { authStore } from "../store/auth";
-
 // แก้ปัญหา 404 โดยการ Import ตรงๆ (Static Import) สำหรับหน้าที่ Tunnel โหลดไม่ได้
 import EventDetail from "../views/EventDetail.vue";
 import Missions from "../views/Missions.vue";
 import Rankings from "../views/Rankings.vue";
 import Health from "../views/Health.vue";
-
 const routes = [
   {
     path: "/",
@@ -100,7 +98,6 @@ const routes = [
     meta: { title: "กิจกรรมที่สมัครทั้งหมด" },
   },
 ];
-
 const router = createRouter({
   history: createWebHistory(),
   routes,
@@ -118,12 +115,10 @@ const router = createRouter({
     return { top: 0, behavior: 'smooth' };
   },
 });
-
 router.beforeEach(async (to, from, next) => {
   const isRegistering = to.name === "Register";
   const isLoggingIn = to.name === "Login";
   const isResetting = to.name === "ForgotPassword" || to.name === "ResetPassword";
-
   if (authStore.loading) {
     await new Promise<void>((resolve) => {
       const stop = watch(
@@ -138,63 +133,36 @@ router.beforeEach(async (to, from, next) => {
       );
     });
   }
-
   const userAfterLoad = authStore.user;
-
-  console.log("[Router Guard] Navigating to:", to.path);
-  console.log(
-    "[Router Guard] User State:",
-    userAfterLoad
-      ? {
-        id: userAfterLoad.id,
-        fname_th: userAfterLoad.fname_th,
-        phone: userAfterLoad.phone,
-        role: userAfterLoad.role,
-        team_id: userAfterLoad.team_id,
-      }
-      : "null",
-  );
-
   if (!userAfterLoad && !isLoggingIn && !isRegistering && !isResetting) {
-    console.log("[Router Guard] No user, redirecting to Login, saving redirect:", to.fullPath);
     if (to.fullPath !== "/") {
       sessionStorage.setItem("redirect_after_login", to.fullPath);
     }
     return next({ name: "Login" });
   }
-
   // ── Route-level Admin access guard ─────────────────────────────────
   // Only admin may access /admin panel.
   // Regular users are redirected to / silently.
   if (to.meta.requiresAdmin && userAfterLoad) {
     const role = userAfterLoad.role as string;
     if (role !== 'admin') {
-      console.warn('[Router Guard] Unauthorized access to /admin — redirecting to home.');
       return next({ path: '/' });
     }
   }
-
   if (userAfterLoad && isLoggingIn) {
     const savedRedirect = sessionStorage.getItem("redirect_after_login");
     sessionStorage.removeItem("redirect_after_login");
     const destination = savedRedirect || "/";
-    console.log("[Router Guard] User logged in, redirecting to:", destination);
     return next(destination);
   }
-
   if (userAfterLoad && !isRegistering && !isLoggingIn) {
     if (userAfterLoad.role !== "admin") {
       const isIncomplete = !userAfterLoad.fname_th || !userAfterLoad.phone;
-      console.log("[Router Guard] Profile Incomplete Check:", isIncomplete);
-
       if (isIncomplete) {
-        console.log("[Router Guard] Profile incomplete, redirecting to Register");
         return next({ name: "Register" });
       }
     }
   }
-
   next();
 });
-
 export default router;

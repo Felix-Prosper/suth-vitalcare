@@ -6,17 +6,14 @@ import * as fabric from "fabric";
 import { swal, showSuccess, showError } from "../lib/swal";
 import { useFavorites } from "./useFavorites";
 import { useRealtime } from "./useRealtime";
-
 export interface AssessmentPopupQueue {
   type: string;
   label?: string;
 }
-
 export function useEventDetail() {
   const route = useRoute();
   const router = useRouter();
   const activityId = computed(() => Number(route.params.id));
-
   // ==========================
   // Real-time Sync
   // ==========================
@@ -56,7 +53,6 @@ export function useEventDetail() {
       }
     }
   });
-
   // ==========================
   // Core Event State
   // ==========================
@@ -64,7 +60,6 @@ export function useEventDetail() {
   const loading = ref(false);
   const loadError = ref(false);
   const parsedSections = ref<any[]>([]);
-
   // ==========================
   // Registration & Access State
   // ==========================
@@ -88,7 +83,6 @@ export function useEventDetail() {
           }
         }
       }
-
       if (Array.isArray(rawVis)) {
         vis = rawVis;
       } else if (typeof rawVis === "string" && rawVis.trim() !== "") {
@@ -106,7 +100,6 @@ export function useEventDetail() {
         vis = [String(rawVis)];
       }
     } catch (err) {
-      console.error("Error parsing visibility:", err);
     }
     vis = [...new Set(vis.map(String).filter((v) => v && v !== "null" && v !== "undefined"))];
     return vis.length === 0 ? ["general"] : vis;
@@ -114,7 +107,6 @@ export function useEventDetail() {
   const currentUserRoleLabel = ref("");
   const isHost = ref(false);
   const registerTeamMode = ref(false); // Default to false (Individual)
-
   // ==========================
   // Certificate State
   // ==========================
@@ -124,7 +116,6 @@ export function useEventDetail() {
   const certStatus = ref<"none" | "issued">("none");
   const userActivityScore = ref(0);
   const userActivityRank = ref(0);
-
   // ==========================
   // Assessment & Popups State
   // ==========================
@@ -133,14 +124,12 @@ export function useEventDetail() {
   const popupQueue = ref<AssessmentPopupQueue[]>([]);
   const activePopupIndex = ref(0);
   const popupsDismissed = ref(false);
-
   // ==========================
   // Tanita State
   // ==========================
   const tanitaRecords = ref<any[]>([]);
   const showTanitaModal = ref(false);
   const loadingTanita = ref(false);
-
   // ==========================
   // Goal / Leaderboard State
   // ==========================
@@ -153,14 +142,12 @@ export function useEventDetail() {
   const goalSortBy = ref("progress_desc");
   const goalCurrentPage = ref(1);
   const goalPageSize = ref(10);
-
   // ==========================
   // UI Specific State (Floating button, Touch)
   // ==========================
   const showFloater = ref(false);
   let touchStartX = 0;
   let touchEndX = 0;
-
   // ==========================
   // Favorites State
   // ==========================
@@ -171,9 +158,7 @@ export function useEventDetail() {
     toggleFavorite: syncToggleFavorite,
     fetchEventFavoriteData,
   } = useFavorites();
-
   let pollTimer: any = null;
-
   // ==========================
   // Computed Properties
   // ==========================
@@ -186,7 +171,6 @@ export function useEventDetail() {
   const isContinuousRegistration = computed(() =>
     [true, 1, "1"].includes(event.value?.is_continuous_registration),
   );
-
   const assessmentConfig = computed(() => {
     try {
       return typeof event.value?.assessment_config === "string"
@@ -196,7 +180,6 @@ export function useEventDetail() {
       return {};
     }
   });
-
   const certConfigParsed = computed(() => {
     try {
       return typeof event.value?.certificate_config === "string"
@@ -206,7 +189,6 @@ export function useEventDetail() {
       return {};
     }
   });
-
   const isPreTestRequired = computed(
     () => assessmentConfig.value?.pre_test?.enabled === true,
   );
@@ -216,7 +198,6 @@ export function useEventDetail() {
   const hasAssessment = computed(
     () => isPreTestRequired.value || isPostTestRequired.value,
   );
-
   const isEventStarted = computed(() => {
     if (isContinuousEvent.value) return true;
     if (!event.value?.start_date) return false;
@@ -227,7 +208,6 @@ export function useEventDetail() {
     }
     return moment().isSameOrAfter(start);
   });
-
   const slotFull = computed(() => {
     if (isUnlimited.value) return false;
     if (!event.value) return false;
@@ -236,14 +216,12 @@ export function useEventDetail() {
     const total = Number(event.value.max_slots || event.value.total || 0);
     return filled >= total;
   });
-
   const slotPct = computed(() => {
     if (isUnlimited.value) return 0;
     const filled = event.value.registration_count ?? event.value.filled ?? 0;
     const total = Number(event.value.max_slots || event.value.total || 1);
     return Math.min(100, Math.round((filled / total) * 100));
   });
-
   const totalMissionsCount = computed(() => {
     if (event.value?.tasks?.length) return event.value.tasks.length;
     if (event.value?.missions_config)
@@ -252,11 +230,9 @@ export function useEventDetail() {
       ).length;
     return 0;
   });
-
   const completedMissionsCount = computed(
     () => event.value?.tasks?.filter((t: any) => t.completed).length || 0,
   );
-
   // ── Tanita Computed ──
   const tanitaConfig = computed(() => {
     try {
@@ -278,7 +254,6 @@ export function useEventDetail() {
   const shouldShowTanita = computed(
     () => hasTanitaTask.value || tanitaRequiredDates.value.length > 0,
   );
-
   const currentMuscleToFatRatio = computed(() => {
     if (tanitaRecords.value.length === 0) return "0.00";
     const rec = tanitaRecords.value[0];
@@ -286,7 +261,6 @@ export function useEventDetail() {
     const fat = (Number(rec.weight) || 0) * ((Number(rec.fat_pc) || 0) / 100);
     return fat > 0 ? (muscle / fat).toFixed(2) : "0.00";
   });
-
   const healthTrendClass = computed(() => {
     if (tanitaRecords.value.length < 2) return "";
     const r0 = tanitaRecords.value[0],
@@ -298,7 +272,6 @@ export function useEventDetail() {
     if (fat_diff <= 0) return "trend-good";
     return "trend-neutral";
   });
-
   const healthSummaryText = computed(() => {
     if (tanitaRecords.value.length < 2)
       return "เริ่มบันทึกข้อมูลเพื่อดูบทวิเคราะห์";
@@ -313,7 +286,6 @@ export function useEventDetail() {
     if (muscle_diff > 0) return "💪 มวลกล้ามเนื้อเพิ่มขึ้น พัฒนาการดีมาก";
     return "🏃 รักษามาตรฐานการออกกำลังกายต่อไป สู้ๆ!";
   });
-
   const muscleFatTrendText = computed(() => {
     if (tanitaRecords.value.length < 2) return "คงที่";
     const r0 = tanitaRecords.value[0],
@@ -327,7 +299,6 @@ export function useEventDetail() {
     const diff = ratio0 - ratio1;
     return (diff >= 0 ? "+" : "") + diff.toFixed(2);
   });
-
   const muscleFatTrendClass = computed(() => {
     if (tanitaRecords.value.length < 2) return "";
     const r0 = tanitaRecords.value[0],
@@ -340,7 +311,6 @@ export function useEventDetail() {
       ((Number(r1.weight) * Number(r1.fat_pc)) / 100 || 1);
     return ratio0 >= ratio1 ? "trend-up" : "trend-down";
   });
-
   const metabolicTrendText = computed(() => {
     if (tanitaRecords.value.length < 2) return "คงที่";
     const diff =
@@ -350,7 +320,6 @@ export function useEventDetail() {
     if (diff > 0) return `เพิ่มขึ้น ${diff} ปี`;
     return "เท่าเดิม";
   });
-
   const metabolicTrendClass = computed(() => {
     if (tanitaRecords.value.length < 2) return "";
     const diff =
@@ -358,7 +327,6 @@ export function useEventDetail() {
       (Number(tanitaRecords.value[1].metabolic_age) || 0);
     return diff <= 0 ? "trend-up" : "trend-down";
   });
-
   // ── Goal Computed ──
   const hasGoalConfig = computed(() => {
     try {
@@ -371,7 +339,6 @@ export function useEventDetail() {
       return false;
     }
   });
-
   const goalConfigParsed = computed(() => {
     try {
       return typeof event.value?.goal_config === "string"
@@ -381,7 +348,6 @@ export function useEventDetail() {
       return {};
     }
   });
-
   const goalUnit = computed(() => {
     try {
       const gc =
@@ -414,7 +380,6 @@ export function useEventDetail() {
       return "หน่วย";
     }
   });
-
   const goalUnitLabel = computed(() => {
     const gc = goalConfigData.value || goalConfigParsed.value || {};
     const t = gc.target_type;
@@ -439,7 +404,6 @@ export function useEventDetail() {
     };
     return map[t] || goalUnit.value || "หน่วย";
   });
-
   const filteredAndSortedGoalData = computed(() => {
     let list = [...goalData.value];
     if (goalSearchQuery.value.trim()) {
@@ -461,7 +425,6 @@ export function useEventDetail() {
     });
     return list;
   });
-
   const paginatedGoalData = computed(() => {
     const start = (goalCurrentPage.value - 1) * goalPageSize.value;
     return filteredAndSortedGoalData.value.slice(
@@ -472,7 +435,6 @@ export function useEventDetail() {
   const totalGoalPages = computed(() =>
     Math.ceil(filteredAndSortedGoalData.value.length / goalPageSize.value),
   );
-
   // ── Cert Computed ──
   const certConditionText = computed(() => {
     const mode = event.value?.certificate_config?.issue_mode;
@@ -480,13 +442,11 @@ export function useEventDetail() {
     if (mode === "goal_complete") return "รับได้เมื่อผ่านเป้าหมาย";
     return "เงื่อนไขตามที่ผู้จัดกำหนด";
   });
-
   const certCardState = computed(() => {
     if (certStatus.value === "issued") return "state-issued";
     if (isRegistered.value && isEligible.value) return "state-eligible";
     return "state-pending";
   });
-
   const postTestEligible = computed(() => {
     if (!event.value) return false;
     if (isContinuousEvent.value) return true;
@@ -494,14 +454,11 @@ export function useEventDetail() {
     // If it's started, they can do post-test (or use the 3-day window)
     return isEventStarted.value;
   });
-
   // ==========================
   // Methods
   // ==========================
-
   const showToast = (msg: string, type: "success" | "error" = "success") =>
     type === "error" ? showError(msg) : showSuccess(msg);
-
   const formatDateThai = (dateStr: string) => {
     if (!dateStr) return "";
     const d = moment(dateStr);
@@ -521,7 +478,6 @@ export function useEventDetail() {
     ];
     return `${d.date()} ${m[d.month()]} ${d.year() + 543}`;
   };
-
   const sanitizeHtml = (html: string) =>
     html
       ? html
@@ -534,7 +490,6 @@ export function useEventDetail() {
   const sanitizedRules = computed(() =>
     sanitizeHtml(event.value?.rules_regulations || ""),
   );
-
   // Fetch Core Event
   const fetchEvent = async (silent = false) => {
     if (!silent) loading.value = true;
@@ -545,19 +500,14 @@ export function useEventDetail() {
         router.push("/activities");
         return;
       }
-
       const res = await fetch(`/api/activities/${id}`);
       if (!res.ok) {
-        console.error(`[useEventDetail] Fetch failed for activity ID ${id}: ${res.status} ${res.statusText}`);
         loadError.value = true;
         return;
       }
-
       const data = await res.json();
-      
       // Update event data while preserving local state if needed (optional)
       event.value = data;
-
       try {
         parsedSections.value = JSON.parse(event.value.detail || "[]");
       } catch {
@@ -565,7 +515,6 @@ export function useEventDetail() {
           ? [{ title: "รายละเอียด", content: event.value.detail }]
           : [];
       }
-
       // Refresh registration and validate access
       await checkRegistration();
       validateAccess();
@@ -574,7 +523,6 @@ export function useEventDetail() {
     } finally {
       loading.value = false;
     }
-
     // Phase 2: Secondary data
     if (authStore.user?.id && event.value) {
       Promise.all([
@@ -588,7 +536,6 @@ export function useEventDetail() {
       }).catch(() => {});
     }
   };
-
   // Host & Registration Checks
   const checkIsHost = async () => {
     if (!authStore.user?.team_id) {
@@ -610,7 +557,6 @@ export function useEventDetail() {
       isHost.value = authStore.user.role === "host";
     }
   };
-
   const checkRegistration = async () => {
     if (!authStore.user?.id) return;
     try {
@@ -622,20 +568,14 @@ export function useEventDetail() {
       isRegistered.value = !!data.registered;
     } catch {}
   };
-
   const validateAccess = () => {
     if (!event.value) return;
-    
-    
-
     noPermissionReason.value = "";
-    
     if (event.value.status === "closed") {
       hasPermissionToJoin.value = false;
       noPermissionReason.value = "กิจกรรมนี้ปิดรับสมัครแล้ว";
       return;
     }
-
     if (!isContinuousRegistration.value && event.value.registration_end_date) {
       const regEnd = new Date(event.value.registration_end_date);
       regEnd.setHours(23, 59, 59, 999);
@@ -645,7 +585,6 @@ export function useEventDetail() {
         return;
       }
     }
-
     if (!isContinuousEvent.value && event.value.end_date) {
       const eventEnd = new Date(event.value.end_date);
       eventEnd.setHours(23, 59, 59, 999);
@@ -655,7 +594,6 @@ export function useEventDetail() {
         return;
       }
     }
-
     if (!isUnlimited.value) {
       const filled = event.value.registration_count ?? event.value.filled ?? 0;
       const limit = Number(event.value.max_slots || event.value.total || 0);
@@ -665,28 +603,22 @@ export function useEventDetail() {
         return;
       }
     }
-
     const vis = allowedGroups.value;
-
     if (vis.includes("general") || (vis.length === 1 && (vis[0].toLowerCase() === 'public' || vis[0].toLowerCase() === 'general'))) {
       hasPermissionToJoin.value = true;
       return;
     }
-
-
     if (!authStore.user) {
       hasPermissionToJoin.value = false;
       noPermissionReason.value = "กรุณาเข้าสู่ระบบก่อนเข้าร่วม";
       return;
     }
-
     // If the activity was created by a Team Host, restrict to that team ONLY
     const creatorRole = event.value.creator?.role || event.value.creator?.role_name;
     const isTeamMatch =
       authStore.user?.team_id &&
       event.value.creator?.team_id &&
       Number(authStore.user.team_id) === Number(event.value.creator.team_id);
-
     if (creatorRole === 'host') {
       if (!isTeamMatch) {
         hasPermissionToJoin.value = false;
@@ -694,16 +626,13 @@ export function useEventDetail() {
         return;
       }
     }
-
     const baseGroups = ["general", "my_team", "other_teams"];
     const baseVis = vis.filter((v) => baseGroups.includes(v));
-
     let passBase =
       baseVis.length === 0 ||
       baseVis.includes("general") ||
       (baseVis.includes("my_team") && isTeamMatch) ||
       (baseVis.includes("other_teams") && authStore.user?.team_id);
-
     if (!passBase) {
       hasPermissionToJoin.value = false;
       if (baseVis.includes("my_team") && !baseVis.includes("other_teams")) {
@@ -721,7 +650,6 @@ export function useEventDetail() {
       }
       return;
     }
-
     const roleTypeGroups = [
       "นักเรียน",
       "นักศึกษา",
@@ -736,7 +664,6 @@ export function useEventDetail() {
       "ม.1", "ม.2", "ม.3", "ม.4", "ม.5", "ม.6"
     ];
     const yearGroups = ["ปี 1", "ปี 2", "ปี 3", "ปี 4", "ปี 5", "ปี 6"];
-
     const gradeVis = vis.filter((v) => gradeGroups.includes(v) || specificGrades.includes(v));
     const yearVis = vis.filter((v) => yearGroups.includes(v));
     const facultyVis = vis.filter(
@@ -747,17 +674,14 @@ export function useEventDetail() {
         !specificGrades.includes(v) &&
         !yearGroups.includes(v),
     );
-
     const hasRoleFilters =
       roleTypeVis.length > 0 ||
       gradeVis.length > 0 ||
       yearVis.length > 0 ||
       facultyVis.length > 0;
-
     const userRole = authStore.user?.role_type;
     const userDetail1 = authStore.user?.role_detail_1;
     const userDetail2 = authStore.user?.role_detail_2;
-
     // Compute User Status Label
     if (authStore.user) {
       if (userRole === "นักเรียน") {
@@ -775,7 +699,6 @@ export function useEventDetail() {
     } else {
       currentUserRoleLabel.value = "ยังไม่ได้เข้าสู่ระบบ";
     }
-
     if (hasRoleFilters) {
       // 1. Check Role Type if specified
       if (roleTypeVis.length > 0 && !roleTypeVis.includes(userRole)) {
@@ -783,7 +706,6 @@ export function useEventDetail() {
         noPermissionReason.value = `จำกัดเฉพาะกลุ่ม: ${roleTypeVis.join(", ")}`;
         return;
       }
-
       // 2. Role-specific Detail Checks
       if (userRole === "นักเรียน") {
         const userGrade = userDetail2 || "";
@@ -794,7 +716,6 @@ export function useEventDetail() {
             if (v === "ม.1 - ม.6") return userGrade.startsWith("ม.");
             return v === userGrade;
           });
-
         if (!passGrade) {
           hasPermissionToJoin.value = false;
           noPermissionReason.value = `จำกัดเฉพาะระดับชั้น: ${gradeVis.join(", ")} (ปัจจุบันคุณคือ: ${userGrade || "ไม่ระบุ"})`;
@@ -810,7 +731,6 @@ export function useEventDetail() {
         } else {
           userFac = userDetail2 || "";
         }
-
         const passFac =
           facultyVis.length === 0 ||
           facultyVis.includes(userFac) ||
@@ -820,7 +740,6 @@ export function useEventDetail() {
           noPermissionReason.value = `จำกัดเฉพาะสำนักวิชา: ${facultyVis.join(", ")}`;
           return;
         }
-
         const passYear =
           yearVis.length === 0 ||
           yearVis.includes(userYear) ||
@@ -844,7 +763,6 @@ export function useEventDetail() {
           return;
         }
       }
-
       // 3. Cross-role enforcement
       // If a role-specific filter is active but the user isn't in that role,
       // they must have been explicitly allowed in roleTypeVis.
@@ -852,7 +770,6 @@ export function useEventDetail() {
       const isCollegeStudent = userRole === "นักศึกษา";
       const isStaff =
         userRole === "บุคลากรมหาวิทยาลัย" || userRole === "บุคลากรโรงพยาบาล";
-
       if (gradeVis.length > 0 && !isStudent && !roleTypeVis.includes(userRole)) {
         hasPermissionToJoin.value = false;
         noPermissionReason.value = `กิจกรรมนี้จำกัดเฉพาะนักเรียนระดับชั้น: ${gradeVis.join(", ")}`;
@@ -880,17 +797,14 @@ export function useEventDetail() {
     }
     hasPermissionToJoin.value = true;
   };
-
   // Join / Leave Actions
   const joinActivity = async () => {
     if (joining.value || slotFull.value) return;
     joining.value = true;
-    
     if (!authStore.user?.id) {
       joining.value = false;
       return showError("กรุณาเข้าสู่ระบบก่อนเข้าร่วมกิจกรรมครับ");
     }
-
     if (!hasPermissionToJoin.value) {
       joining.value = false;
       return showToast(
@@ -898,14 +812,11 @@ export function useEventDetail() {
         "error",
       );
     }
-
     let joinMode = "solo"; // Force individual registration as per user request
-
     let eventCode = "";
     const hasCode = event.value.has_event_code || !!event.value.event_code;
     const isTeamMember = authStore.user?.team_id && event.value.creator?.team_id && 
                         Number(authStore.user.team_id) === Number(event.value.creator.team_id);
-
     if (hasCode) {
       const { value: code, isConfirmed } = await swal.fire({
         title: event.value.team_mode ? "รหัสเข้าร่วมทีม" : "รหัสเข้าร่วมกิจกรรม",
@@ -916,14 +827,12 @@ export function useEventDetail() {
         inputPlaceholder: "กรอกรหัสผ่านที่นี่...",
         inputValidator: (value) => !value ? "กรุณากรอกรหัสผ่าน!" : null,
       });
-      
       if (!isConfirmed) {
         joining.value = false;
         return;
       }
       eventCode = code as string;
     }
-
     // Check if event has a password
     let eventPassword = "";
     const hasPassword = event.value.has_event_password;
@@ -950,9 +859,7 @@ export function useEventDetail() {
       }
       eventPassword = pwd as string;
     }
-
     try {
-
       const res = await fetch(`/api/activities/${event.value.id}/join`, {
         method: "POST",
         headers: {
@@ -966,18 +873,14 @@ export function useEventDetail() {
           eventPassword,
         }),
       });
-
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || data.message || "เข้าร่วมไม่สำเร็จ");
       }
-
       isRegistered.value = true;
       event.value.registration_count = (event.value.registration_count || 0) + 1;
       if (event.value.filled !== undefined) event.value.filled = (event.value.filled || 0) + 1;
-      
       showToast(data.message || "เข้าร่วมกิจกรรมสำเร็จ!", "success");
-      
       if (event.value.certificate_config?.enabled) checkCertEligibility();
       checkAndShowPopups();
     } catch (e: any) {
@@ -986,7 +889,6 @@ export function useEventDetail() {
       joining.value = false;
     }
   };
-
   const leaveActivity = async () => {
     const result = await swal.fire({
       title: "ยืนยันการออกจากกิจกรรม?",
@@ -1003,10 +905,8 @@ export function useEventDetail() {
       },
       buttonsStyling: false,
     });
-
     if (!result.isConfirmed) return;
     let leaveMode = "solo";
-
     joining.value = true;
     try {
       const res = await fetch(`/api/activities/${event.value.id}/leave`, {
@@ -1029,7 +929,6 @@ export function useEventDetail() {
       joining.value = false;
     }
   };
-
   // Favorites
   const fetchFavoriteStatus = async () => {
     if (!event.value?.id) return;
@@ -1045,7 +944,6 @@ export function useEventDetail() {
       await fetchFavoriteStatus();
     } catch {}
   };
-
   // Assessments & Popups
   const checkAssessmentStatus = async () => {
     if (!authStore.user || !event.value) return;
@@ -1064,19 +962,16 @@ export function useEventDetail() {
       postTestCompleted.value = post.completed;
     } catch {}
   };
-
   const getTanitaLabel = (dateItem: any) => {
     if (!dateItem) return "";
     if (typeof dateItem === 'object') return dateItem.label || "";
     return "";
   };
-
   const getTanitaDate = (dateItem: any) => {
     if (!dateItem) return "";
     if (typeof dateItem === 'object') return dateItem.date || "";
     return String(dateItem);
   };
-
   const isPastOrToday = (dateItem: any) => {
     const dStr = getTanitaDate(dateItem);
     if (!dStr) return true; // หากไม่ระบุวันที่ ให้ถือว่าสามารถส่งได้เลย
@@ -1091,20 +986,16 @@ export function useEventDetail() {
         String(r.session_label || "").trim() === label.trim() ||
         String(r.session_label || "").trim() === label.replace("รอบที่ ", ""),
     );
-
   const checkAndShowPopups = () => {
     if (!isRegistered.value) return;
     const tempQueue: AssessmentPopupQueue[] = [];
-
     if (isPreTestRequired.value && !preTestCompleted.value)
       tempQueue.push({ type: "pre_test" });
-
     tanitaRequiredDates.value.forEach((dateItem: any, index: number) => {
       const label = `รอบที่ ${index + 1}`;
       if (isPastOrToday(dateItem) && !hasTanitaRecord(label))
         tempQueue.push({ type: `tanita_${index + 1}`, label });
     });
-
     const canDoPostTest = isPreTestRequired.value
       ? preTestCompleted.value
       : true;
@@ -1117,18 +1008,15 @@ export function useEventDetail() {
     ) {
       if (postTestEligible.value) tempQueue.push({ type: "post_test" });
     }
-
     activePopupIndex.value = 0;
     popupQueue.value = tempQueue;
   };
-
   const dismissAllPopups = () => (popupsDismissed.value = true);
   const goToAssessment = (popup: any) => {
     const type = typeof popup === "string" ? popup : popup.type;
     const label = typeof popup === "string" ? "" : popup.label;
     if (type.includes("test") && !isRegistered.value)
       return showError("กรุณาลงทะเบียนก่อนทำแบบทดสอบครับ");
-
     dismissAllPopups();
     if (type.startsWith("tanita"))
       router.push({
@@ -1144,7 +1032,6 @@ export function useEventDetail() {
         query: { eventId: event.value.id, type },
       });
   };
-
   const getPopupTheme = (type: string) =>
     type === "pre_test"
       ? "pre-test-theme"
@@ -1158,7 +1045,6 @@ export function useEventDetail() {
       return `ถึงกำหนดบันทึกข้อมูล (Tanita) ${popup.label || ""}`;
     return "ถึงกำหนดบันทึกข้อมูล (Tanita)";
   };
-
   // Touch Swipe Logic for Modals
   const handleTouchStart = (e: TouchEvent) => {
     touchStartX = e.changedTouches[0].screenX;
@@ -1177,7 +1063,6 @@ export function useEventDetail() {
     if (touchEndX > touchStartX + threshold && activePopupIndex.value > 0)
       activePopupIndex.value--;
   };
-
   // Tanita Calls
   const fetchTanitaHistory = async () => {
     if (!authStore.user?.id || !event.value?.id) return;
@@ -1198,7 +1083,6 @@ export function useEventDetail() {
       return showToast("ยังไม่มีข้อมูลบันทึก", "error");
     showTanitaModal.value = true;
   };
-
   // Goals
   const fetchGoalProgress = async () => {
     if (!event.value?.id) return;
@@ -1211,7 +1095,6 @@ export function useEventDetail() {
       goalConfigData.value = json.goal_config || {};
       goalData.value = json.data || [];
       goalCurrentPage.value = 1;
-      
       // Re-verify certificate eligibility whenever goal progress is updated
       // to allow the download button to unlock immediately if the user just passed the goal.
       if (isRegistered.value && event.value?.certificate_config?.enabled) {
@@ -1241,7 +1124,6 @@ export function useEventDetail() {
     (goalViewTab.value === "individual"
       ? Number(item.id) === Number(authStore.user.id)
       : Number(item.id) === Number(authStore.user.team_id));
-
   const certCriteria = ref<any>(null);
   const checkCertEligibility = async () => {
     if (!authStore.user?.id || !event.value?.id) return;
@@ -1257,7 +1139,6 @@ export function useEventDetail() {
           { headers: { "x-user-id": String(authStore.user.id) } },
         ),
       ]);
-
       if (certRes.ok) {
         const data = await certRes.json();
         isEligible.value = !!data.eligible;
@@ -1272,7 +1153,6 @@ export function useEventDetail() {
       }
     } catch {}
   };
-
   const toSafeUrl = (url: string) => {
     if (!url || typeof url !== "string") return "";
     if (!url.startsWith("http")) return url;
@@ -1292,7 +1172,6 @@ export function useEventDetail() {
     if (Array.isArray(obj.objects)) obj.objects.forEach(patchCORS);
     if (obj.backgroundImage) patchCORS(obj.backgroundImage);
   };
-
   const claimCert = async () => {
     if (claiming.value) return;
     claiming.value = true;
@@ -1304,7 +1183,6 @@ export function useEventDetail() {
       if (!tplRes.ok) throw new Error("ไม่พบเทมเพลตเกียรติบัตร");
       const template = await tplRes.json();
       if (!template?.canvas_json) throw new Error("เกียรติบัตรยังไม่ได้ออกแบบ");
-
       const W = template.width || 1754,
         H = template.height || 1240;
       const el = document.createElement("canvas");
@@ -1315,17 +1193,14 @@ export function useEventDetail() {
         height: H,
         enableRetinaScaling: false,
       });
-
       const raw =
         typeof template.canvas_json === "string"
           ? JSON.parse(template.canvas_json)
           : structuredClone(template.canvas_json);
       patchCORS(raw);
-
       await cv.loadFromJSON(raw, (jsonObj: any, fabricObj: any) => {
         if (jsonObj?.data && fabricObj) (fabricObj as any).data = jsonObj.data;
       });
-
       // Profile Image handling
       const user = authStore.user;
       const picUrl =
@@ -1348,10 +1223,8 @@ export function useEventDetail() {
           });
           cv.backgroundImage = bgImg;
         } catch (e) {
-          console.warn("Background load failed", e);
         }
       }
-
       const replacements: Record<string, string> = {
         "{{user_fullname}}":
           [user?.fname_th, user?.lname_th].filter(Boolean).join(" ") ||
@@ -1371,7 +1244,6 @@ export function useEventDetail() {
           day: "numeric",
         }),
       };
-
       const picHolders: any[] = [];
       cv.getObjects().forEach((obj) => {
         if (["i-text", "text", "textbox"].includes(obj.type || "")) {
@@ -1384,7 +1256,6 @@ export function useEventDetail() {
         }
         if ((obj as any).data?.field === "user_picture") picHolders.push(obj);
       });
-
       for (const ph of picHolders) {
         if (!picUrl) {
           cv.remove(ph);
@@ -1409,7 +1280,6 @@ export function useEventDetail() {
             originX: "center",
             originY: "center",
           });
-
           profileImg.set({
             left: ph.left,
             top: ph.top,
@@ -1426,11 +1296,9 @@ export function useEventDetail() {
           cv.remove(ph);
         }
       }
-
       cv.renderAll();
       await new Promise<void>((r) => setTimeout(r, 100)); // Hack for fonts/images loading
       cv.renderAll();
-
       const dataURL = cv.toDataURL({
         format: "png",
         quality: 1,
@@ -1442,7 +1310,6 @@ export function useEventDetail() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-
       await fetch("/api/certificates/generate", {
         method: "POST",
         headers: {
@@ -1462,7 +1329,6 @@ export function useEventDetail() {
       claiming.value = false;
     }
   };
-
   // Social
   const shareSocial = async (platform: string) => {
     const url = window.location.href;
@@ -1484,7 +1350,6 @@ export function useEventDetail() {
     if (urls[platform])
       window.open(urls[platform], "_blank", "width=600,height=450");
   };
-
   // Navigation & UI Helpers
   const handleBack = () => {
     const backPath = window.history.state?.back;
@@ -1515,9 +1380,6 @@ export function useEventDetail() {
   const handleScroll = () => {
     showFloater.value = window.scrollY > 400;
   };
-
-
-
   // ==========================
   // Watchers & Lifecycles
   // ==========================
@@ -1530,7 +1392,6 @@ export function useEventDetail() {
     },
     { immediate: true },
   );
-
   watch(showGoalModal, (nv) =>
     nv
       ? router.replace({ query: { ...route.query, modal: "goals" } })
@@ -1541,7 +1402,6 @@ export function useEventDetail() {
       ? router.replace({ query: { ...route.query, modal: "tanita" } })
       : router.replace({ query: { ...route.query, modal: undefined } }),
   );
-
   watch(
     () => route.query.success,
     async (newVal) => {
@@ -1568,13 +1428,11 @@ export function useEventDetail() {
       }
     },
   );
-
   watch(
     [() => authStore.user?.id, () => authStore.user?.team_id],
     checkIsHost,
     { immediate: true },
   );
-
   watch(
     () => authStore.user,
     async () => {
@@ -1591,17 +1449,14 @@ export function useEventDetail() {
     },
     { deep: true }
   );
-
   onMounted(() => {
     fetchEvent();
     window.addEventListener("scroll", handleScroll);
   });
-
   onUnmounted(() => {
     if (pollTimer) clearInterval(pollTimer);
     window.removeEventListener("scroll", handleScroll);
   });
-
   // ==========================
   // Return all encapsulated logic
   // ==========================
@@ -1647,7 +1502,6 @@ export function useEventDetail() {
     showFloater,
     route,
     router,
-
     // Computed
     isUnlimited,
     isContinuousEvent,
@@ -1682,7 +1536,6 @@ export function useEventDetail() {
     tanitaRequiredDates,
     hasTanitaTask,
     postTestEligible,
-
     // Methods
     fetchEvent,
     joinActivity,
@@ -1714,4 +1567,4 @@ export function useEventDetail() {
     sanitizeHtml,
     currentUserRoleLabel,
   };
-}
+}

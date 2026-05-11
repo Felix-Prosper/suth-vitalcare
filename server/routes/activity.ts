@@ -200,7 +200,7 @@ router.get("/", async (req, res) => {
 
     res.json(transformed);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -291,7 +291,7 @@ router.get("/user/:userId/registered", async (req, res) => {
 
     res.json(transformed);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -313,7 +313,7 @@ router.get("/:id/scores", async (req, res) => {
       }, {}),
     );
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -325,7 +325,7 @@ router.get("/:id/registration/:userId", async (req, res) => {
     );
     res.json({ registered: rows.length > 0 });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -387,7 +387,7 @@ router.get("/batch", async (req, res) => {
 
     res.json(transformed);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -627,7 +627,7 @@ router.post("/:id/join", async (req, res) => {
     await connection.rollback();
     if (error.code === "ER_DUP_ENTRY")
       return res.status(400).json({ error: "คุณลงทะเบียนแล้ว" });
-    return res.status(400).json({ error: error.message });
+    return res.status(400).json({ error: "Bad Request" });
   } finally {
     connection.release();
   }
@@ -706,7 +706,7 @@ router.post("/admin/enroll", requireAdmin, async (req, res) => {
     return res.status(201).json({ message: "Enrolled user successfully" });
   } catch (error: any) {
     await connection.rollback();
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: "Internal Server Error" });
   } finally {
     connection.release();
   }
@@ -749,7 +749,7 @@ router.post("/admin/kick", requireAdmin, async (req, res) => {
 
     return res.json({ message: "Removed user successfully" });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -804,7 +804,7 @@ router.post("/admin/kick-bulk", requireAdmin, async (req, res) => {
 
     return res.json({ message: `Removed user from ${eventIds.length} activities successfully` });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -889,7 +889,7 @@ router.get("/:id", async (req, res) => {
       missions_config,
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1087,7 +1087,7 @@ router.post("/", requireAdmin, async (req, res) => {
     res.status(201).json(finalRows[0]);
   } catch (error: any) {
     await connection.rollback();
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   } finally {
     connection.release();
   }
@@ -1149,7 +1149,7 @@ router.patch("/bulk-status", async (req, res) => {
     res.json({ message: "Successfully updated status" });
   } catch (error: any) {
     await connection.rollback();
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   } finally {
     connection.release();
   }
@@ -1207,7 +1207,7 @@ router.delete("/bulk", async (req, res) => {
     res.status(204).send();
   } catch (error: any) {
     await connection.rollback();
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   } finally {
     connection.release();
   }
@@ -1416,7 +1416,7 @@ router.patch("/:id", requireAdmin, async (req, res) => {
     res.json(finalRows[0]);
   } catch (error: any) {
     await connection.rollback();
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   } finally {
     connection.release();
   }
@@ -1445,7 +1445,7 @@ router.get("/:id/leaderboard", async (req, res) => {
       })),
     );
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1495,7 +1495,7 @@ router.delete("/:id", async (req, res) => {
 
     res.status(204).send();
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1583,7 +1583,7 @@ router.post("/:id/leave", async (req, res) => {
     });
   } catch (error: any) {
     await connection.rollback();
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   } finally {
     connection.release();
   }
@@ -1648,7 +1648,7 @@ router.get("/:id/participants", async (req, res) => {
     res.json(transformed);
   } catch (error: any) {
     console.error("[Get Participants Error]", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1735,7 +1735,7 @@ router.get("/:id/admin-stats", requireAdminOrHost, async (req, res) => {
       tanita: transformedTanita,
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1771,7 +1771,7 @@ router.patch("/:id/assign-team", async (req, res) => {
     res.json({ success: true });
   } catch (err: any) {
     await connection.rollback();
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "Internal Server Error" });
   } finally {
     connection.release();
   }
@@ -1831,7 +1831,7 @@ router.get("/:id/assessment-part-stats", async (req, res) => {
     res.json({ partStats: rows, questionStats: questionRows });
   } catch (error: any) {
     console.error("[Assessment Stats Error]", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1888,7 +1888,7 @@ router.get("/:id/assessments", async (req, res) => {
 
     res.json(transformed);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1956,7 +1956,7 @@ router.get("/:id/tanita-changes", async (req, res) => {
     const result = Array.from(userMap.values()).filter(u => u.first && u.latest && u.first.id !== u.latest.id);
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -2021,7 +2021,7 @@ router.get("/:id/assessment-comparison", async (req, res) => {
     const result = Array.from(userMap.values()).filter(u => u.pre_score !== null || u.post_score !== null);
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -2071,7 +2071,7 @@ router.get('/:id/bonus-points', requireAdminOrHost, async (req, res) => {
       given_by_name: (() => { try { return decrypt(r.given_by_name) || r.given_by_name; } catch { return r.given_by_name; } })(),
     }));
     res.json(decrypted);
-  } catch (error: any) { res.status(500).json({ error: error.message }); }
+  } catch (error: any) { res.status(500).json({ error: "Internal Server Error" }); }
 });
 
 // POST /api/activities/:id/bonus-points
@@ -2096,7 +2096,7 @@ router.post('/:id/bonus-points', requireAdminOrHost, async (req, res) => {
     }
     await logAudit({ userId: Number(adminId), action: 'ADD_BONUS_POINTS', description: `Admin added ${pts} bonus pts to user ${user_id} in event ${id}. Reason: ${reason || '-'}`, targetType: 'activity', targetId: Number(id) });
     res.status(201).json({ id: result.insertId, message: '????????????????' });
-  } catch (error: any) { res.status(500).json({ error: error.message }); }
+  } catch (error: any) { res.status(500).json({ error: "Internal Server Error" }); }
 });
 
 // DELETE /api/activities/:id/bonus-points/:bonusId
@@ -2111,6 +2111,6 @@ router.delete('/:id/bonus-points/:bonusId', requireAdminOrHost, async (req, res)
     await pool.query('UPDATE users SET points = GREATEST(0, points - ?), total_score = GREATEST(0, total_score - ?) WHERE id = ?', [Number(points), Number(points), user_id]);
     await logAudit({ userId: Number(adminId), action: 'DELETE_BONUS_POINTS', description: `Admin removed bonus ${bonusId} (${points} pts) from user ${user_id} in event ${id}`, targetType: 'activity', targetId: Number(id) });
     res.json({ message: '?????????????' });
-  } catch (error: any) { res.status(500).json({ error: error.message }); }
+  } catch (error: any) { res.status(500).json({ error: "Internal Server Error" }); }
 });
 export default router;

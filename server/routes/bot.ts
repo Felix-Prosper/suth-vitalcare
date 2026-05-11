@@ -40,17 +40,28 @@ const blobClient = new messagingApi.MessagingApiBlobClient({
 
 // ─── User State Detection ────────────────────────────────────────────────────
 interface UserState {
-  hasProfile: boolean;    // กรอกข้อมูลส่วนตัวครบ (มีเบอร์โทรหรือ fname_th จากการลงทะเบียนจริง)
-  hasActivity: boolean;   // สมัครกิจกรรมอย่างน้อย 1 รายการ
+  hasProfile: boolean; // กรอกข้อมูลส่วนตัวครบ (มีเบอร์โทรหรือ fname_th จากการลงทะเบียนจริง)
+  hasActivity: boolean; // สมัครกิจกรรมอย่างน้อย 1 รายการ
 }
 
 // ─── Helper for AI Processing Timeouts ───────────────────────────────────────
-async function safeReplyMessage(client: any, replyToken: string, lineUserId: string | undefined, messages: any[]) {
+async function safeReplyMessage(
+  client: any,
+  replyToken: string,
+  lineUserId: string | undefined,
+  messages: any[],
+) {
   try {
     return await client.replyMessage({ replyToken, messages });
   } catch (err: any) {
-    if (err.message && err.message.toLowerCase().includes("expire") && lineUserId) {
-      console.warn(`[BOT] Reply token expired for ${lineUserId}, falling back to pushMessage!`);
+    if (
+      err.message &&
+      err.message.toLowerCase().includes("expire") &&
+      lineUserId
+    ) {
+      console.warn(
+        `[BOT] Reply token expired for ${lineUserId}, falling back to pushMessage!`,
+      );
       return await client.pushMessage({ to: lineUserId, messages });
     }
     throw err;
@@ -61,14 +72,14 @@ async function getUserState(userId: number): Promise<UserState> {
   try {
     const [[userRow]]: any = await pool.query(
       "SELECT phone, fname_th FROM users WHERE id = ?",
-      [userId]
+      [userId],
     );
     const [[regRow]]: any = await pool.query(
       "SELECT COUNT(*) as cnt FROM registrations WHERE user_id = ?",
-      [userId]
+      [userId],
     );
     // hasProfile: ถือว่าครบถ้าเบอร์โทรถูกเก็บไว้ (เก็บในรูป encrypted แต่ไม่ว่าง)
-    const hasProfile = !!(userRow?.phone);
+    const hasProfile = !!userRow?.phone;
     const hasActivity = (regRow?.cnt ?? 0) > 0;
     return { hasProfile, hasActivity };
   } catch {
@@ -80,16 +91,25 @@ async function getUserState(userId: number): Promise<UserState> {
 // isGroup = true → แสดงเฉพาะปุ่ม Add Friend เพื่อให้ user ไปคุยกับบอท 1:1
 async function getMainQuickReply(userId: number | null, isGroup = false) {
   const liffId = process.env.VITE_LIFF_ID;
-  const loginUrl  = `https://liff.line.me/${liffId}/login`;
-  const actUrl    = `https://liff.line.me/${liffId}/activities`;
+  const loginUrl = `https://liff.line.me/${liffId}/login`;
+  const actUrl = `https://liff.line.me/${liffId}/activities`;
   const botBasicId = process.env.LINE_BOT_BASIC_ID || "";
-  const addFriendUrl = botBasicId ? `https://line.me/R/ti/p/@${botBasicId}` : loginUrl;
+  const addFriendUrl = botBasicId
+    ? `https://line.me/R/ti/p/@${botBasicId}`
+    : loginUrl;
 
   // ถ้าอยู่ใน Group/Room — Quick Reply จะถูก share กับทุกคน ใช้เฉพาะปุ่มเชิญไปคุย 1:1
   if (isGroup) {
     return {
       items: [
-        { type: "action" as const, action: { type: "uri" as const, label: "💬 VitalCare Bot", uri: addFriendUrl } },
+        {
+          type: "action" as const,
+          action: {
+            type: "uri" as const,
+            label: "💬 VitalCare Bot",
+            uri: addFriendUrl,
+          },
+        },
       ],
     };
   }
@@ -98,8 +118,22 @@ async function getMainQuickReply(userId: number | null, isGroup = false) {
     // ยังไม่มี userId (ผู้ใช้ใหม่มาก) — ชวนสมัคร
     return {
       items: [
-        { type: "action" as const, action: { type: "uri" as const,     label: "📝 ลงทะเบียน",        uri: loginUrl } },
-        { type: "action" as const, action: { type: "message" as const, label: "วิธีใช้งาน",          text: "วิธีใช้งาน" } },
+        {
+          type: "action" as const,
+          action: {
+            type: "uri" as const,
+            label: "📝 ลงทะเบียน",
+            uri: loginUrl,
+          },
+        },
+        {
+          type: "action" as const,
+          action: {
+            type: "message" as const,
+            label: "วิธีใช้งาน",
+            text: "วิธีใช้งาน",
+          },
+        },
       ],
     };
   }
@@ -110,8 +144,22 @@ async function getMainQuickReply(userId: number | null, isGroup = false) {
     // สมัครผ่าน LINE แต่ยังไม่กรอกข้อมูลส่วนตัว — ชวนไปกรอกโปรไฟล์
     return {
       items: [
-        { type: "action" as const, action: { type: "uri" as const,     label: "📝 ลงทะเบียนให้ครบ",  uri: loginUrl } },
-        { type: "action" as const, action: { type: "message" as const, label: "วิธีใช้งาน",          text: "วิธีใช้งาน" } },
+        {
+          type: "action" as const,
+          action: {
+            type: "uri" as const,
+            label: "📝 ลงทะเบียนให้ครบ",
+            uri: loginUrl,
+          },
+        },
+        {
+          type: "action" as const,
+          action: {
+            type: "message" as const,
+            label: "วิธีใช้งาน",
+            text: "วิธีใช้งาน",
+          },
+        },
       ],
     };
   }
@@ -120,9 +168,30 @@ async function getMainQuickReply(userId: number | null, isGroup = false) {
     // ลงทะเบียนครบแล้ว แต่ยังไม่สมัครกิจกรรม
     return {
       items: [
-        { type: "action" as const, action: { type: "uri" as const,     label: "🎯 เลือกกิจกรรม",     uri: actUrl } },
-        { type: "action" as const, action: { type: "message" as const, label: "องค์ประกอบร่างกาย",  text: "ส่งข้อมูล องค์ประกอบของร่างกาย" } },
-        { type: "action" as const, action: { type: "message" as const, label: "วิธีใช้งาน",          text: "วิธีใช้งาน" } },
+        {
+          type: "action" as const,
+          action: {
+            type: "uri" as const,
+            label: "🎯 เลือกกิจกรรม",
+            uri: actUrl,
+          },
+        },
+        {
+          type: "action" as const,
+          action: {
+            type: "message" as const,
+            label: "องค์ประกอบร่างกาย",
+            text: "ส่งข้อมูล องค์ประกอบของร่างกาย",
+          },
+        },
+        {
+          type: "action" as const,
+          action: {
+            type: "message" as const,
+            label: "วิธีใช้งาน",
+            text: "วิธีใช้งาน",
+          },
+        },
       ],
     };
   }
@@ -130,10 +199,38 @@ async function getMainQuickReply(userId: number | null, isGroup = false) {
   // ผู้ใช้ Active ปกติ — เมนูเต็ม
   return {
     items: [
-      { type: "action" as const, action: { type: "message" as const,   label: "ส่งภารกิจ",          text: "ส่งภารกิจ" } },
-      { type: "action" as const, action: { type: "message" as const,   label: "ภารกิจวันนี้",        text: "ภารกิจวันนี้" } },
-      { type: "action" as const, action: { type: "message" as const,   label: "องค์ประกอบร่างกาย", text: "ส่งข้อมูล องค์ประกอบของร่างกาย" } },
-      { type: "action" as const, action: { type: "message" as const,   label: "วิธีใช้งาน",          text: "วิธีใช้งาน" } },
+      {
+        type: "action" as const,
+        action: {
+          type: "message" as const,
+          label: "ส่งภารกิจ",
+          text: "ส่งภารกิจ",
+        },
+      },
+      {
+        type: "action" as const,
+        action: {
+          type: "message" as const,
+          label: "ภารกิจวันนี้",
+          text: "ภารกิจวันนี้",
+        },
+      },
+      {
+        type: "action" as const,
+        action: {
+          type: "message" as const,
+          label: "องค์ประกอบร่างกาย",
+          text: "ส่งข้อมูล องค์ประกอบของร่างกาย",
+        },
+      },
+      {
+        type: "action" as const,
+        action: {
+          type: "message" as const,
+          label: "วิธีใช้งาน",
+          text: "วิธีใช้งาน",
+        },
+      },
     ],
   };
 }
@@ -142,9 +239,22 @@ async function getMainQuickReply(userId: number | null, isGroup = false) {
 async function getPhotoUploadQuickReply(userId: number, isGroupChat: boolean) {
   return {
     items: [
-      { type: "action" as const, action: { type: "camera" as const,     label: " ถ่ายรูป" } },
-      { type: "action" as const, action: { type: "cameraRoll" as const, label: " เลือกจากอัลบั้ม" } },
-      { type: "action" as const, action: { type: "message" as const,    label: "❌ ยกเลิก", text: "ยกเลิก" } },
+      {
+        type: "action" as const,
+        action: { type: "camera" as const, label: " ถ่ายรูป" },
+      },
+      {
+        type: "action" as const,
+        action: { type: "cameraRoll" as const, label: " เลือกจากอัลบั้ม" },
+      },
+      {
+        type: "action" as const,
+        action: {
+          type: "message" as const,
+          label: "❌ ยกเลิก",
+          text: "ยกเลิก",
+        },
+      },
     ],
   };
 }
@@ -323,16 +433,22 @@ function buildEventCarousel(validTasks: any[], ownerId: number): any[] {
       } else if (e.eventPoster.startsWith("http")) {
         heroUrl = e.eventPoster;
       } else {
-        const base = apiBase.startsWith("http") ? apiBase.replace(/\/api\/?$/, "") : tunnelUrl;
-        heroUrl = `${base}${e.eventPoster.startsWith('/') ? '' : '/'}${e.eventPoster}`;
+        const base = apiBase.startsWith("http")
+          ? apiBase.replace(/\/api\/?$/, "")
+          : tunnelUrl;
+        heroUrl = `${base}${e.eventPoster.startsWith("/") ? "" : "/"}${e.eventPoster}`;
       }
     }
 
     if (heroUrl && heroUrl.length > 2000) {
       heroUrl = null;
     }
-    
-    if (heroUrl && heroUrl.startsWith("http://") && !heroUrl.includes("localhost")) {
+
+    if (
+      heroUrl &&
+      heroUrl.startsWith("http://") &&
+      !heroUrl.includes("localhost")
+    ) {
       heroUrl = heroUrl.replace("http://", "https://");
     }
 
@@ -536,12 +652,7 @@ function buildConfirmationFlex(
     ]);
 
     const bodySection = safeSection([
-      row(
-        "ไขมัน (%)",
-        result.fat_pc,
-        "%",
-        "#111827",
-      ),
+      row("ไขมัน (%)", result.fat_pc, "%", "#111827"),
       row("มวลไขมัน", result.fat_mass, "kg"),
       row("FFM (ไร้ไขมัน)", result.ffm, "kg"),
       row("มวลกล้ามเนื้อ", result.muscle_mass, "kg", "#111827"),
@@ -555,12 +666,7 @@ function buildConfirmationFlex(
       row("BMR", result.bmr_kj, "kJ"),
       row("BMI", result.bmi, ""),
       row("น้ำหนักเหมาะสม", result.ideal_weight, "kg"),
-      row(
-        "ไขมันช่องท้อง",
-        result.visceral_fat,
-        "ระดับ",
-        "#111827",
-      ),
+      row("ไขมันช่องท้อง", result.visceral_fat, "ระดับ", "#111827"),
       row("อายุเผาผลาญ", result.metabolic_age, "ปี"),
       row("Physique", result.physique_rating, ""),
       row("ระดับความอ้วน", result.obesity_degree, "%"),
@@ -832,8 +938,8 @@ function buildConfirmationFlex(
                 displayText: "ยกเลิก",
               },
             },
-          ]
-        }
+          ],
+        },
       ],
     },
   };
@@ -851,7 +957,8 @@ async function handleEvent(event: any) {
 
   // ตรวจสอบว่าเป็น Group/Room chat หรือไม่
   // Quick Reply ใน Group จะ shared กับทุกคน → ใช้เฉพาะปุ่ม Add Friend
-  const isGroupChat = event.source.type === "group" || event.source.type === "room";
+  const isGroupChat =
+    event.source.type === "group" || event.source.type === "room";
 
   try {
     // 0. Handle follow event (Someone adds the bot)
@@ -866,7 +973,7 @@ async function handleEvent(event: any) {
       // เช็คว่ามีในระบบแล้วหรือยัง (กรณี unfollow แล้ว follow ใหม่)
       const [existingRows]: any = await pool.query(
         "SELECT id, phone FROM users WHERE line_id = ?",
-        [lineUserId]
+        [lineUserId],
       );
       const existingUser = existingRows[0] ?? null;
       const liffId = process.env.VITE_LIFF_ID;
@@ -876,42 +983,76 @@ async function handleEvent(event: any) {
         // ผู้ใช้ใหม่จริงๆ — ชวนลงทะเบียน
         return client.replyMessage({
           replyToken: event.replyToken,
-          messages: [{
-            type: "text",
-            text: `สวัสดีครับ ${followName}! ยินดีต้อนรับสู่ VitalCare 🎉\n\nก่อนเริ่มต้นบันทึกกิจกรรม กรุณาลงทะเบียนข้อมูลส่วนตัวก่อนนะครับ ใช้เวลาเพียงไม่กี่นาที 📝`,
-            quickReply: {
-              items: [
-                { type: "action" as const, action: { type: "uri" as const, label: "📝 ลงทะเบียนเลย", uri: loginUrl } },
-                { type: "action" as const, action: { type: "message" as const, label: "วิธีใช้งาน", text: "วิธีใช้งาน" } },
-              ],
+          messages: [
+            {
+              type: "text",
+              text: `สวัสดีครับ ${followName}! ยินดีต้อนรับสู่ VitalCare 🎉\n\nก่อนเริ่มต้นบันทึกกิจกรรม กรุณาลงทะเบียนข้อมูลส่วนตัวก่อนนะครับ ใช้เวลาเพียงไม่กี่นาที 📝`,
+              quickReply: {
+                items: [
+                  {
+                    type: "action" as const,
+                    action: {
+                      type: "uri" as const,
+                      label: "📝 ลงทะเบียนเลย",
+                      uri: loginUrl,
+                    },
+                  },
+                  {
+                    type: "action" as const,
+                    action: {
+                      type: "message" as const,
+                      label: "วิธีใช้งาน",
+                      text: "วิธีใช้งาน",
+                    },
+                  },
+                ],
+              },
             },
-          }],
+          ],
         });
       } else if (!existingUser.phone) {
         // เคย follow แต่ยังไม่กรอกโปรไฟล์
         return client.replyMessage({
           replyToken: event.replyToken,
-          messages: [{
-            type: "text",
-            text: `ยินดีต้อนรับกลับมานะครับ ${followName}! 👋\n\nดูเหมือนข้อมูลส่วนตัวของคุณยังไม่ครบ กรุณากรอกให้ครบก่อนเพื่อใช้งานได้เต็มที่ครับ`,
-            quickReply: {
-              items: [
-                { type: "action" as const, action: { type: "uri" as const, label: "📝 กรอกข้อมูล", uri: loginUrl } },
-                { type: "action" as const, action: { type: "message" as const, label: "วิธีใช้งาน", text: "วิธีใช้งาน" } },
-              ],
+          messages: [
+            {
+              type: "text",
+              text: `ยินดีต้อนรับกลับมานะครับ ${followName}! 👋\n\nดูเหมือนข้อมูลส่วนตัวของคุณยังไม่ครบ กรุณากรอกให้ครบก่อนเพื่อใช้งานได้เต็มที่ครับ`,
+              quickReply: {
+                items: [
+                  {
+                    type: "action" as const,
+                    action: {
+                      type: "uri" as const,
+                      label: "📝 กรอกข้อมูล",
+                      uri: loginUrl,
+                    },
+                  },
+                  {
+                    type: "action" as const,
+                    action: {
+                      type: "message" as const,
+                      label: "วิธีใช้งาน",
+                      text: "วิธีใช้งาน",
+                    },
+                  },
+                ],
+              },
             },
-          }],
+          ],
         });
       } else {
         // กลับมาใหม่ และข้อมูลครบแล้ว
         const mainQR = await getMainQuickReply(existingUser.id, isGroupChat);
         return client.replyMessage({
           replyToken: event.replyToken,
-          messages: [{
-            type: "text",
-            text: `ยินดีต้อนรับกลับมาครับ ${followName}! 💪\n\nคุณสามารถส่งรูปภาพผลการวิ่ง / สลิปองค์ประกอบร่างกาย หรือกดปุ่มด้านล่างได้เลยครับ`,
-            quickReply: mainQR,
-          }],
+          messages: [
+            {
+              type: "text",
+              text: `ยินดีต้อนรับกลับมาครับ ${followName}! 💪\n\nคุณสามารถส่งรูปภาพผลการวิ่ง / สลิปองค์ประกอบร่างกาย หรือกดปุ่มด้านล่างได้เลยครับ`,
+              quickReply: mainQR,
+            },
+          ],
         });
       }
     }
@@ -981,7 +1122,8 @@ async function handleEvent(event: any) {
           "SELECT note, type FROM tasks WHERE id = ?",
           [taskId],
         );
-        const taskName = taskData.length > 0 ? (taskData[0].note || taskData[0].type) : "ภารกิจ";
+        const taskName =
+          taskData.length > 0 ? taskData[0].note || taskData[0].type : "ภารกิจ";
 
         await pool.query(
           "UPDATE users SET last_bot_task_id = ? WHERE line_id = ?",
@@ -1001,9 +1143,11 @@ async function handleEvent(event: any) {
               ? apiBase.replace(/\/api\/?$/, "")
               : tunnelUrl;
 
-            const fullUrl = result.publicUrl.startsWith("data:") 
+            const fullUrl = result.publicUrl.startsWith("data:")
               ? `${host}/api/bot/image-preview/${userId}?t=${Date.now()}`
-              : (result.publicUrl.startsWith("http") ? result.publicUrl : `${host}${result.publicUrl}`);
+              : result.publicUrl.startsWith("http")
+                ? result.publicUrl
+                : `${host}${result.publicUrl}`;
 
             return client.replyMessage({
               replyToken: event.replyToken,
@@ -1015,8 +1159,17 @@ async function handleEvent(event: any) {
                 {
                   type: "flex",
                   altText: `ยืนยันข้อมูลการส่งผลของคุณ ${displayName}`,
-                  contents: buildConfirmationFlex(result, fullUrl, taskId, userId),
-                  quickReply: getConfirmQuickReply(Number(taskId), result, userId),
+                  contents: buildConfirmationFlex(
+                    result,
+                    fullUrl,
+                    taskId,
+                    userId,
+                  ),
+                  quickReply: getConfirmQuickReply(
+                    Number(taskId),
+                    result,
+                    userId,
+                  ),
                 },
               ],
             });
@@ -1035,7 +1188,7 @@ async function handleEvent(event: any) {
         });
       } else if (action === "select_bot_event" && data.get("eventId")) {
         const eventId = Number(data.get("eventId"));
-        
+
         // Fetch event name for display
         const [eventData]: any = await pool.query(
           "SELECT title FROM events WHERE id = ?",
@@ -1139,14 +1292,14 @@ async function handleEvent(event: any) {
       const stream = await blobClient.getMessageContent(messageId);
       const rawBuf = await streamToBuffer(stream);
 
-      // Process with Sharp to optimize for Database (WebP, max 1280px)
+      // Process with Sharp to optimize for Database (PNG, max 1280px)
       const sharp = (await import("sharp")).default;
       const optimizedBuf = await sharp(rawBuf)
-        .resize(1280, 1280, { fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 85 })
+        .resize(1280, 1280, { fit: "inside", withoutEnlargement: true })
+        .png({ compressionLevel: 9, adaptiveFiltering: true })
         .toBuffer();
-      
-      const b64 = `data:image/webp;base64,${optimizedBuf.toString("base64")}`;
+
+      const b64 = `data:image/png;base64,${optimizedBuf.toString("base64")}`;
       const publicUrl = b64; // We use base64 directly in logic
 
       const apiBase = process.env.VITE_API_URL || "";
@@ -1154,7 +1307,7 @@ async function handleEvent(event: any) {
       const host = apiBase.startsWith("http")
         ? apiBase.replace(/\/api\/?$/, "")
         : tunnelUrl;
-      
+
       // For LINE Hero, we MUST use a real URL that serves from DB
       const fullUrl = `${host}/api/bot/image-preview/${userId}?t=${Date.now()}`;
       console.log("DEBUG: Final URL for LINE Hero (DB-served):", fullUrl);
@@ -1234,22 +1387,25 @@ async function handleEvent(event: any) {
             }
           } catch (tanitaErr: any) {
             console.warn(`[BOT] analyze-tanita failed:`, tanitaErr.message);
-            
+
             // ถ้าเป็นโหมดบันทึกร่างกายโดยเฉพาะ (lastBotTaskId === 0) แล้วรูปผิด หรือ AI ขัดข้อง -> แจ้งเตือนด้วย Flex Message ทันที
             if (lastBotTaskId === 0) {
               const isInvalidImage = tanitaErr.response?.status === 422;
-              
-              // อัปเดต DB ด้วยรูปนี้ก่อน เพื่อให้ปุ่ม 'แก้ไข' บนเว็บเห็นรูปที่พึ่งส่งมาล่าสุด
-              await pool.query("UPDATE users SET pending_bot_result = ? WHERE id = ?", [
-                JSON.stringify({ type: "TANITA", publicUrl }),
-                userId,
-              ]);
 
-              const errMsg = isInvalidImage 
-                ? (tanitaErr.response?.data?.error || 'รูปภาพที่ส่งมาไม่ใช่ใบวัดองค์ประกอบร่างกาย')
-                : 'เกิดข้อผิดพลาดในการวิเคราะห์ภาพจากระบบ AI หรือระบบประมวลผลไม่ทันเวลา (Timeout)\n\nระบบยังคงบันทึกรูปของคุณไว้ คุณสามารถกดปุ่มเพื่อกรอกข้อมูลด้วยตนเองผ่านเว็บไซต์ได้เลยครับ';
-              
-              const headerText = isInvalidImage ? "ไม่พบข้อมูลสุขภาพในรูป" : "ระบบวิเคราะห์ภาพขัดข้อง";
+              // อัปเดต DB ด้วยรูปนี้ก่อน เพื่อให้ปุ่ม 'แก้ไข' บนเว็บเห็นรูปที่พึ่งส่งมาล่าสุด
+              await pool.query(
+                "UPDATE users SET pending_bot_result = ? WHERE id = ?",
+                [JSON.stringify({ type: "TANITA", publicUrl }), userId],
+              );
+
+              const errMsg = isInvalidImage
+                ? tanitaErr.response?.data?.error ||
+                  "รูปภาพที่ส่งมาไม่ใช่ใบวัดองค์ประกอบร่างกาย"
+                : "เกิดข้อผิดพลาดในการวิเคราะห์ภาพจากระบบ AI หรือระบบประมวลผลไม่ทันเวลา (Timeout)\n\nระบบยังคงบันทึกรูปของคุณไว้ คุณสามารถกดปุ่มเพื่อกรอกข้อมูลด้วยตนเองผ่านเว็บไซต์ได้เลยครับ";
+
+              const headerText = isInvalidImage
+                ? "ไม่พบข้อมูลสุขภาพในรูป"
+                : "ระบบวิเคราะห์ภาพขัดข้อง";
               const bodyCompUrl = `${host}/body-composition`;
 
               return client.replyMessage({
@@ -1298,7 +1454,7 @@ async function handleEvent(event: any) {
                             wrap: true,
                             color: "#374151",
                             size: "sm",
-                          }
+                          },
                         ],
                       },
                       footer: {
@@ -1324,11 +1480,13 @@ async function handleEvent(event: any) {
                 ],
               });
             }
-            
-            // ถ้าเป็น Mission (>0) แล้ว analyze-tanita พลาด ไม่ต้อง return 
+
+            // ถ้าเป็น Mission (>0) แล้ว analyze-tanita พลาด ไม่ต้อง return
             // ปล่อยให้ flow ไหลไปที่ analyze-mission ด้านล่างแทน
             if (lastBotTaskId > 0) {
-              console.log(`[BOT] Tanita analysis skipped or failed for mission, falling back to mission analysis...`);
+              console.log(
+                `[BOT] Tanita analysis skipped or failed for mission, falling back to mission analysis...`,
+              );
             }
           }
         }
@@ -1380,15 +1538,15 @@ async function handleEvent(event: any) {
 
         if (isRateLimit) {
           // บันทึก URL รูปไว้เพื่อให้ไปแก้ไขเองได้ แม้ AI จะล่ม
-          const rateLimitResult = { 
-            type: lastBotTaskId === 0 ? "TANITA" : "MISSION", 
+          const rateLimitResult = {
+            type: lastBotTaskId === 0 ? "TANITA" : "MISSION",
             publicUrl,
-            isRateLimited: true 
+            isRateLimited: true,
           };
-          await pool.query("UPDATE users SET pending_bot_result = ? WHERE id = ?", [
-            JSON.stringify(rateLimitResult),
-            userId,
-          ]);
+          await pool.query(
+            "UPDATE users SET pending_bot_result = ? WHERE id = ?",
+            [JSON.stringify(rateLimitResult), userId],
+          );
 
           return client.replyMessage({
             replyToken: event.replyToken,
@@ -1507,7 +1665,12 @@ async function handleEvent(event: any) {
       }
 
       // Generate Confirmation Flex Message
-      const flexMsg = buildConfirmationFlex(result, fullUrl, lastBotTaskId, userId);
+      const flexMsg = buildConfirmationFlex(
+        result,
+        fullUrl,
+        lastBotTaskId,
+        userId,
+      );
 
       return client.replyMessage({
         replyToken: event.replyToken,
@@ -1573,15 +1736,18 @@ async function handleEvent(event: any) {
           : tunnelUrl;
 
         const fullUrl2 = pending.publicUrl
-          ? (pending.publicUrl.startsWith("data:") 
-              ? `${host}/api/bot/image-preview/${userId}?t=${Date.now()}`
-              : (pending.publicUrl.startsWith("http") ? pending.publicUrl : `${host}${pending.publicUrl}`))
+          ? pending.publicUrl.startsWith("data:")
+            ? `${host}/api/bot/image-preview/${userId}?t=${Date.now()}`
+            : pending.publicUrl.startsWith("http")
+              ? pending.publicUrl
+              : `${host}${pending.publicUrl}`
           : "";
 
         const updatedFlex = buildConfirmationFlex(
           pending,
           fullUrl2,
           lastBotTaskId,
+          userId,
         );
         return client.replyMessage({
           replyToken: event.replyToken,
@@ -1594,7 +1760,7 @@ async function handleEvent(event: any) {
               type: "flex",
               altText: "ยืนยันข้อมูลที่แก้ไข",
               contents: updatedFlex,
-              quickReply: getConfirmQuickReply(lastBotTaskId, pending),
+              quickReply: getConfirmQuickReply(lastBotTaskId, pending, userId),
             },
           ],
         });
@@ -1639,7 +1805,7 @@ async function handleEvent(event: any) {
             // ตรวจสอบว่าวันนี้เคยส่งภารกิจนี้ไปหรือยัง (เพื่อเลือกระหว่าง INSERT หรือ UPDATE)
             const [existingSubs]: any = await pool.query(
               "SELECT id FROM submissions WHERE user_id = ? AND task_id = ? AND DATE(created_at) = CURDATE() AND status != 'rejected' LIMIT 1",
-              [userId, lastBotTaskId]
+              [userId, lastBotTaskId],
             );
 
             let subId: number;
@@ -1647,14 +1813,18 @@ async function handleEvent(event: any) {
 
             if (existingSubs.length > 0) {
               subId = existingSubs[0].id;
-              console.log(`[BOT] Updating existing submission ${subId} for task ${lastBotTaskId}`);
+              console.log(
+                `[BOT] Updating existing submission ${subId} for task ${lastBotTaskId}`,
+              );
               await pool.query(
                 "UPDATE submissions SET value = ?, img_url = ?, created_at = NOW() WHERE id = ?",
-                [val, publicUrl, subId]
+                [val, publicUrl, subId],
               );
             } else {
               isNewSubmission = true;
-              console.log(`[BOT] Creating new submission for task ${lastBotTaskId}`);
+              console.log(
+                `[BOT] Creating new submission for task ${lastBotTaskId}`,
+              );
               const [insResult]: any = await pool.query(
                 `INSERT INTO submissions (user_id, task_id, value, img_url, status, activity_type, proof_type, created_at)
                  VALUES (?, ?, ?, ?, 'approved', ?, 'image', NOW())`,
@@ -1679,54 +1849,99 @@ async function handleEvent(event: any) {
                 fat_pc: result.fat_pc ? String(result.fat_pc) : null,
                 fat_mass: result.fat_mass ? String(result.fat_mass) : null,
                 ffm: result.ffm ? String(result.ffm) : null,
-                muscle_mass: result.muscle_mass ? String(result.muscle_mass) : null,
+                muscle_mass: result.muscle_mass
+                  ? String(result.muscle_mass)
+                  : null,
                 tbw_mass: result.tbw_mass ? String(result.tbw_mass) : null,
                 tbw_pc: result.tbw_pc ? String(result.tbw_pc) : null,
                 bone_mass: result.bone_mass ? String(result.bone_mass) : null,
                 bmr_kcal: Number(result.bmr_kcal) || null,
-                metabolic_age: result.metabolic_age ? String(result.metabolic_age) : null,
-                visceral_fat: result.visceral_fat ? String(result.visceral_fat) : null,
+                metabolic_age: result.metabolic_age
+                  ? String(result.metabolic_age)
+                  : null,
+                visceral_fat: result.visceral_fat
+                  ? String(result.visceral_fat)
+                  : null,
                 bmi: result.bmi ? String(result.bmi) : null,
-                ideal_weight: result.ideal_weight ? String(result.ideal_weight) : null,
-                obesity_degree: result.obesity_degree ? String(result.obesity_degree) : null,
+                ideal_weight: result.ideal_weight
+                  ? String(result.ideal_weight)
+                  : null,
+                obesity_degree: result.obesity_degree
+                  ? String(result.obesity_degree)
+                  : null,
                 physique_rating: String(result.physique_rating || ""),
               };
-              const encryptedTanita = encryptFields(tanitaData, TANITA_ENCRYPTED_FIELDS);
+              const encryptedTanita = encryptFields(
+                tanitaData,
+                TANITA_ENCRYPTED_FIELDS,
+              );
 
               if (isNewSubmission) {
                 await pool.query(
                   `INSERT INTO tanita (user_id, submission_id, recorded_at, body_type, age, height, weight, fat_pc, fat_mass, ffm, muscle_mass, tbw_mass, tbw_pc, bone_mass, bmr_kcal, metabolic_age, visceral_fat, bmi, ideal_weight, obesity_degree, physique_rating, event_id)
                    VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                   [
-                    userId, subId, encryptedTanita.body_type, encryptedTanita.age, encryptedTanita.height,
-                    encryptedTanita.weight, encryptedTanita.fat_pc, encryptedTanita.fat_mass, encryptedTanita.ffm,
-                    encryptedTanita.muscle_mass, encryptedTanita.tbw_mass, encryptedTanita.tbw_pc, encryptedTanita.bone_mass,
-                    encryptedTanita.bmr_kcal, encryptedTanita.metabolic_age, encryptedTanita.visceral_fat, encryptedTanita.bmi,
-                    encryptedTanita.ideal_weight, encryptedTanita.obesity_degree, encryptedTanita.physique_rating, task.event_id,
-                  ]
+                    userId,
+                    subId,
+                    encryptedTanita.body_type,
+                    encryptedTanita.age,
+                    encryptedTanita.height,
+                    encryptedTanita.weight,
+                    encryptedTanita.fat_pc,
+                    encryptedTanita.fat_mass,
+                    encryptedTanita.ffm,
+                    encryptedTanita.muscle_mass,
+                    encryptedTanita.tbw_mass,
+                    encryptedTanita.tbw_pc,
+                    encryptedTanita.bone_mass,
+                    encryptedTanita.bmr_kcal,
+                    encryptedTanita.metabolic_age,
+                    encryptedTanita.visceral_fat,
+                    encryptedTanita.bmi,
+                    encryptedTanita.ideal_weight,
+                    encryptedTanita.obesity_degree,
+                    encryptedTanita.physique_rating,
+                    task.event_id,
+                  ],
                 );
               } else {
                 await pool.query(
-                  `UPDATE tanita SET 
-                    recorded_at = NOW(), body_type = ?, age = ?, height = ?, weight = ?, fat_pc = ?, fat_mass = ?, 
-                    ffm = ?, muscle_mass = ?, tbw_mass = ?, tbw_pc = ?, bone_mass = ?, bmr_kcal = ?, 
-                    metabolic_age = ?, visceral_fat = ?, bmi = ?, ideal_weight = ?, obesity_degree = ?, 
+                  `UPDATE tanita SET
+                    recorded_at = NOW(), body_type = ?, age = ?, height = ?, weight = ?, fat_pc = ?, fat_mass = ?,
+                    ffm = ?, muscle_mass = ?, tbw_mass = ?, tbw_pc = ?, bone_mass = ?, bmr_kcal = ?,
+                    metabolic_age = ?, visceral_fat = ?, bmi = ?, ideal_weight = ?, obesity_degree = ?,
                     physique_rating = ?
                    WHERE submission_id = ?`,
                   [
-                    encryptedTanita.body_type, encryptedTanita.age, encryptedTanita.height, encryptedTanita.weight,
-                    encryptedTanita.fat_pc, encryptedTanita.fat_mass, encryptedTanita.ffm, encryptedTanita.muscle_mass,
-                    encryptedTanita.tbw_mass, encryptedTanita.tbw_pc, encryptedTanita.bone_mass, encryptedTanita.bmr_kcal,
-                    encryptedTanita.metabolic_age, encryptedTanita.visceral_fat, encryptedTanita.bmi, encryptedTanita.ideal_weight,
-                    encryptedTanita.obesity_degree, encryptedTanita.physique_rating, subId
-                  ]
+                    encryptedTanita.body_type,
+                    encryptedTanita.age,
+                    encryptedTanita.height,
+                    encryptedTanita.weight,
+                    encryptedTanita.fat_pc,
+                    encryptedTanita.fat_mass,
+                    encryptedTanita.ffm,
+                    encryptedTanita.muscle_mass,
+                    encryptedTanita.tbw_mass,
+                    encryptedTanita.tbw_pc,
+                    encryptedTanita.bone_mass,
+                    encryptedTanita.bmr_kcal,
+                    encryptedTanita.metabolic_age,
+                    encryptedTanita.visceral_fat,
+                    encryptedTanita.bmi,
+                    encryptedTanita.ideal_weight,
+                    encryptedTanita.obesity_degree,
+                    encryptedTanita.physique_rating,
+                    subId,
+                  ],
                 );
               }
             }
 
             // จัดการเรื่องคะแนน (ให้เฉพาะกรณีที่เป็นการส่งครั้งแรกของวันเท่านั้น)
             if (task.points && isNewSubmission) {
-              console.log(`[BOT Points] Awarding ${task.points} to user ${userId} for task ${lastBotTaskId}. SubID: ${subId}`);
+              console.log(
+                `[BOT Points] Awarding ${task.points} to user ${userId} for task ${lastBotTaskId}. SubID: ${subId}`,
+              );
               await pool.query(
                 "UPDATE users SET points = points + ?, total_score = total_score + ? WHERE id = ?",
                 [task.points, task.points, userId],
@@ -2045,7 +2260,7 @@ async function handleEvent(event: any) {
             {
               type: "text",
               text: `✏️ กรุณาพิมพ์ค่าที่ถูกต้องครับ\n\nประเภท: ${parsed?.type || "ไม่ทราบ"}\nรูปแบบ: ${hint}\n\n⚠️ พิมพ์เฉพาะตัวเลขเท่านั้น ไม่ต้องใส่หน่วยครับ`,
-              quickReply: getConfirmQuickReply(lastBotTaskId, parsed),
+              quickReply: getConfirmQuickReply(lastBotTaskId, parsed, userId),
             },
           ],
         });
@@ -2137,7 +2352,7 @@ router.use(
       res.status(401).send(err.signatureValidationFailed);
     } else if (err) {
       console.error(`[LINE] ❌ Webhook Middleware Error:`, err);
-      res.status(500).send(err.message);
+      res.status(500).send("Internal Server Error");
     } else {
       next();
     }
@@ -2158,10 +2373,16 @@ router.get("/pending-result", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
 
     const result = rows[0].pending_bot_result;
-    res.json(result ? (typeof result === "string" ? JSON.parse(result) : result) : null);
+    res.json(
+      result
+        ? typeof result === "string"
+          ? JSON.parse(result)
+          : result
+        : null,
+    );
   } catch (error: any) {
     console.error("[BOT] Failed to fetch pending result:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

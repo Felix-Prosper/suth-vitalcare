@@ -4,11 +4,9 @@ import { authStore } from '../store/auth';
 import { uiStore } from '../store/ui';
 import { useSWR } from '../composables/useSWR';
 import { useFavorites } from '../composables/useFavorites';
-
 export function useActivities() {
     const router = useRouter();
     const route = useRoute();
-
     const searchQuery = ref('');
     const debouncedQuery = ref('');
     const activities = ref<any[]>([]);
@@ -19,7 +17,6 @@ export function useActivities() {
     const rolesMaster = ref<any[]>([]);
     const availableCertEvents = ref<Set<number>>(new Set());
     const registeredEventIds = ref<Set<number>>(new Set());
-
     const viewMode = ref<'grid' | 'list'>('grid');
     const activeTab = ref<'all' | 'registered' | 'bookmarked'>('all');
     const sortBy = ref<'newest' | 'oldest' | 'date' | 'popular' | 'least_popular' | 'az' | 'za' | 'reg_far' | 'reg_near' | 'duration_long' | 'start_soonest'>('newest');
@@ -43,10 +40,8 @@ export function useActivities() {
     const filterRolePublic = ref(false);
     const filterSection = ref('all');
     const showFilterPanel = ref(false);
-
     const ITEMS_PER_PAGE = 24;
     const currentPage = ref(1);
-
     const PAGE_SIZE = 12;
     const visibleCount = ref(PAGE_SIZE);
     const loadingMore = ref(false);
@@ -54,15 +49,12 @@ export function useActivities() {
     let infiniteObserver: IntersectionObserver | null = null;
     const visibleCards = ref<Set<number>>(new Set());
     let cardObserver: IntersectionObserver | null = null;
-
     let countdownTimer: ReturnType<typeof setInterval> | null = null;
     const now = ref(Date.now());
     const isMobileScreen = ref(false);
-
     function checkScreen() {
         isMobileScreen.value = window.innerWidth <= 768;
     }
-
     let searchDebounce: ReturnType<typeof setTimeout> | null = null;
     watch(searchQuery, (v) => {
         if (searchDebounce) clearTimeout(searchDebounce);
@@ -72,7 +64,6 @@ export function useActivities() {
             scrollToTop();
         }, 400);
     });
-
     watch([
         activeTab, sortBy, filterDateFrom, filterDateTo, filterStatus, filterTaskType,
         filterRoles, filterCert, filterContinuousReg, filterContinuousEvent,
@@ -82,32 +73,24 @@ export function useActivities() {
         visibleCount.value = PAGE_SIZE;
         updateUrlQuery();
     });
-
     // 🔗 Deep Linking & Navigation History
     function updateUrlQuery(isPush = false) {
         const query: any = { ...route.query };
-
         if (currentPage.value > 1) query.page = String(currentPage.value);
         else delete query.page;
-
         if (filterSection.value !== 'all') query.section = filterSection.value;
         else delete query.section;
-
         if (searchQuery.value) query.q = searchQuery.value;
         else delete query.q;
-
         if (sortBy.value !== 'newest') query.sort = sortBy.value;
         else delete query.sort;
-
         // Sync other filters if needed...
-
         if (isPush) {
             router.replace({ query }).catch(() => { });
         } else {
             router.replace({ query }).catch(() => { });
         }
     }
-
     // Read from URL on Init
     watch(() => route.query, (q) => {
         if (q.page) currentPage.value = Number(q.page);
@@ -115,21 +98,17 @@ export function useActivities() {
         if (q.q && q.q !== searchQuery.value) searchQuery.value = String(q.q);
         if (q.sort) sortBy.value = q.sort as any;
     }, { immediate: true });
-
     async function fetchBanners() {
         loadingBanners.value = true;
         try {
             // 🌟 1. ลองยิงดึงทั้งหมดก่อน
             let res = await fetch('/api/banners');
-
             // 🌟 2. ถ้าดึงแบบไม่มีเงื่อนไขแล้วพัง (Route ไม่มี/ติด Auth) ให้ถอยกลับไปใช้ท่าเดิมที่มี
             if (!res.ok) {
                 res = await fetch('/api/banners?active=true&position=activity');
             }
-
             if (res.ok) {
                 const data = await res.json();
-
                 // 🌟 3. แกะกล่องข้อมูล (ครอบคลุมทุกท่าที่ Backend จะคายมา)
                 let allBanners: any[] = [];
                 if (Array.isArray(data)) {
@@ -141,29 +120,23 @@ export function useActivities() {
                 } else {
                     allBanners = [data]; // กรณี API ส่งมาแค่ object ก้อนเดียวเพียวๆ
                 }
-
                 // 🌟 4. กรองให้ชัวร์ เอาเฉพาะแบนเนอร์ที่เปิดใช้งานและอยู่หน้า activity
                 const nv = allBanners.filter((b: any) => {
                     if (!b || !b.image_url) return false; // ป้องกันข้อมูลขยะ ต้องมีรูปถึงจะโชว์
-
                     const isActive = b.is_active === true || b.is_active === 1 || String(b.is_active) === 'true' || String(b.is_active) === '1' || b.is_active === undefined;
                     const isActivityPos = !b.position || String(b.position).toLowerCase() === 'activity';
-
                     return isActive && isActivityPos;
                 });
-
                 if (JSON.stringify(nv) !== JSON.stringify(activeBanners.value)) {
                     activeBanners.value = nv;
                 }
             }
         } catch (err: any) {
-            console.error("[Banner Error] พังตอนดึงข้อมูล:", err);
             bannersError.value = err;
         } finally {
             loadingBanners.value = false;
         }
     }
-
     const { data: swrMaster } = useSWR<any[]>(
         () => authStore.user?.id ? '/api/master' : null,
         {
@@ -176,15 +149,12 @@ export function useActivities() {
         }
     );
     watch(swrMaster, (nv) => { if (nv) rolesMaster.value = nv; }, { immediate: true });
-
     const loadingActivities = ref(true);
     const activitiesError = ref<any>(null);
-
     const fetchActivities = async (silent = false) => {
         if (!silent && activities.value.length === 0) loadingActivities.value = true;
         const safetyTimer = setTimeout(() => {
             if (loadingActivities.value) {
-                console.warn('[useActivities] fetchActivities took too long, forcing loading to false.');
                 loadingActivities.value = false;
             }
         }, 5000);
@@ -192,7 +162,6 @@ export function useActivities() {
             const res = await fetch('/api/activities');
             if (!res.ok) throw new Error('Fetch failed');
             const rawData = await res.json();
-
             // 🚀 PERFORMANCE BOOST: แปลง JSON และเวลาเก็บไว้ใช้งานเลย จะได้ไม่ต้องทำซ้ำใน computed
             const nv = rawData.map((act: any) => ({
                 ...act,
@@ -201,14 +170,12 @@ export function useActivities() {
                 _certConfig: typeof act.certificate_config === 'string' ? JSON.parse(act.certificate_config || '{}') : (act.certificate_config || {}),
                 _assessConfig: typeof act.assessment_config === 'string' ? JSON.parse(act.assessment_config || '{}') : (act.assessment_config || {}),
                 _goalConfig: typeof act.goal_config === 'string' ? JSON.parse(act.goal_config || '{}') : (act.goal_config || {}),
-
                 _startMs: act.start_date ? new Date(act.start_date).getTime() : 0,
                 _createdMs: (act.created_at || act.id) ? new Date(act.created_at || act.id).getTime() : 0,
                 _regStartMs: (act.registration_start_date || act.start_date) ? new Date(act.registration_start_date || act.start_date).getTime() : 0,
                 _endMs: act.end_date ? new Date(act.end_date).getTime() : 0,
                 _regDeadlineMs: (act.registration_end_date || act.registration_deadline) ? new Date(act.registration_end_date || act.registration_deadline).getTime() : 0
             }));
-
             if (JSON.stringify(nv) !== JSON.stringify(activities.value)) {
                 activities.value = nv;
                 nextTick(() => prefetchDetailPages(nv.slice(0, 6)));
@@ -221,7 +188,6 @@ export function useActivities() {
             loadingActivities.value = false;
         }
     };
-
     const { data: swrAvailableCerts, mutate: mutateCerts } = useSWR<any[]>(
         () => authStore.user?.id ? `/api/certificates/available/${authStore.user.id}` : null,
         { revalidateOnFocus: false }
@@ -236,7 +202,6 @@ export function useActivities() {
             availableCertEvents.value = set;
         }
     }, { immediate: true });
-
     const { data: swrMyRegistrations } = useSWR<any[]>(
         () => authStore.user?.id ? `/api/activities/user/${authStore.user.id}/registered` : null,
         { revalidateOnFocus: false }
@@ -251,7 +216,6 @@ export function useActivities() {
             registeredEventIds.value = set;
         }
     }, { immediate: true });
-
     function prefetchDetailPages(acts: any[]) {
         if (!('requestIdleCallback' in window)) return;
         (window as any).requestIdleCallback(() => {
@@ -262,43 +226,33 @@ export function useActivities() {
             });
         });
     }
-
     watch(activeBanners, (banners) => {
         if (!banners.length) return;
         const link = document.createElement('link');
         link.rel = 'preload'; link.as = 'image'; link.href = banners[0].image_url;
         document.head.appendChild(link);
     }, { immediate: true });
-
     const { favoriteIds, fetchFavorites, toggleFavorite: syncToggleFavorite } = useFavorites();
-
     function toggleFavorite(e: Event, id: number) {
         e.stopPropagation();
         syncToggleFavorite(id);
     }
-
     type ActivityStatus = 'registered' | 'full' | 'closed' | 'open' | 'ongoing' | 'ended';
     const getActivityStatus = (act: any): ActivityStatus => {
         const nowMs = now.value;
-
         // 1. สิ้นสุดกิจกรรม (Operational end date passed)
         const isEnded = !act.is_continuous_event && act._endMs && act._endMs < nowMs;
         if (isEnded) return 'ended';
-
         // 2. ลงทะเบียนแล้ว (User is registered)
         if (registeredEventIds.value.has(act.id)) return 'registered';
-
         // 3. ปิดรับสมัครแต่กำลังดำเนินการ (Registration closed/full but operation not ended)
         const isFull = !act.is_unlimited_max_slots && act.max_slots && (act.registration_count || 0) >= act.max_slots;
         if (isFull) return 'full';
-
         const regClosed = (!act.is_continuous_registration && act._regDeadlineMs && act._regDeadlineMs < nowMs) || act.status === 'closed' || act.registration_closed;
         if (regClosed) return 'ongoing';
-
         // 4. เปิดรับสมัคร (Registration is still open)
         return 'open';
     };
-
     function getCountdown(act: any): string | null {
         if (!!act.is_continuous_registration) return 'เปิดรับตลอด';
         if (!act.registration_deadline) return null;
@@ -311,12 +265,10 @@ export function useActivities() {
         if (h > 0) return `${h}ชม. ${m}น.`;
         return `${m}นาที`;
     }
-
     function isCountdownUrgent(act: any): boolean {
         if (!act.registration_deadline) return false;
         return act._regDeadlineMs - now.value < 86400000 * 3;
     }
-
     const publicActivities = computed(() => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -330,71 +282,53 @@ export function useActivities() {
             return true;
         });
     });
-
     const filteredAndSortedActivities = computed(() => {
         const q = debouncedQuery.value.toLowerCase();
-
         let pool = publicActivities.value.filter(act => {
             if (filterStatus.value === 'open' && getActivityStatus(act) !== 'open') return false;
             if (filterStatus.value === 'closed' && getActivityStatus(act) !== 'closed' && getActivityStatus(act) !== 'full') return false;
-
             if (filterTaskType.value !== 'all') {
                 if (!act._tasks.some((t: any) => t.type === filterTaskType.value)) return false;
             }
-
             if (filterRoles.value.length > 0) {
                 if (act._visibility.length > 0) {
                     if (!act._visibility.some((v: string) => filterRoles.value.includes(v))) return false;
                 }
             }
-
             if (filterCert.value) {
                 if (!act._certConfig.enabled) return false;
             }
-
             if (filterContinuousReg.value && !act.is_continuous_registration) return false;
             if (filterContinuousEvent.value && !act.is_continuous_event) return false;
-
             if (filterHasAssessment.value) {
                 if (!(act._assessConfig.pre_test?.enabled || act._assessConfig.post_test?.enabled)) return false;
             }
-
             if (filterHasGoals.value) {
                 if (!act._goalConfig.enabled) return false;
             }
-
             if (filterFavorites.value && !favoriteIds.value.has(act.id)) return false;
             if (filterRegistered.value && !registeredEventIds.value.has(act.id)) return false;
-
             const activeRoles: string[] = [];
             if (filterRoleStudent.value) activeRoles.push('นักเรียน');
             if (filterRoleUni.value) activeRoles.push('นักศึกษา');
             if (filterRoleStaff.value) activeRoles.push('บุคลากร');
             if (filterRolePublic.value) activeRoles.push('บุคคลทั่วไป');
-
             if (activeRoles.length > 0) {
                 // OR Logic: Activity must have at least one of the selected roles
                 if (!act._visibility?.some((v: string) => activeRoles.includes(v))) return false;
             }
-
-
-
             if (filterMaxSlots.value < 100) {
                 if (act.is_unlimited_max_slots) return false;
                 if (act.max_slots > filterMaxSlots.value) return false;
             }
-
             if (filterMissionCount.value < 100) {
                 if (act._tasks.length > filterMissionCount.value) return false;
             }
-
             if (activeTab.value === 'registered' && !registeredEventIds.value.has(act.id)) return false;
             if (activeTab.value === 'bookmarked' && !favoriteIds.value.has(act.id)) return false;
             if (q && !act.title.toLowerCase().includes(q) && !act.location_name?.toLowerCase().includes(q)) return false;
-
             return true;
         });
-
         pool.sort((a, b) => {
             if (sortBy.value === 'date') return a._startMs - b._startMs;
             if (sortBy.value === 'popular') return (b.registration_count || 0) - (a.registration_count || 0);
@@ -408,18 +342,11 @@ export function useActivities() {
             if (sortBy.value === 'oldest') return a._createdMs - b._createdMs;
             return b._createdMs - a._createdMs; // Default: newest
         });
-
         return pool;
     });
-
-
-
-
-
     const sectionFilteredActivities = computed(() => {
         let pool = filteredAndSortedActivities.value;
         const nowMs = now.value;
-
         if (filterSection.value === 'mine') {
             pool = publicActivities.value
                 .filter(a => registeredEventIds.value.has(a.id))
@@ -458,31 +385,26 @@ export function useActivities() {
             const start = (currentPage.value - 1) * ITEMS_PER_PAGE;
             return publicActivities.value.slice(start, start + ITEMS_PER_PAGE);
         }
-
         // Search / Filter / View All: Use Infinite Scroll (Unlimited)
         return sectionFilteredActivities.value.slice(0, visibleCount.value);
     });
-
     const totalPages = computed(() => {
         const pool = (filterSection.value === 'all' && !debouncedQuery.value && !hasActiveFilters.value)
             ? publicActivities.value
             : sectionFilteredActivities.value;
         return Math.ceil(pool.length / ITEMS_PER_PAGE);
     });
-
     function setSection(section: string) {
         filterSection.value = section;
         currentPage.value = 1;
         visibleCount.value = PAGE_SIZE;
         scrollToTop();
     }
-
     function changePage(p: number) {
         currentPage.value = p;
         scrollToTop();
         updateUrlQuery(true);
     }
-
     function prevPage() {
         if (currentPage.value > 1) {
             currentPage.value--;
@@ -490,7 +412,6 @@ export function useActivities() {
             updateUrlQuery(true);
         }
     }
-
     function nextPage() {
         if (currentPage.value < totalPages.value) {
             currentPage.value++;
@@ -498,29 +419,22 @@ export function useActivities() {
             updateUrlQuery(true);
         }
     }
-
     function scrollToTop() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-
     const flashSaleRemaining = computed(() => {
         const endingAct = publicActivities.value
             .filter(a => getActivityStatus(a) === 'open' && a.registration_deadline && (a._regDeadlineMs - now.value < 86400000 * 3) && (a._regDeadlineMs - now.value > 0))
             .sort((a, b) => a._regDeadlineMs - b._regDeadlineMs)[0];
-
         if (!endingAct) return { h: '00', m: '00', s: '00' };
-
         const diff = Math.max(0, endingAct._regDeadlineMs - now.value);
         const h = Math.floor(diff / 3600000).toString().padStart(2, '0');
         const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
         const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
-
         return { h, m, s };
     });
-
     const totalFiltered = computed(() => filteredAndSortedActivities.value.length);
     const hasMore = computed(() => visibleCount.value < totalFiltered.value);
-
     const hasActiveFilters = computed(() =>
         filterDateFrom.value || filterDateTo.value ||
         sortBy.value !== 'newest' || filterStatus.value !== 'all' ||
@@ -530,7 +444,6 @@ export function useActivities() {
         filterMaxSlots.value < 100 || filterMissionCount.value < 100 ||
         filterRoleStudent.value || filterRoleUni.value || filterRoleStaff.value || filterRolePublic.value
     );
-
     const viewSections = computed(() => {
         const allItems = paginatedActivities.value;
         const allSection = {
@@ -542,7 +455,6 @@ export function useActivities() {
             isFlash: false,
             isFiltered: false
         };
-
         if (viewMode.value === 'grid' && activeTab.value === 'all' && !debouncedQuery.value && !hasActiveFilters.value) {
             if (filterSection.value !== 'all') {
                 const titles: any = {
@@ -554,7 +466,6 @@ export function useActivities() {
                 };
                 return [{ id: 'filtered-' + filterSection.value, title: titles[filterSection.value] || 'ผลการค้นหา', items: allItems, isFlash: filterSection.value === 'ending-soon', isFiltered: true }];
             }
-
             const nowMs = now.value;
             const registered: any[] = [];
             const endingSoon: any[] = [];
@@ -563,16 +474,13 @@ export function useActivities() {
             const teamActivities: any[] = [];
             const ongoing: any[] = [];
             const favorites: any[] = [];
-
             const pool = publicActivities.value;
             const favIds = favoriteIds.value;
             const regIds = registeredEventIds.value;
-
             for (let i = 0; i < pool.length; i++) {
                 const a = pool[i];
                 const status = getActivityStatus(a);
                 const isFav = favIds.has(a.id);
-
                 if (status === 'registered') {
                     if (registered.length < 5) registered.push(a);
                 } else if (status === 'open') {
@@ -583,30 +491,23 @@ export function useActivities() {
                 } else if ((status === 'full' || status === 'closed') && a._endMs > nowMs) {
                     if (ongoing.length < 5) ongoing.push(a);
                 }
-
                 if (isFav && favorites.length < 5) favorites.push(a);
-
                 if (!a.team_mode && soloActivities.length < 5) soloActivities.push(a);
                 if (!!a.team_mode && teamActivities.length < 5) teamActivities.push(a);
             }
-
             // Sort specialized lists as needed
             registered.sort((a, b) => a._startMs - b._startMs);
             endingSoon.sort((a, b) => a._regDeadlineMs - b._regDeadlineMs);
             newest.sort((a, b) => b._createdMs - a._createdMs);
             favorites.sort((a, b) => b._createdMs - a._createdMs);
-
             const sections: any[] = [];
             if (registered.length > 0) sections.push({ id: 'mine', title: 'กิจกรรมของฉัน', items: registered, isFlash: false, isFiltered: false });
             if (favorites.length > 0) sections.push({ id: 'favorites', title: 'รายการโปรด', items: favorites, isFlash: false, isFiltered: false });
-
             sections.push({ ...allSection, items: allItems, id: 'all-home', title: 'กิจกรรมทั้งหมด', isHorizontal: false });
             return sections;
         }
-
         return [allSection];
     });
-
     function clearFilters() {
         filterDateFrom.value = ''; filterDateTo.value = ''; filterStatus.value = 'all';
         filterTaskType.value = 'all'; filterRoles.value = [];
@@ -620,17 +521,14 @@ export function useActivities() {
         filterRolePublic.value = false;
         filterMaxSlots.value = 100; filterMissionCount.value = 100; sortBy.value = 'newest';
     }
-
     function clearSearch() {
         searchQuery.value = '';
     }
-
     function loadMore() {
         if (loadingMore.value || !hasMore.value) return;
         loadingMore.value = true;
         setTimeout(() => { visibleCount.value += PAGE_SIZE; loadingMore.value = false; }, 300);
     }
-
     watch(sentinelEl, (el) => {
         if (infiniteObserver) { infiniteObserver.disconnect(); infiniteObserver = null; }
         if (el) {
@@ -641,13 +539,11 @@ export function useActivities() {
             infiniteObserver.observe(el);
         }
     });
-
     function observeCard(el: any, id: number) {
         if (!el || !cardObserver) return;
         (el as HTMLElement).dataset.cardId = String(id);
         cardObserver.observe(el);
     }
-
     function setupCardObserver() {
         cardObserver = new IntersectionObserver(entries => {
             entries.forEach(e => {
@@ -656,19 +552,15 @@ export function useActivities() {
             });
         }, { rootMargin: '100px' });
     }
-
     const formatDateThai = (dateStr: string) => {
         if (!dateStr) return '';
         const date = new Date(dateStr);
         const months = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
         return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
     };
-
     const getSlotPercent = (used: number, max: number) => max ?
         Math.min(100, Math.round((used / max) * 100)) : 0;
-
     const goToDetail = (id: number) => router.push(`/activities/${id}`);
-
     const onBannerClick = (b: any) => {
         if (b.link_type === 'activity' && b.link_activity_id) {
             router.push(`/activities/${b.link_activity_id}`);
@@ -676,7 +568,6 @@ export function useActivities() {
             window.open(b.link_url, '_blank');
         }
     };
-
     let fetchTimeout: any = null;
     watch(() => uiStore.lastRealtimeUpdate, () => {
         if (fetchTimeout) clearTimeout(fetchTimeout);
@@ -686,16 +577,13 @@ export function useActivities() {
             mutateCerts(true); 
         }, 1500);
     });
-
     onMounted(async () => {
         checkScreen();
         window.addEventListener('resize', checkScreen);
-
         // 🌟 Read section from query param
         if (route.query.section) {
             filterSection.value = String(route.query.section);
         }
-
         fetchBanners();
         fetchActivities();
         fetchFavorites();
@@ -710,7 +598,6 @@ export function useActivities() {
         await nextTick();
         countdownTimer = setInterval(() => { now.value = Date.now(); }, 1000);
     });
-
     onUnmounted(() => {
         window.removeEventListener('resize', checkScreen);
         if (searchDebounce) clearTimeout(searchDebounce);
@@ -718,7 +605,6 @@ export function useActivities() {
         if (cardObserver) cardObserver.disconnect();
         if (countdownTimer) clearInterval(countdownTimer);
     });
-
     return {
         searchQuery,
         debouncedQuery,

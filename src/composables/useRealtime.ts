@@ -1,9 +1,7 @@
 import { onMounted, onUnmounted, getCurrentInstance } from 'vue';
 import { io, Socket } from 'socket.io-client';
-
 let singleton: Socket | null = null;
 let singletonRefCount = 0;
-
 function getSocket(): any {
     if (!singleton) {
         singleton = io({
@@ -13,7 +11,6 @@ function getSocket(): any {
             reconnectionDelay: 2000,
             timeout: 20000,
         });
-
         singleton.on('connect', () => {
             // connected
         });
@@ -23,7 +20,6 @@ function getSocket(): any {
         singleton.on('connect_error', (err) => {
             // connection error
         });
-
         // Add explicit mobile reconnect trigger + session re-validate
         if (typeof document !== 'undefined') {
             document.addEventListener('visibilitychange', () => {
@@ -42,7 +38,6 @@ function getSocket(): any {
     }
     return singleton;
 }
-
 export function useRealtime(callbacks: {
     onSubmissionCreated?: (data: any) => void,
     onSubmissionUpdated?: (data: any) => void,
@@ -64,7 +59,6 @@ export function useRealtime(callbacks: {
     onUserKicked?: (data: any) => void
 }) {
     const handlers: [string, (data: any) => void][] = [];
-
     const addListener = (event: string, cb: ((data: any) => void) | undefined) => {
         if (!cb) return;
         const wrapped = (data: any) => {
@@ -73,7 +67,6 @@ export function useRealtime(callbacks: {
         handlers.push([event, wrapped]);
         getSocket().on(event, wrapped);
     };
-
     const setup = () => {
         singletonRefCount++;
         addListener('SUBMISSION_CREATED', callbacks.onSubmissionCreated);
@@ -95,7 +88,6 @@ export function useRealtime(callbacks: {
         addListener('BANNER_DELETED', callbacks.onBannerDeleted);
         addListener('USER_KICKED', callbacks.onUserKicked);
     };
-
     const cleanup = () => {
         const sock = singleton;
         if (sock) {
@@ -104,7 +96,6 @@ export function useRealtime(callbacks: {
         singletonRefCount--;
         // Don't disconnect - keep singleton alive so App.vue always stays connected
     };
-
     // If called inside a component (has instance), use lifecycle hooks
     if (getCurrentInstance()) {
         onMounted(setup);
@@ -113,4 +104,4 @@ export function useRealtime(callbacks: {
         // Called outside component (e.g. top-level script) - setup immediately
         setup();
     }
-}
+}

@@ -6,13 +6,11 @@ import moment from "moment";
 import Cropper from "cropperjs";
 import "cropperjs/dist/cropper.css";
 import { useRoute, useRouter } from "vue-router";
-
 export interface Section {
   title: string;
   content: string;
   image?: string;
 }
-
 export interface Task {
   id?: number | null;
   title: string;
@@ -25,7 +23,6 @@ export interface Task {
   is_active?: boolean;
   allowed_days: number[];
 }
-
 export interface GoalConfig {
   enabled: boolean;
   mode: "solo" | "team";
@@ -34,25 +31,21 @@ export interface GoalConfig {
   target_value: number;
   reward_text: string;
 }
-
 export interface CertificateConfig {
   enabled: boolean;
   issue_mode: "immediately" | "event_end" | "goal_complete";
   template_id?: number;
 }
-
 export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
   const route = useRoute();
   const router = useRouter();
   const ACTIVITY_DRAFT_KEY = "activity_create_draft";
   let isRestoringDraft = false;
-
   const editingId = ref<number | null>(null);
   const uploading = ref(false);
   const submitting = ref(false);
   const activeTaskIdx = ref(0);
   const showAdvanced = ref(false);
-
   const allMasterData = ref<any[]>([]);
   const taskTypeOptions = ref<any[]>([]);
   const metricOptions = ref<any[]>([]);
@@ -64,7 +57,6 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
     { value: "both", label: "📷✍️ รูปภาพ + ข้อความ (Both)" },
     { value: "manual", label: "🔢 กรอกตัวเลข (Manual)" },
   ]);
-
   const initialForm = (existingDates?: any[]) => ({
     title: "",
     poster: "",
@@ -132,9 +124,7 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
     scope: (route.query.teamId ? "team" : "global") as "global" | "team",
     is_restricted: false,
   });
-
   const form = ref(initialForm());
-
   // Master Data logic
   const fetchMasterData = async () => {
     try {
@@ -150,20 +140,38 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         "สำนักวิชาสาธารณสุขศาสตร์",
         "สำนักวิชาศาสตร์และศิลป์ดิจิทัล",
       ];
-
       const staticRoles = [
         { id: "general", name: "ทุกคนในโครงการ (Public)", category: "พื้นฐาน" },
         { id: "นักเรียน", name: "นักเรียน", category: "บทบาทหลัก" },
         { id: "นักศึกษา", name: "นักศึกษา", category: "บทบาทหลัก" },
-        { id: "บุคลากรโรงพยาบาล", name: "บุคลากรโรงพยาบาล", category: "บทบาทหลัก" },
-        { id: "บุคลากรมหาวิทยาลัย", name: "บุคลากรมหาวิทยาลัย", category: "บทบาทหลัก" },
+        {
+          id: "บุคลากรโรงพยาบาล",
+          name: "บุคลากรโรงพยาบาล",
+          category: "บทบาทหลัก",
+        },
+        {
+          id: "บุคลากรมหาวิทยาลัย",
+          name: "บุคลากรมหาวิทยาลัย",
+          category: "บทบาทหลัก",
+        },
         { id: "บุคคลทั่วไป", name: "บุคคลทั่วไป", category: "บทบาทหลัก" },
-        { id: "ป.1 - ป.6", name: "ประถมศึกษา (ป.1 - ป.6)", category: "ระบุระดับชั้น" },
-        { id: "ม.1 - ม.6", name: "มัธยมศึกษา (ม.1 - ม.6)", category: "ระบุระดับชั้น" },
+        {
+          id: "ป.1 - ป.6",
+          name: "ประถมศึกษา (ป.1 - ป.6)",
+          category: "ระบุระดับชั้น",
+        },
+        {
+          id: "ม.1 - ม.6",
+          name: "มัธยมศึกษา (ม.1 - ม.6)",
+          category: "ระบุระดับชั้น",
+        },
         ...uniYears.map((yr) => ({ id: yr, name: yr, category: "ระบุชั้นปี" })),
-        ...uniFaculties.map((fac) => ({ id: fac, name: fac, category: "ระบุสำนักวิชา" })),
+        ...uniFaculties.map((fac) => ({
+          id: fac,
+          name: fac,
+          category: "ระบุสำนักวิชา",
+        })),
       ];
-
       const res = await fetch("/api/master", {
         headers: { "x-user-id": String(authStore.user?.id) },
       });
@@ -176,7 +184,6 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         metricOptions.value = data
           .filter((c: any) => c.category === "metric")
           .map((c: any) => ({ value: c.key_name, label: c.display_label }));
-
         const units: Record<string, string[]> = {};
         data
           .filter((c: any) => c.category === "metric")
@@ -184,36 +191,35 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
             units[c.key_name] = c.metadata?.links || [];
           });
         unitOptions.value = units;
-
         const roleOptions = data
           .filter((c: any) => c.category === "role")
-          .map((c: any) => ({ id: c.key_name, name: c.display_label, category: "บทบาทหลัก" }));
+          .map((c: any) => ({
+            id: c.key_name,
+            name: c.display_label,
+            category: "บทบาทหลัก",
+          }));
         roles.value = [...staticRoles, ...roleOptions];
       } else {
         roles.value = staticRoles;
       }
-    } catch (e) {
-      console.error("[useActivityForm] Fetch master data error:", e);
-    }
+    } catch (e) {}
   };
-
   const getFilteredMetrics = (taskTypeKey: string) => {
     const taskTypeItem = allMasterData.value.find(
-      (c) => c.category === "task_type" && c.key_name === taskTypeKey
+      (c) => c.category === "task_type" && c.key_name === taskTypeKey,
     );
     const linkedIds = taskTypeItem?.metadata?.links || [];
     if (linkedIds.length === 0) return metricOptions.value;
     return metricOptions.value.filter((m) => {
       const fullItem = allMasterData.value.find(
-        (c) => c.category === "metric" && c.key_name === m.value
+        (c) => c.category === "metric" && c.key_name === m.value,
       );
       return linkedIds.includes(fullItem?.id) || linkedIds.includes(m.value);
     });
   };
-
   const getFilteredUnits = (metricKey: string) => {
     const metricItem = allMasterData.value.find(
-      (c) => c.category === "metric" && c.key_name === metricKey
+      (c) => c.category === "metric" && c.key_name === metricKey,
     );
     const linkedIds = metricItem?.metadata?.links || [];
     const allUnitOptions = allMasterData.value
@@ -221,17 +227,15 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       .map((c) => ({ value: c.key_name, label: c.display_label, id: c.id }));
     if (linkedIds.length === 0) return allUnitOptions;
     return allUnitOptions.filter(
-      (u) => linkedIds.includes(u.id) || linkedIds.includes(u.value)
+      (u) => linkedIds.includes(u.id) || linkedIds.includes(u.value),
     );
   };
-
   const resetForm = () => {
     editingId.value = null;
     form.value = initialForm();
     activeTaskIdx.value = 0;
     showAdvanced.value = false;
   };
-
   const restoreDraft = () => {
     const draft = localStorage.getItem(ACTIVITY_DRAFT_KEY);
     if (draft && !editingId.value) {
@@ -240,7 +244,6 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         const parsed = JSON.parse(draft);
         form.value = { ...initialForm(), ...parsed };
       } catch (e) {
-        console.error("[useActivityForm] Restore draft error:", e);
       } finally {
         setTimeout(() => {
           isRestoringDraft = false;
@@ -248,20 +251,19 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       }
     }
   };
-
   const saveActivity = async () => {
     if (submitting.value) return false;
-
-    if (!editingId.value && authStore.user?.role !== 'admin') {
+    if (!editingId.value && authStore.user?.role !== "admin") {
       showError("คุณไม่มีสิทธิ์ในการสร้างกิจกรรม (เฉพาะ Admin เท่านั้น)");
       return false;
     }
-
-    if (!form.value.is_unlimited_max_slots && (!form.value.max_slots || form.value.max_slots <= 0)) {
+    if (
+      !form.value.is_unlimited_max_slots &&
+      (!form.value.max_slots || form.value.max_slots <= 0)
+    ) {
       showError("กรุณาระบุจำนวนผู้เข้าร่วมอย่างน้อย 1 คน");
       return false;
     }
-
     // Validate Task Points
     for (let i = 0; i < form.value.tasks.length; i++) {
       const task = form.value.tasks[i];
@@ -270,44 +272,66 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         return false;
       }
     }
-
     // Validate Dates
-    if (!form.value.is_continuous_registration && form.value.registration_start_date && form.value.registration_end_date) {
-      if (moment(form.value.registration_end_date).isBefore(moment(form.value.registration_start_date))) {
+    if (
+      !form.value.is_continuous_registration &&
+      form.value.registration_start_date &&
+      form.value.registration_end_date
+    ) {
+      if (
+        moment(form.value.registration_end_date).isBefore(
+          moment(form.value.registration_start_date),
+        )
+      ) {
         showError("วันปิดรับสมัครไม่สามารถอยู่ก่อนวันเปิดรับสมัครได้");
         return false;
       }
     }
-
-    if (!form.value.is_continuous_event && form.value.start_date && form.value.end_date) {
+    if (
+      !form.value.is_continuous_event &&
+      form.value.start_date &&
+      form.value.end_date
+    ) {
       if (moment(form.value.end_date).isBefore(moment(form.value.start_date))) {
         showError("วันสิ้นสุดกิจกรรมไม่สามารถอยู่ก่อนวันเริ่มกิจกรรมได้");
         return false;
       }
     }
-
     submitting.value = true;
     try {
-      const url = editingId.value ? `/api/activities/${editingId.value}` : "/api/activities";
+      const url = editingId.value
+        ? `/api/activities/${editingId.value}`
+        : "/api/activities";
       const method = editingId.value ? "PATCH" : "POST";
-
       let status = "open";
       if (form.value.visibility_type === "draft") status = "draft";
       else if (form.value.visibility_type === "scheduled") status = "published";
-
       const eventData = {
         title: form.value.title,
         poster: form.value.poster,
-        start_date: form.value.is_continuous_event ? null : form.value.start_date || null,
-        end_date: form.value.is_continuous_event ? null : form.value.end_date || null,
-        publish_start_date: form.value.visibility_type === "scheduled" ? form.value.publish_start_date || null : null,
-        registration_start_date: form.value.is_continuous_registration ? null : form.value.registration_start_date || null,
-        registration_end_date: form.value.is_continuous_registration ? null : form.value.registration_end_date || null,
+        start_date: form.value.is_continuous_event
+          ? null
+          : form.value.start_date || null,
+        end_date: form.value.is_continuous_event
+          ? null
+          : form.value.end_date || null,
+        publish_start_date:
+          form.value.visibility_type === "scheduled"
+            ? form.value.publish_start_date || null
+            : null,
+        registration_start_date: form.value.is_continuous_registration
+          ? null
+          : form.value.registration_start_date || null,
+        registration_end_date: form.value.is_continuous_registration
+          ? null
+          : form.value.registration_end_date || null,
         is_continuous_registration: form.value.is_continuous_registration,
         is_continuous_event: form.value.is_continuous_event,
         start_time: form.value.start_time || null,
         end_time: form.value.end_time || null,
-        max_slots: form.value.is_unlimited_max_slots ? 0 : form.value.max_slots || 0,
+        max_slots: form.value.is_unlimited_max_slots
+          ? 0
+          : form.value.max_slots || 0,
         is_unlimited_max_slots: form.value.is_unlimited_max_slots,
         detail: JSON.stringify(form.value.sections),
         activity_mode: "event",
@@ -315,11 +339,13 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         location_name: form.value.location_name,
         organizer: form.value.organizer,
         event_code: form.value.event_code,
-        event_password: form.value.is_restricted ? (form.value.event_password || null) : null,
+        event_password: form.value.is_restricted
+          ? form.value.event_password || null
+          : null,
         visibility: JSON.stringify(
-          !form.value.is_restricted || form.value.visibility.length === 0 
-            ? ["general"] 
-            : form.value.visibility.filter(v => v !== "general")
+          !form.value.is_restricted || form.value.visibility.length === 0
+            ? ["general"]
+            : form.value.visibility.filter((v) => v !== "general"),
         ),
         health_config: { tanita_dates: [...form.value.tanita_dates] },
         goal_config: JSON.stringify(form.value.goal_config),
@@ -330,7 +356,6 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         status: status,
         sort_order: form.value.sort_order || 0,
       };
-
       const response = await fetch(url, {
         method,
         headers: {
@@ -339,7 +364,6 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         },
         body: JSON.stringify({ ...eventData, userId: authStore.user?.id }),
       });
-
       if (response.ok) {
         await fetchActivitiesCallback();
         if (method === "POST") {
@@ -348,11 +372,15 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
           });
           if (userRes.ok) authStore.setUser(await userRes.json());
         }
-        showSuccess(editingId.value ? "อัปเดตกิจกรรมสำเร็จ!" : "สร้างกิจกรรมสำเร็จ!");
+        showSuccess(
+          editingId.value ? "อัปเดตกิจกรรมสำเร็จ!" : "สร้างกิจกรรมสำเร็จ!",
+        );
         uiStore.triggerRealtimeUpdate(); // ✅ Trigger global realtime sync
         localStorage.removeItem(ACTIVITY_DRAFT_KEY);
         resetForm();
-        router.replace({ query: { ...route.query, sub: undefined, id: undefined } });
+        router.replace({
+          query: { ...route.query, sub: undefined, id: undefined },
+        });
         activeTab.value = "list";
         return true;
       } else {
@@ -360,17 +388,14 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         showError(err.error || "เกิดข้อผิดพลาดในการบันทึกข้อมูล");
       }
     } catch (e) {
-      console.error("[useActivityForm] Save error:", e);
       showError("เกิดข้อผิดพลาดขณะบันทึกกิจกรรม");
     } finally {
       submitting.value = false;
     }
     return false;
   };
-
   const addSection = () => form.value.sections.push({ title: "", content: "" });
   const removeSection = (index: number) => form.value.sections.splice(index, 1);
-
   const addTask = (template?: "exercise" | "food" | "mood" | "photo") => {
     let newTask: Task = {
       title: "ภารกิจใหม่",
@@ -383,21 +408,50 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       is_active: true,
       allowed_days: [0, 1, 2, 3, 4, 5, 6],
     };
-
     if (template === "exercise") {
-      newTask = { ...newTask, title: "ออกกำลังกาย", note: "ออกกำลังกาย", type: "exercise", metric_type: "distance", metric_unit: "km", submission_type: "photo" };
+      newTask = {
+        ...newTask,
+        title: "ออกกำลังกาย",
+        note: "ออกกำลังกาย",
+        type: "exercise",
+        metric_type: "distance",
+        metric_unit: "km",
+        submission_type: "photo",
+      };
     } else if (template === "food") {
-      newTask = { ...newTask, title: "อาหาร", note: "อาหาร", type: "food", metric_type: "nutrition", metric_unit: "meal", submission_type: "photo" };
+      newTask = {
+        ...newTask,
+        title: "อาหาร",
+        note: "อาหาร",
+        type: "food",
+        metric_type: "nutrition",
+        metric_unit: "meal",
+        submission_type: "photo",
+      };
     } else if (template === "mood") {
-      newTask = { ...newTask, title: "อารมณ์/สมาธิ", note: "อารมณ์/สมาธิ", type: "mood", metric_type: "mood_level", metric_unit: "level", submission_type: "manual" };
+      newTask = {
+        ...newTask,
+        title: "อารมณ์/สมาธิ",
+        note: "อารมณ์/สมาธิ",
+        type: "mood",
+        metric_type: "mood_level",
+        metric_unit: "level",
+        submission_type: "manual",
+      };
     } else if (template === "photo") {
-      newTask = { ...newTask, title: "ส่งรูปภาพ", note: "ส่งรูปภาพ", type: "general", metric_type: "count", metric_unit: "times", submission_type: "photo" };
+      newTask = {
+        ...newTask,
+        title: "ส่งรูปภาพ",
+        note: "ส่งรูปภาพ",
+        type: "general",
+        metric_type: "count",
+        metric_unit: "times",
+        submission_type: "photo",
+      };
     }
-
     form.value.tasks.push(newTask);
     activeTaskIdx.value = form.value.tasks.length - 1;
   };
-
   const removeTask = async (origIdx: number) => {
     const task = form.value.tasks[origIdx];
     if (task.id) {
@@ -405,15 +459,16 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         "ยืนยันการลบภารกิจ?",
         "การลบภารกิจที่มีอยู่แล้วจะทำให้ประวัติการส่งงานทั้งหมดของภารกิจนี้ถูกลบไปด้วย คุณแน่ใจหรือไม่?",
         "ลบภารกิจนี้",
-        "warning"
+        "warning",
       );
       if (!confirmed) return;
     }
-
     form.value.tasks.splice(origIdx, 1);
-    activeTaskIdx.value = Math.max(0, Math.min(activeTaskIdx.value, form.value.tasks.length - 1));
+    activeTaskIdx.value = Math.max(
+      0,
+      Math.min(activeTaskIdx.value, form.value.tasks.length - 1),
+    );
   };
-
   const handleTypeChange = (task: Task) => {
     const availableMetrics = getFilteredMetrics(task.type);
     if (availableMetrics.length > 0) {
@@ -421,18 +476,15 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       handleMetricChange(task);
     }
   };
-
   const handleMetricChange = (task: Task) => {
     const availableUnits = getFilteredUnits(task.metric_type);
     if (availableUnits.length > 0) task.metric_unit = availableUnits[0].value;
   };
-
   const isDayValidForEvent = (day: number) => {
     if (!form.value.start_date || !form.value.end_date) return { valid: true };
     const start = moment(form.value.start_date).startOf("day");
     const end = moment(form.value.end_date).endOf("day");
     if (end.diff(start, "days") >= 6) return { valid: true };
-
     const validDays = new Set<number>();
     let current = moment(start);
     while (current.isSameOrBefore(end)) {
@@ -440,10 +492,20 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       current.add(1, "day");
     }
     if (validDays.has(day)) return { valid: true };
-    const daysMap = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
-    return { valid: false, reason: `ขออภัย วัน${daysMap[day]} ไม่อยู่ในช่วงวันที่จัดกิจกรรม (${start.format("DD/MM/YYYY")} - ${end.format("DD/MM/YYYY")})` };
+    const daysMap = [
+      "อาทิตย์",
+      "จันทร์",
+      "อังคาร",
+      "พุธ",
+      "พฤหัสบดี",
+      "ศุกร์",
+      "เสาร์",
+    ];
+    return {
+      valid: false,
+      reason: `ขออภัย วัน${daysMap[day]} ไม่อยู่ในช่วงวันที่จัดกิจกรรม (${start.format("DD/MM/YYYY")} - ${end.format("DD/MM/YYYY")})`,
+    };
   };
-
   const toggleDay = (task: Task, day: number) => {
     const check = isDayValidForEvent(day);
     if (!check.valid) {
@@ -451,11 +513,14 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       return;
     }
     if (typeof task.allowed_days === "string") {
-      try { task.allowed_days = JSON.parse(task.allowed_days); }
-      catch { task.allowed_days = [0, 1, 2, 3, 4, 5, 6]; }
+      try {
+        task.allowed_days = JSON.parse(task.allowed_days);
+      } catch {
+        task.allowed_days = [0, 1, 2, 3, 4, 5, 6];
+      }
     }
-    if (!Array.isArray(task.allowed_days)) task.allowed_days = [0, 1, 2, 3, 4, 5, 6];
-
+    if (!Array.isArray(task.allowed_days))
+      task.allowed_days = [0, 1, 2, 3, 4, 5, 6];
     const idx = task.allowed_days.indexOf(day);
     if (idx > -1) task.allowed_days.splice(idx, 1);
     else {
@@ -463,29 +528,34 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       task.allowed_days.sort();
     }
   };
-
   const setDayPreset = (task: Task, type: "all" | "weekday" | "weekend") => {
     let days: number[] = [];
     if (type === "all") days = [0, 1, 2, 3, 4, 5, 6];
     else if (type === "weekday") days = [1, 2, 3, 4, 5];
     else if (type === "weekend") days = [0, 6];
-
     const validSet: number[] = [];
     const invalidNames: string[] = [];
-    const daysMap = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
-
+    const daysMap = [
+      "อาทิตย์",
+      "จันทร์",
+      "อังคาร",
+      "พุธ",
+      "พฤหัสบดี",
+      "ศุกร์",
+      "เสาร์",
+    ];
     for (const d of days) {
       const check = isDayValidForEvent(d);
       if (check.valid) validSet.push(d);
       else invalidNames.push(daysMap[d]);
     }
-
-    if (invalidNames.length > 0) showError(`ไม่สามารถเลือกวัน: ${invalidNames.join(", ")} ได้ เนื่องจากอยู่นอกระยะเวลาจัดกิจกรรม`);
+    if (invalidNames.length > 0)
+      showError(
+        `ไม่สามารถเลือกวัน: ${invalidNames.join(", ")} ได้ เนื่องจากอยู่นอกระยะเวลาจัดกิจกรรม`,
+      );
     if (validSet.length > 0) task.allowed_days = validSet;
   };
-
   const activeTab = ref("list");
-
   // --- Sync State from URL (Back/Forward support) ---
   watch(
     () => [route.query.sub, route.query.id],
@@ -500,26 +570,24 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         resetForm();
       }
     },
-    { immediate: true }
+    { immediate: true },
   );
-
   const handleBack = () => {
     if (window.history.length > 1 && route.query.sub) {
       router.back();
     } else {
-      router.replace({ query: { ...route.query, sub: undefined, id: undefined } });
+      router.replace({
+        query: { ...route.query, sub: undefined, id: undefined },
+      });
       activeTab.value = "list";
     }
   };
-
   const showCertEditor = ref(false);
   const certEditorEventId = ref<number | null>(null);
   const hasCertTemplate = ref(false);
   const certLastUpdated = ref("");
-
   const isDragging = ref(false);
   const draggingSectionIdx = ref<number | null>(null);
-
   const showCropper = ref(false);
   const cropperTarget = ref<"poster" | number>("poster");
   const cropperRawFile = ref<File | null>(null);
@@ -527,40 +595,43 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
   const cropperEl = ref<HTMLImageElement | null>(null);
   const cropRatio = ref(16 / 9);
   let cropperInstance: any = null; // Using any for Cropper instance
-
   const clockField = ref<"start" | "end" | null>(null);
   const clockMode = ref<"hour" | "min">("hour");
-
   const sectionDraggingIdx = ref<number | null>(null);
   const sectionDragOverIdx = ref<number | null>(null);
   const taskDraggingOrigIdx = ref<number | null>(null);
   const taskDragOverOrigIdx = ref<number | null>(null);
-
   // Computed
   const getTimeHour = (t: string) => parseInt(t?.split(":")?.[0] ?? "8", 10);
   const getTimeMin = (t: string) => parseInt(t?.split(":")?.[1] ?? "0", 10);
   const pad2 = (n: number) => String(n).padStart(2, "0");
-
   const currentHour = ref(8);
   const currentMin = ref(0);
   const isAm = ref(true);
-
-  watch([clockField, () => form.value.start_time, () => form.value.end_time], () => {
-    const cur = clockField.value === "start" ? form.value.start_time : form.value.end_time;
-    currentHour.value = getTimeHour(cur);
-    currentMin.value = getTimeMin(cur);
-    isAm.value = currentHour.value < 12;
-  });
-
+  watch(
+    [clockField, () => form.value.start_time, () => form.value.end_time],
+    () => {
+      const cur =
+        clockField.value === "start"
+          ? form.value.start_time
+          : form.value.end_time;
+      currentHour.value = getTimeHour(cur);
+      currentMin.value = getTimeMin(cur);
+      isAm.value = currentHour.value < 12;
+    },
+  );
   const displayedTasks = ref<any[]>([]);
-  watch(() => form.value.tasks, (tasks) => {
-    displayedTasks.value = tasks.map((task, i) => ({
-      origIdx: i,
-      displayNum: i + 1,
-      task,
-    }));
-  }, { deep: true, immediate: true });
-
+  watch(
+    () => form.value.tasks,
+    (tasks) => {
+      displayedTasks.value = tasks.map((task, i) => ({
+        origIdx: i,
+        displayNum: i + 1,
+        task,
+      }));
+    },
+    { deep: true, immediate: true },
+  );
   const flatUnits = [
     { value: "km", label: "กิโลเมตร (km)" },
     { value: "m", label: "เมตร (m)" },
@@ -573,64 +644,70 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
     { value: "times", label: "ครั้ง (times)" },
     { value: "kg", label: "กิโลกรัม (kg)" },
   ];
-
   const showSchoolLevels = ref(false);
   const showUniFilters = ref(false);
   const showFacultyFilters = ref(false);
-  watch(() => form.value.visibility, (vis, oldVis) => {
-    showSchoolLevels.value = vis.includes("นักเรียน");
-    showUniFilters.value = vis.includes("นักศึกษา");
-    showFacultyFilters.value = vis.includes("นักศึกษา") || vis.includes("บุคลากรมหาวิทยาลัย");
-
-    // Cleanup logic: If a main category is removed, remove its sub-categories
-    if (oldVis && vis.length < oldVis.length) {
-      const removedItems = oldVis.filter(id => !vis.includes(id));
-      let newVis = [...vis];
-      let changed = false;
-
-      if (removedItems.includes("นักเรียน")) {
-        const schoolLevelIds = roles.value.filter(r => r.category === "ระบุระดับชั้น").map(r => r.id);
-        newVis = newVis.filter(id => !schoolLevelIds.includes(id));
-        changed = true;
+  watch(
+    () => form.value.visibility,
+    (vis, oldVis) => {
+      showSchoolLevels.value = vis.includes("นักเรียน");
+      showUniFilters.value = vis.includes("นักศึกษา");
+      showFacultyFilters.value =
+        vis.includes("นักศึกษา") || vis.includes("บุคลากรมหาวิทยาลัย");
+      // Cleanup logic: If a main category is removed, remove its sub-categories
+      if (oldVis && vis.length < oldVis.length) {
+        const removedItems = oldVis.filter((id) => !vis.includes(id));
+        let newVis = [...vis];
+        let changed = false;
+        if (removedItems.includes("นักเรียน")) {
+          const schoolLevelIds = roles.value
+            .filter((r) => r.category === "ระบุระดับชั้น")
+            .map((r) => r.id);
+          newVis = newVis.filter((id) => !schoolLevelIds.includes(id));
+          changed = true;
+        }
+        if (removedItems.includes("นักศึกษา")) {
+          const uniYearIds = roles.value
+            .filter((r) => r.category === "ระบุชั้นปี")
+            .map((r) => r.id);
+          newVis = newVis.filter((id) => !uniYearIds.includes(id));
+          changed = true;
+        }
+        // Faculty is shared between Students and University Staff
+        const isFacultyParentActive =
+          vis.includes("นักศึกษา") || vis.includes("บุคลากรมหาวิทยาลัย");
+        if (
+          !isFacultyParentActive &&
+          (removedItems.includes("นักศึกษา") ||
+            removedItems.includes("บุคลากรมหาวิทยาลัย"))
+        ) {
+          const facultyIds = roles.value
+            .filter((r) => r.category === "ระบุสำนักวิชา")
+            .map((r) => r.id);
+          newVis = newVis.filter((id) => !facultyIds.includes(id));
+          changed = true;
+        }
+        if (changed && newVis.length !== vis.length) {
+          form.value.visibility = newVis;
+        }
       }
-
-      if (removedItems.includes("นักศึกษา")) {
-        const uniYearIds = roles.value.filter(r => r.category === "ระบุชั้นปี").map(r => r.id);
-        newVis = newVis.filter(id => !uniYearIds.includes(id));
-        changed = true;
-      }
-
-      // Faculty is shared between Students and University Staff
-      const isFacultyParentActive = vis.includes("นักศึกษา") || vis.includes("บุคลากรมหาวิทยาลัย");
-      if (!isFacultyParentActive && (removedItems.includes("นักศึกษา") || removedItems.includes("บุคลากรมหาวิทยาลัย"))) {
-        const facultyIds = roles.value.filter(r => r.category === "ระบุสำนักวิชา").map(r => r.id);
-        newVis = newVis.filter(id => !facultyIds.includes(id));
-        changed = true;
-      }
-
-      if (changed && newVis.length !== vis.length) {
-        form.value.visibility = newVis;
-      }
-    }
-  }, { deep: true, immediate: true });
-
+    },
+    { deep: true, immediate: true },
+  );
   const openCreate = (forcedTeamId?: number) => {
-    if (authStore.user?.role !== 'admin') {
+    if (authStore.user?.role !== "admin") {
       showError("คุณไม่มีสิทธิ์ในการสร้างกิจกรรม (เฉพาะ Admin เท่านั้น)");
       return;
     }
-    
     resetForm();
     if (forcedTeamId) {
       form.value.team_id = forcedTeamId;
       form.value.scope = "team";
     }
-    
     activeTab.value = "form";
     router.push({ query: { ...route.query, sub: "form" } });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
   const viewActivityDetails = (act: any) => {
     editingId.value = act.id;
     form.value.title = act.title;
@@ -638,7 +715,6 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
     router.push({ query: { ...route.query, sub: "dashboard", id: act.id } });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
   const editActivity = (act: any) => {
     editingId.value = act.id;
     router.push({ query: { ...route.query, sub: "form", id: act.id } });
@@ -646,20 +722,21 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
     let parsedTasks: any[] = [];
     try {
       parsedSections = JSON.parse(act.detail || "[]");
-      if (!Array.isArray(parsedSections)) parsedSections = [{ title: "รายละเอียด", content: act.detail || "" }];
+      if (!Array.isArray(parsedSections))
+        parsedSections = [{ title: "รายละเอียด", content: act.detail || "" }];
     } catch {
       parsedSections = [{ title: "รายละเอียด", content: act.detail || "" }];
     }
     try {
-      parsedTasks = Array.isArray(act.tasks) ? act.tasks : JSON.parse(act.tasks || "[]");
+      parsedTasks = Array.isArray(act.tasks)
+        ? act.tasks
+        : JSON.parse(act.tasks || "[]");
     } catch {
       parsedTasks = [];
     }
-
     let vType = "now";
     if (act.status === "draft") vType = "draft";
     else if (act.status === "published") vType = "scheduled";
-
     const safeParseJSON = (data: any, fallback: any) => {
       if (!data) return fallback;
       if (typeof data !== "string") return data;
@@ -667,9 +744,10 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         let p = JSON.parse(data);
         while (typeof p === "string") p = JSON.parse(p);
         return p || fallback;
-      } catch { return fallback; }
+      } catch {
+        return fallback;
+      }
     };
-
     const newFormState = {
       ...initialForm(),
       title: act.title,
@@ -686,7 +764,11 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       tasks: parsedTasks.map((t: any) => {
         let ad = t.allowed_days;
         if (typeof ad === "string") {
-          try { ad = JSON.parse(ad); } catch { ad = [0, 1, 2, 3, 4, 5, 6]; }
+          try {
+            ad = JSON.parse(ad);
+          } catch {
+            ad = [0, 1, 2, 3, 4, 5, 6];
+          }
         }
         if (!Array.isArray(ad)) ad = [0, 1, 2, 3, 4, 5, 6];
         return {
@@ -703,10 +785,21 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       event_password: act.event_password || "",
       visibility: safeParseJSON(act.visibility, []),
       goal_config: safeParseJSON(act.goal_config, { enabled: false }),
-      certificate_config: safeParseJSON(act.certificate_config, { enabled: false, issue_mode: "immediately" }),
+      certificate_config: safeParseJSON(act.certificate_config, {
+        enabled: false,
+        issue_mode: "immediately",
+      }),
       assessment_config: safeParseJSON(act.assessment_config, {
-        pre_test: { enabled: false, title: "แบบทดสอบก่อนเข้าร่วม (Pre-test)", questions: [] },
-        post_test: { enabled: false, title: "แบบทดสอบหลังเข้าร่วม (Post-test)", questions: [] },
+        pre_test: {
+          enabled: false,
+          title: "แบบทดสอบก่อนเข้าร่วม (Pre-test)",
+          questions: [],
+        },
+        post_test: {
+          enabled: false,
+          title: "แบบทดสอบหลังเข้าร่วม (Post-test)",
+          questions: [],
+        },
       }),
       tanita_dates: [] as any[],
       visibility_type: vType,
@@ -721,27 +814,37 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       sort_order: act.sort_order || 0,
       is_restricted: false,
     };
-
     const visibility = safeParseJSON(act.visibility, []);
     newFormState.visibility = visibility;
-    newFormState.is_restricted = (visibility.length > 0 && !visibility.includes("general")) || !!act.event_password;
-
+    newFormState.is_restricted =
+      (visibility.length > 0 && !visibility.includes("general")) ||
+      !!act.event_password;
     let hConfig = act.health_config;
     if (hConfig && typeof hConfig === "string") {
-      try { hConfig = JSON.parse(hConfig); } catch { hConfig = null; }
+      try {
+        hConfig = JSON.parse(hConfig);
+      } catch {
+        hConfig = null;
+      }
     }
-    newFormState.tanita_dates = Array.isArray(hConfig?.tanita_dates) ? [...hConfig.tanita_dates] : [];
+    newFormState.tanita_dates = Array.isArray(hConfig?.tanita_dates)
+      ? [...hConfig.tanita_dates]
+      : [];
     form.value = newFormState;
-
-    const specificRoleIds = roles.value.filter(r => r.category !== 'พื้นฐาน').map(r => r.id);
-    showAdvanced.value = newFormState.visibility.some((v: string) => specificRoleIds.includes(v)) || !!newFormState.event_code || !!newFormState.event_password;
-
+    const specificRoleIds = roles.value
+      .filter((r) => r.category !== "พื้นฐาน")
+      .map((r) => r.id);
+    showAdvanced.value =
+      newFormState.visibility.some((v: string) =>
+        specificRoleIds.includes(v),
+      ) ||
+      !!newFormState.event_code ||
+      !!newFormState.event_password;
     activeTaskIdx.value = 0;
     activeTab.value = "form";
     if (act.id) checkCertTemplate(act.id);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
-
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -750,13 +853,14 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       reader.readAsDataURL(file);
     });
   };
-
-  // Upload to local server storage (/api/upload) — returns a path URL e.g. /uploads/activity/name-date.webp
-  const uploadToLocal = async (file: File, type: "activity" | "section"): Promise<string> => {
+  // Upload to local server storage (/api/upload) — returns a path URL e.g. /uploads/activity/name-date.png
+  const uploadToLocal = async (
+    file: File,
+    type: "activity" | "section",
+  ): Promise<string> => {
     // Use the current activity title as the filename base, fallback to "กิจกรรม"
     const activityName = form.value.title?.trim() || "กิจกรรม";
     const label = type === "section" ? `${activityName}-section` : activityName;
-
     const formData = new FormData();
     formData.append("image", file);
     const params = new URLSearchParams({ type: "activity", name: label });
@@ -772,7 +876,6 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
     const data = await res.json();
     return data.url as string;
   };
-
   const uploadSectionFile = async (file: File, index: number) => {
     uploading.value = true;
     try {
@@ -780,9 +883,10 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       form.value.sections[index].image = url;
     } catch (error: any) {
       uiStore.toast("error", "อัปโหลดรูปภาพล้มเหลว", error.message);
-    } finally { uploading.value = false; }
+    } finally {
+      uploading.value = false;
+    }
   };
-
   const uploadFile = async (file: File) => {
     uploading.value = true;
     try {
@@ -790,9 +894,10 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       form.value.poster = url;
     } catch (error: any) {
       uiStore.toast("error", "อัปโหลดรูปภาพล้มเหลว", error.message);
-    } finally { uploading.value = false; }
+    } finally {
+      uploading.value = false;
+    }
   };
-
   const handlePosterUpload = (e: any) => {
     const file = e.target.files[0];
     if (file) openCropper(file, "poster");
@@ -801,7 +906,6 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
     const file = e.target.files[0];
     if (file) openCropper(file, index);
   };
-
   const openCropper = (file: File, target: "poster" | number) => {
     cropperTarget.value = target;
     cropperRawFile.value = file;
@@ -810,7 +914,6 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
     // Poster default = 1:1 (square), Section default = 16:9
     cropRatio.value = target === "poster" ? 1 : 16 / 9;
   };
-
   watch([cropperEl, cropperImgUrl, showCropper], async ([el, url, show]) => {
     if (show && el && url) {
       await nextTick();
@@ -826,7 +929,6 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       });
     }
   });
-
   const closeCropper = () => {
     showCropper.value = false;
     if (cropperImgUrl.value) URL.revokeObjectURL(cropperImgUrl.value);
@@ -835,14 +937,11 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       cropperInstance = null;
     }
   };
-
   const confirmCrop = async () => {
     if (!cropperRawFile.value || !cropperInstance) return;
-
     // Cap output resolution: poster max 1080px, section max 1280px wide
     const isPoster = cropperTarget.value === "poster";
     const maxPx = isPoster ? 1080 : 1280;
-
     // getCroppedCanvas with size limit — avoids sending huge canvases
     const canvas = cropperInstance.getCroppedCanvas({
       maxWidth: maxPx,
@@ -851,67 +950,98 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       imageSmoothingQuality: "high",
     });
     if (!canvas) return;
-
-    // WebP q=0.88: ~30% smaller than JPEG q=90, visually lossless for photos
+    // PNG output for deployment compatibility
     canvas.toBlob(async (blob) => {
       if (!blob) return;
       const sizeMB = (blob.size / 1024 / 1024).toFixed(2);
-      console.debug(`[crop] Output: ${canvas.width}×${canvas.height}px | ${sizeMB} MB | WebP`);
       const file = new File(
         [blob],
-        cropperRawFile.value!.name.replace(/\.[^/.]+$/, "") + ".webp",
-        { type: "image/webp" }
+        cropperRawFile.value!.name.replace(/\.[^/.]+$/, "") + ".png",
+        { type: "image/png" },
       );
       if (cropperTarget.value === "poster") await uploadFile(file);
       else await uploadSectionFile(file, cropperTarget.value as number);
       closeCropper();
-    }, "image/webp", 0.88);
+    }, "image/png");
   };
-
   const setCropRatio = (ratio: number) => {
     cropRatio.value = ratio;
     if (cropperInstance) cropperInstance.setAspectRatio(ratio);
   };
-
-  const handleDragOver = (e: DragEvent) => { e.preventDefault(); isDragging.value = true; };
-  const handleDragLeave = () => { isDragging.value = false; };
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    isDragging.value = true;
+  };
+  const handleDragLeave = () => {
+    isDragging.value = false;
+  };
   const handleDrop = (e: DragEvent) => {
-    e.preventDefault(); isDragging.value = false;
+    e.preventDefault();
+    isDragging.value = false;
     const file = e.dataTransfer?.files[0];
     if (file && file.type.startsWith("image/")) openCropper(file, "poster");
   };
-  const handleSectionDragOver = (e: DragEvent, idx: number) => { e.preventDefault(); draggingSectionIdx.value = idx; };
-  const handleSectionDragLeave = () => { draggingSectionIdx.value = null; };
+  const handleSectionDragOver = (e: DragEvent, idx: number) => {
+    e.preventDefault();
+    draggingSectionIdx.value = idx;
+  };
+  const handleSectionDragLeave = () => {
+    draggingSectionIdx.value = null;
+  };
   const handleSectionDrop = (e: DragEvent, idx: number) => {
-    e.preventDefault(); draggingSectionIdx.value = null;
+    e.preventDefault();
+    draggingSectionIdx.value = null;
     const file = e.dataTransfer?.files[0];
     if (file && file.type.startsWith("image/")) openCropper(file, idx);
   };
-
   const openCertificateEditor = () => {
-    if (!editingId.value) { showError("ต้องบันทึกข้อมูลกิจกรรมเบื้องต้นก่อนจึงจะออกแบบเกียรติบัตรได้"); return; }
+    if (!editingId.value) {
+      showError(
+        "ต้องบันทึกข้อมูลกิจกรรมเบื้องต้นก่อนจึงจะออกแบบเกียรติบัตรได้",
+      );
+      return;
+    }
     certEditorEventId.value = editingId.value;
     showCertEditor.value = true;
   };
-  const openCertEditorDirect = (id: number) => { certEditorEventId.value = id; showCertEditor.value = true; };
+  const openCertEditorDirect = (id: number) => {
+    certEditorEventId.value = id;
+    showCertEditor.value = true;
+  };
   const closeCertEditor = () => {
     showCertEditor.value = false;
-    setTimeout(() => { certEditorEventId.value = null; }, 300);
+    setTimeout(() => {
+      certEditorEventId.value = null;
+    }, 300);
   };
   const checkCertTemplate = async (id: number) => {
     try {
-      const res = await fetch(`/api/certificates/templates/${id}`, { headers: { "x-user-id": String(authStore.user?.id) } });
+      const res = await fetch(`/api/certificates/templates/${id}`, {
+        headers: { "x-user-id": String(authStore.user?.id) },
+      });
       if (res.ok) {
         const data = await res.json();
         hasCertTemplate.value = true;
         certLastUpdated.value = data.updated_at || data.created_at || "";
-      } else { hasCertTemplate.value = false; certLastUpdated.value = ""; }
-    } catch { hasCertTemplate.value = false; certLastUpdated.value = ""; }
+      } else {
+        hasCertTemplate.value = false;
+        certLastUpdated.value = "";
+      }
+    } catch {
+      hasCertTemplate.value = false;
+      certLastUpdated.value = "";
+    }
   };
-
-  const onSectionDragStart = (idx: number) => { sectionDraggingIdx.value = idx; };
-  const onSectionDragOver = (idx: number) => { if (sectionDraggingIdx.value !== null && sectionDraggingIdx.value !== idx) sectionDragOverIdx.value = idx; };
-  const onSectionDragLeave = () => { sectionDragOverIdx.value = null; };
+  const onSectionDragStart = (idx: number) => {
+    sectionDraggingIdx.value = idx;
+  };
+  const onSectionDragOver = (idx: number) => {
+    if (sectionDraggingIdx.value !== null && sectionDraggingIdx.value !== idx)
+      sectionDragOverIdx.value = idx;
+  };
+  const onSectionDragLeave = () => {
+    sectionDragOverIdx.value = null;
+  };
   const onSectionDrop = (toIdx: number) => {
     const fromIdx = sectionDraggingIdx.value;
     if (fromIdx !== null && fromIdx !== toIdx) {
@@ -920,19 +1050,28 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       arr.splice(toIdx, 0, moved);
       form.value.sections = arr;
     }
-    sectionDraggingIdx.value = null; sectionDragOverIdx.value = null;
+    sectionDraggingIdx.value = null;
+    sectionDragOverIdx.value = null;
   };
-  const onSectionDragEnd = () => { sectionDraggingIdx.value = null; sectionDragOverIdx.value = null; };
-
+  const onSectionDragEnd = () => {
+    sectionDraggingIdx.value = null;
+    sectionDragOverIdx.value = null;
+  };
   const onTaskTabDragStart = (e: DragEvent, origIdx: number) => {
     taskDraggingOrigIdx.value = origIdx;
     if (e.dataTransfer) e.dataTransfer.effectAllowed = "move";
   };
   const onTaskTabDragOver = (e: DragEvent, origIdx: number) => {
     e.preventDefault();
-    if (taskDraggingOrigIdx.value !== null && taskDraggingOrigIdx.value !== origIdx) taskDragOverOrigIdx.value = origIdx;
+    if (
+      taskDraggingOrigIdx.value !== null &&
+      taskDraggingOrigIdx.value !== origIdx
+    )
+      taskDragOverOrigIdx.value = origIdx;
   };
-  const onTaskTabDragLeave = () => { taskDragOverOrigIdx.value = null; };
+  const onTaskTabDragLeave = () => {
+    taskDragOverOrigIdx.value = null;
+  };
   const onTaskTabDrop = (origIdx: number) => {
     const fromOrig = taskDraggingOrigIdx.value;
     if (fromOrig !== null && fromOrig !== origIdx) {
@@ -941,25 +1080,38 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       arr.splice(origIdx, 0, moved);
       form.value.tasks = arr;
       if (activeTaskIdx.value === fromOrig) activeTaskIdx.value = origIdx;
-      else if (activeTaskIdx.value > fromOrig && activeTaskIdx.value <= origIdx) activeTaskIdx.value--;
-      else if (activeTaskIdx.value < fromOrig && activeTaskIdx.value >= origIdx) activeTaskIdx.value++;
+      else if (activeTaskIdx.value > fromOrig && activeTaskIdx.value <= origIdx)
+        activeTaskIdx.value--;
+      else if (activeTaskIdx.value < fromOrig && activeTaskIdx.value >= origIdx)
+        activeTaskIdx.value++;
     }
-    taskDraggingOrigIdx.value = null; taskDragOverOrigIdx.value = null;
+    taskDraggingOrigIdx.value = null;
+    taskDragOverOrigIdx.value = null;
   };
-  const onTaskTabDragEnd = () => { taskDraggingOrigIdx.value = null; taskDragOverOrigIdx.value = null; };
-  const onTaskTabClick = (origIdx: number) => { activeTaskIdx.value = origIdx; };
-
+  const onTaskTabDragEnd = () => {
+    taskDraggingOrigIdx.value = null;
+    taskDragOverOrigIdx.value = null;
+  };
+  const onTaskTabClick = (origIdx: number) => {
+    activeTaskIdx.value = origIdx;
+  };
   const toggleAll = (rolesToToggle: { id: string }[]) => {
     const allIds = rolesToToggle.map((r) => r.id);
-    const allSelected = allIds.every((id) => form.value.visibility.includes(id));
-    if (allSelected) form.value.visibility = form.value.visibility.filter((id) => !allIds.includes(id));
+    const allSelected = allIds.every((id) =>
+      form.value.visibility.includes(id),
+    );
+    if (allSelected)
+      form.value.visibility = form.value.visibility.filter(
+        (id) => !allIds.includes(id),
+      );
     else {
       const newVis = [...form.value.visibility];
-      allIds.forEach((id) => { if (!newVis.includes(id)) newVis.push(id); });
+      allIds.forEach((id) => {
+        if (!newVis.includes(id)) newVis.push(id);
+      });
       form.value.visibility = newVis;
     }
   };
-
   const fmtTime = (t: string) => {
     const h = getTimeHour(t);
     const m = getTimeMin(t);
@@ -967,9 +1119,13 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
     const h12 = h % 12 || 12;
     return { h12: pad2(h12), m: pad2(m), ampm };
   };
-
-  const openClock = (field: "start" | "end") => { clockField.value = field; clockMode.value = "hour"; };
-  const closeClock = () => { clockField.value = null; };
+  const openClock = (field: "start" | "end") => {
+    clockField.value = field;
+    clockMode.value = "hour";
+  };
+  const closeClock = () => {
+    clockField.value = null;
+  };
   const selectHour = (h: number) => {
     const field = clockField.value!;
     const cur = field === "start" ? form.value.start_time : form.value.end_time;
@@ -997,15 +1153,26 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
     if (field === "start") form.value.start_time = time;
     else form.value.end_time = time;
   };
-
   const formatDateThai = (dateStr: string) => {
     if (!dateStr) return "—";
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return "—";
-    const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+    const months = [
+      "ม.ค.",
+      "ก.พ.",
+      "มี.ค.",
+      "เม.ย.",
+      "พ.ค.",
+      "มิ.ย.",
+      "ก.ค.",
+      "ส.ค.",
+      "ก.ย.",
+      "ต.ค.",
+      "พ.ย.",
+      "ธ.ค.",
+    ];
     return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear() + 543}`;
   };
-
   return {
     // State
     form,
@@ -1043,7 +1210,6 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
     sectionDragOverIdx,
     taskDraggingOrigIdx,
     taskDragOverOrigIdx,
-
     // Actions
     fetchMasterData,
     openCreate,
@@ -1114,9 +1280,7 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
     },
     initialForm,
   };
-
 }
-
 // Helper outside the composable if needed or inside
 function autoExpand(el: HTMLElement) {
   el.style.height = "auto";

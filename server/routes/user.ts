@@ -149,7 +149,7 @@ router.post("/login", async (req, res) => {
     res.status(201).json(decryptFields(rows[0], USER_ENCRYPTED_FIELDS));
   } catch (error: any) {
     console.error("Login/Register error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -191,7 +191,7 @@ router.post("/login-google", async (req, res) => {
     }
   } catch (error: any) {
     console.error("Google Login error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -262,7 +262,7 @@ router.post("/register-email", async (req, res) => {
     res.status(201).json(decryptFields(rows[0], USER_ENCRYPTED_FIELDS));
   } catch (error: any) {
     console.error("Email Register error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -358,7 +358,7 @@ router.post("/login-email", async (req, res) => {
     res.json(decryptFields(userMatch, USER_ENCRYPTED_FIELDS));
   } catch (error: any) {
     console.error("Email Login error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -397,7 +397,7 @@ router.post("/forgot-password", async (req, res) => {
       debug_token: token // REMOVE THIS IN PRODUCTION
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -434,7 +434,7 @@ router.post("/reset-password", async (req, res) => {
 
     res.json({ message: "เปลี่ยนรหัสผ่านใหม่เรียบร้อยแล้ว" });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -452,7 +452,7 @@ router.get("/rankings/individual", async (req, res) => {
     const decryptedRows = rows.map((r: any) => decryptFields(r, ['fname_th', 'lname_th', 'nickname']));
     res.json(decryptedRows);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -477,7 +477,7 @@ router.get("/rankings/teams", async (req, res) => {
     res.json(transformed.slice(0, 10));
   } catch (error: any) {
     console.error("Fetch team rankings error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -566,7 +566,7 @@ router.get("/:userId/registrations", async (req, res) => {
     res.json(Array.from(eventMap.values()));
   } catch (error: any) {
     console.error("[ERROR] Fetch Regs Failed:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -592,7 +592,7 @@ router.get("/:userId/activities/:activityId/missions", async (req, res) => {
     });
     res.json(nested);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -608,7 +608,7 @@ router.get("/", requireAdmin, async (req, res) => {
     const decryptedRows = rows.map((r: any) => decryptFields(r, USER_ENCRYPTED_FIELDS));
     res.json(decryptedRows);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -647,7 +647,7 @@ router.patch("/:id/ban", requireAdmin, async (req, res) => {
     res.json({ success: true, message: "ดำเนินการสำเร็จ" });
   } catch (error: any) {
     console.error(`[BAN ERROR] User ID: ${req.params.id}`, error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -681,7 +681,7 @@ router.patch("/:id/unban", requireAdmin, async (req, res) => {
     res.json({ success: true, message: "ยกเลิกการแบนสำเร็จ" });
   } catch (error: any) {
     console.error(`[UNBAN ERROR] User ID: ${req.params.id}`, error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -735,7 +735,7 @@ router.get("/:id/full-profile", requireAdmin, async (req, res) => {
     });
   } catch (error: any) {
     console.error('[full-profile error]', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -760,7 +760,7 @@ router.get("/:id/profile", async (req, res) => {
     if (!rows.length) return res.status(404).json({ error: "User not found" });
     res.json(decryptFields(rows[0], USER_ENCRYPTED_FIELDS));
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -823,7 +823,7 @@ router.patch("/:id/profile", async (req, res) => {
     res.json(decryptFields(rows[0], USER_ENCRYPTED_FIELDS) || {});
   } catch (error: any) {
     console.error('[PATCH PROFILE] Error:', error.message);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -862,7 +862,7 @@ router.post("/bulk-suspend", requireAdmin, async (req, res) => {
 
     res.json({ success: true });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -872,7 +872,7 @@ router.get("/:id/audit-logs", requireAdmin, async (req, res) => {
     res.json(rows);
   } catch (error: any) {
     if (error.code === 'ER_NO_SUCH_TABLE') return res.json([]);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -888,7 +888,7 @@ router.post("/:id/impersonate", requireAdmin, async (req, res) => {
     });
     res.json({ success: true, message: "Impersonation started" });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -904,7 +904,7 @@ router.post("/:id/impersonate/stop", requireAdmin, async (req, res) => {
     });
     res.json({ success: true, message: "Impersonation stopped" });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -925,7 +925,7 @@ router.post("/:id/force-logout", requireAdmin, async (req, res) => {
     });
     res.json({ success: true, message: "Forced logout triggered" });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -957,7 +957,7 @@ router.delete("/:id", requireAdmin, async (req, res) => {
 
     res.json({ success: true });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1010,7 +1010,7 @@ router.patch("/:id", requireAdmin, async (req, res) => {
     getIO().emit(EVENTS.USER_UPDATED, { id: Number(id), ...updatedUser });
     res.json(updatedUser);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1029,7 +1029,7 @@ router.patch("/:id/role", requireAdmin, async (req, res) => {
 
     res.json(updatedUser);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1060,7 +1060,7 @@ router.get("/:id", async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ error: "User not found" });
     res.json(decryptFields(rows[0], USER_ENCRYPTED_FIELDS));
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1070,7 +1070,7 @@ router.get("/line/:lineId", async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ error: "User not found" });
     res.json(decryptFields(rows[0], USER_ENCRYPTED_FIELDS));
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1092,7 +1092,7 @@ router.post("/", async (req, res) => {
     const [rows]: any = await pool.query('SELECT * FROM users WHERE id = ?', [result.insertId]);
     res.status(201).json(decryptFields(rows[0], USER_ENCRYPTED_FIELDS));
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    res.status(400).json({ error: "Bad Request" });
   }
 });
 
@@ -1176,7 +1176,7 @@ router.patch("/:id", async (req, res) => {
     res.json(decryptFields(updatedRows[0], USER_ENCRYPTED_FIELDS));
   } catch (error: any) {
     console.error("Update user error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1223,7 +1223,7 @@ router.patch("/:id/suspend", async (req, res) => {
     res.json({ message: `User ${is_suspended ? 'suspended' : 'unsuspended'} successfully` });
   } catch (error: any) {
     console.error("Suspend user error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1266,7 +1266,7 @@ router.delete("/:id", async (req, res) => {
     res.json({ message: "User deleted successfully" });
   } catch (error: any) {
     console.error("Delete user error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1315,7 +1315,7 @@ router.post("/:id/reset-password", requireAdmin, async (req, res) => {
     res.json({ message: "Password reset email sent successfully" });
   } catch (error: any) {
     console.error("Password reset error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1346,7 +1346,7 @@ router.post("/:id/verify-email", requireAdmin, async (req, res) => {
     res.json({ message: "Email verified successfully" });
   } catch (error: any) {
     console.error("Email verification error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1378,7 +1378,7 @@ router.post("/:id/unlink-line", requireAdmin, async (req, res) => {
     res.json({ message: "LINE account unlinked successfully" });
   } catch (error: any) {
     console.error("LINE unlink error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1413,7 +1413,7 @@ router.post("/:id/revoke-sessions", requireAdmin, async (req, res) => {
     res.json({ message: "All sessions revoked successfully" });
   } catch (error: any) {
     console.error("Session revocation error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1480,7 +1480,7 @@ router.post("/", requireAdmin, async (req, res) => {
     });
   } catch (error: any) {
     console.error("Create user error:", error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

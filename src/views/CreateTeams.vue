@@ -11,9 +11,7 @@ import {
 import { swal, showSuccess, showError } from "../lib/swal";
 import { useRealtime } from "../composables/useRealtime";
 import { uiStore } from "../store/ui";
-
 const router = useRouter();
-
 type User = { id: string; name: string; avatar?: string; fname_th?: string; nickname?: string };
 type Room = {
   id: string; code: string; name: string;
@@ -21,7 +19,6 @@ type Room = {
   password?: string;
   hostId: string; members: User[];
 };
-
 const currentUser = computed(() => ({
   id: authStore.user?.id ?? null,
   name: authStore.user?.fname_th ?? "คุณ",
@@ -29,7 +26,6 @@ const currentUser = computed(() => ({
   teamId: authStore.user?.team_id ?? null,
   canCreateActivity: authStore.user?.role === 'admin',
 }));
-
 const loading = ref(false);
 const skeletonVisible = ref(false);
 const isInitializing = ref(false);
@@ -39,11 +35,9 @@ const searchQuery = ref("");
 const showCreateModal = ref(false);
 const showCodeModal = ref(false);
 const showSearchModal = ref(false);
-
 const codeDigits = ref<string[]>(Array(6).fill(''));
 const joinCodeStr = computed(() => codeDigits.value.join('').toUpperCase());
 const joinCodeLoading = ref(false);
-
 const handleDigitInput = (e: Event, idx: number) => {
   const input = e.target as HTMLInputElement;
   const val = input.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
@@ -62,7 +56,6 @@ const handleDigitInput = (e: Event, idx: number) => {
   }
   input.value = codeDigits.value[idx];
 };
-
 const handleDigitKeydown = (e: KeyboardEvent, idx: number) => {
   if (e.key === 'Backspace' && !codeDigits.value[idx] && idx > 0) {
     codeDigits.value[idx - 1] = '';
@@ -70,7 +63,6 @@ const handleDigitKeydown = (e: KeyboardEvent, idx: number) => {
     if (prev) (prev as HTMLInputElement).focus();
   }
 };
-
 const handleDigitPaste = (e: ClipboardEvent) => {
   e.preventDefault();
   const text = e.clipboardData?.getData('text').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 6) || '';
@@ -79,18 +71,15 @@ const handleDigitPaste = (e: ClipboardEvent) => {
   const nextEl = document.getElementById(`otp-${lastFilledIdx}`);
   if (nextEl) (nextEl as HTMLInputElement).focus();
 };
-
 const handleFocus = (e: FocusEvent) => {
   if (e.target) {
     (e.target as HTMLInputElement).select();
   }
 };
-
 const submitJoinByCode = async () => {
   const code = joinCodeStr.value;
   if (code.length < 6) return showToast('error', 'กรอกรหัส 6 หลักให้ครบ');
   if (joinCodeLoading.value) return;
-  
   joinCodeLoading.value = true;
   try {
     await joinByCode(code);
@@ -100,13 +89,10 @@ const submitJoinByCode = async () => {
     joinCodeLoading.value = false;
   }
 };
-
 const selectedRoomToJoin = ref<Room | null>(null);
 const newRoomForm = ref({ name: "", maxMembers: 4, isPrivate: false, code: "" });
-
 const joinStep = ref(1);
 const joinTargetName = ref("");
-
 const openJoinModal = (initialRoom = null) => {
    codeDigits.value = Array(6).fill('');
    if (initialRoom) {
@@ -122,7 +108,6 @@ const openJoinModal = (initialRoom = null) => {
       setTimeout(() => document.getElementById('joinNameInput')?.focus(), 100);
    }
 };
-
 const verifyJoinName = () => {
    if (!joinTargetName.value.trim()) return showToast('error', 'กรุณาใส่ชื่อทีม');
    const match = rooms.value.find(r => r.name.toLowerCase() === joinTargetName.value.trim().toLowerCase());
@@ -136,13 +121,11 @@ const verifyJoinName = () => {
       setTimeout(() => document.getElementById('otp-0')?.focus(), 100);
    }
 };
-
 const showToast = (type: "success" | "error" | "info", message: string) => {
   if (type === "success") showSuccess(message);
   else if (type === "error") showError(message);
   else swal.fire({ icon: "info", title: message, toast: true, position: "top", showConfirmButton: false, timer: 3000 });
 };
-
 const fetchRooms = async () => {
   if (!currentUser.value.id) return;
   skeletonVisible.value = true;
@@ -154,7 +137,6 @@ const fetchRooms = async () => {
   } catch { showToast("error", "โหลดรายการห้องไม่สำเร็จ"); }
   finally { skeletonVisible.value = false; }
 };
-
 const handleCreateRoom = async () => {
   if (loading.value) return;
   if (authStore.user?.team_id) return showToast("info", "คุณมีทีมอยู่แล้ว ไม่สามารถสร้างทีมใหม่ได้");
@@ -168,24 +150,18 @@ const handleCreateRoom = async () => {
     const res = await fetch("/api/teams", { method: "POST", headers: { "Content-Type": "application/json", "x-user-id": String(currentUser.value.id) }, body: JSON.stringify({ ...newRoomForm.value, hostId: currentUser.value.id }) });
     if (res.ok) {
       const team = await res.json();
-      console.log("[CreateTeams.vue] API Response:", team);
       const tid = (team && typeof team === 'object') ? (team.id || team.teamId) : team;
-      console.log("[CreateTeams.vue] Extracted Team ID:", tid);
-      
       if (authStore.user && tid) {
         const updatedUser = { ...authStore.user, team_id: tid };
         authStore.setUser(updatedUser);
-        console.log("[CreateTeams.vue] Updated authStore.user with team_id:", tid);
         showToast("success", "สร้างทีมสำเร็จ!");
       } else {
-        console.error("[CreateTeams.vue] Failed to extract team ID or user missing");
         showToast("error", "สร้างทีมสำเร็จแต่ไม่สามารถระบุ ID ทีมได้");
       }
     } else { const err = await res.json(); showToast("error", err.error ?? "สร้างทีมไม่สำเร็จ"); }
   } catch { showToast("error", "เกิดข้อผิดพลาดในการสร้างทีม"); }
   finally { loading.value = false; }
 };
-
 const confirmJoin = async (teamId: string) => {
   if (loading.value) return;
   if (!currentUser.value.id) return router.push("/login");
@@ -193,18 +169,15 @@ const confirmJoin = async (teamId: string) => {
   try {
     const res = await fetch("/api/teams/join", { method: "POST", headers: { "Content-Type": "application/json", "x-user-id": String(currentUser.value.id) }, body: JSON.stringify({ teamId, userId: currentUser.value.id }) });
     if (res.ok) { 
-      console.log("[CreateTeams.vue] Joined team successfully:", teamId);
       if (authStore.user) {
         const updatedUser = { ...authStore.user, team_id: teamId };
         authStore.setUser(updatedUser);
-        console.log("[CreateTeams.vue] Updated authStore.user with team_id:", updatedUser.team_id);
       }
       showToast("success", "เข้าร่วมทีมสำเร็จ!");
     } else { const err = await res.json(); showToast("error", err.error ?? "เข้าร่วมทีมไม่สำเร็จ"); }
   } catch { showToast("error", "เข้าร่วมทีมล้มเหลว"); }
   finally { loading.value = false; }
 };
-
 const joinByCode = async (code: string) => {
   if (loading.value) return;
   if (!code || !currentUser.value.id) return;
@@ -213,18 +186,15 @@ const joinByCode = async (code: string) => {
     const res = await fetch("/api/teams/join-by-code", { method: "POST", headers: { "Content-Type": "application/json", "x-user-id": String(currentUser.value.id) }, body: JSON.stringify({ code: code, userId: currentUser.value.id }) });
     const data = await res.json();
     if (res.ok) { 
-      console.log("[CreateTeams.vue] Joined by code successfully:", data.teamId);
       if (authStore.user) {
         const updatedUser = { ...authStore.user, team_id: data.teamId };
         authStore.setUser(updatedUser);
-        console.log("[CreateTeams.vue] Updated authStore.user with team_id:", updatedUser.team_id);
       }
       showToast("success", "เข้าร่วมทีมสำเร็จ!");
     } else showToast("error", data.error ?? "ค้นหาห้องไม่สำเร็จ");
   } catch { showToast("error", "ค้นหาห้องล้มเหลว"); }
   finally { loading.value = false; }
 };
-
 const joinRoom = (room: Room) => {
   if (authStore.user?.team_id) return showToast("info", "คุณมีทีมอยู่แล้ว ไม่สามารถเข้าร่วมทีมอื่นได้");
   if ((room.members?.length || 0) >= room.maxMembers) return showToast("info", "ห้องเต็มแล้ว");
@@ -234,11 +204,7 @@ const joinRoom = (room: Room) => {
   }
   confirmJoin(room.id);
 };
-
-
-
 const getHost = (room: Room) => room.members?.find(m => m.id === room.hostId);
-
 const checkUserTeam = () => {
   if (authStore.user?.team_id) {
     router.replace("/teams");
@@ -246,35 +212,28 @@ const checkUserTeam = () => {
   }
   return false;
 };
-
 onMounted(() => {
   if (checkUserTeam()) return;
   fetchRooms();
 });
-
 watch(() => authStore.user?.team_id, (newTeamId) => {
   if (newTeamId) {
     router.replace("/teams");
   }
 });
-
 const filteredRooms = computed(() => {
   let list = rooms.value;
   if (!searchQuery.value) return list;
   const lowerQ = searchQuery.value.toLowerCase();
   return list.filter(r => r.name.toLowerCase().includes(lowerQ) || (r.code && r.code.toLowerCase() === lowerQ));
 });
-
 const currentPage = ref(1);
 const itemsPerPage = 10;
-
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredRooms.value.length / itemsPerPage)));
-
 const paginatedRooms = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
   return filteredRooms.value.slice(start, start + itemsPerPage);
 });
-
 watch(searchQuery, (newVal) => {
   currentPage.value = 1;
   if (newVal && newVal.length === 6) {
@@ -282,7 +241,6 @@ watch(searchQuery, (newVal) => {
     if (matchedRoom) { joinByCode(newVal); searchQuery.value = ""; }
   }
 });
-
 const navigateHub = (view: "search" | "create" | "join") => {
   if (authStore.user?.team_id) {
     return showToast("info", "คุณมีทีมอยู่แล้ว ไม่สามารถดำเนินการนี้ได้");
@@ -291,7 +249,6 @@ const navigateHub = (view: "search" | "create" | "join") => {
   else if (view === "create") showCreateModal.value = true;
   else if (view === "search") showSearchModal.value = true;
 }
-
 useRealtime({
   onTeamCreated: () => fetchRooms(),
   onTeamUpdated: () => fetchRooms(),
@@ -303,31 +260,25 @@ useRealtime({
   onTeamLeft: () => fetchRooms(),
   onTeamKicked: () => fetchRooms(),
 });
-
 watch(() => uiStore.lastRealtimeUpdate, () => {
   fetchRooms();
 });
 </script>
-
 <template>
   <div class="rank-app">
     <main class="modern-list-view">
-      
       <Transition name="fade" mode="out-in">
         <div v-if="currentView === 'hub'" class="hub-container">
-          
           <div class="top-actions-wrapper" :class="authStore.user?.team_id ? 'justify-between' : 'justify-end'">
             <button v-if="authStore.user?.team_id" class="my-team-btn" @click="router.push('/teams')">
                <ShieldCheck :size="18" class="text-orange-600" />
                <span>ดูทีมของฉัน</span>
             </button>
-            
             <button v-if="!authStore.user?.team_id" class="create-btn-top" @click="navigateHub('create')">
               <Plus :size="18" />
               <span>สร้างทีม</span>
             </button>
           </div>
-
           <div class="search-header">
             <div class="modern-search-box">
               <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -336,17 +287,14 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
               <input class="modern-search-input" v-model="searchQuery" placeholder="ค้นหาชื่อทีม หรือ รหัสทีม 6 หลัก..." />
             </div>
           </div>
-
           <div class="activity-list-container">
             <div class="list-header-bar">
               <div class="list-title">ทีมทั้งหมด ({{ filteredRooms.length }})</div>
             </div>
-
             <div class="activity-list-body">
               <div v-if="skeletonVisible" class="skeleton-list">
                 <div v-for="n in 5" :key="n" class="skeleton-row"></div>
               </div>
-              
               <div v-else-if="filteredRooms.length === 0" class="empty-search">
                 <Users :size="48" class="empty-icon-wrap" />
                 <h3 class="empty-title">ไม่พบข้อมูลทีม</h3>
@@ -355,17 +303,14 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
                   <Plus :size="18" /> สร้างทีมใหม่
                 </button>
               </div>
-              
               <div v-else class="ev-list">
                 <div v-for="room in paginatedRooms" :key="room.id" class="activity-row hover-effect" @click="joinRoom(room)">
-                  
                   <div class="ar-left">
                     <div class="ev-poster">
                       <img v-if="getHost(room)?.avatar" :src="getHost(room)?.avatar" loading="lazy" />
                       <div class="ev-fallback" v-else>{{ room.name.charAt(0) }}</div>
                     </div>
                   </div>
-                  
                   <div class="ar-middle">
                     <div class="ev-name-wrap">
                       <span class="ar-subject">{{ room.name }}</span>
@@ -375,30 +320,24 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
                     </div>
                     <div class="ar-system-name">หัวหน้าทีม: {{ getHost(room)?.fname_th || getHost(room)?.nickname || 'หัวหน้า' }}</div>
                   </div>
-                  
                   <div class="ar-right">
                     <span class="ev-score">
                       <Users :size="14" class="mr-1"/>
                       {{ room.members?.length || 0 }} / {{ room.maxMembers }}
                     </span>
                   </div>
-                  
                 </div>
               </div>
-
               <div class="pagination" v-if="totalPages > 1">
                 <button :disabled="currentPage === 1" @click="currentPage--">« ก่อนหน้า</button>
                 <span class="page-info">หน้า {{ currentPage }} / {{ totalPages }}</span>
                 <button :disabled="currentPage === totalPages" @click="currentPage++">ถัดไป »</button>
               </div>
-
             </div>
           </div>
-          
         </div>
       </Transition>
     </main>
-
     <Teleport to="body">
       <Transition name="modal-fade">
         <div v-if="showCreateModal" class="tn-overlay" @click.self="showCreateModal = false">
@@ -409,13 +348,11 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
                 <X :size="20" />
               </button>
             </div>
-            
             <div class="tn-body">
                <div class="input-group mb-5">
                   <label class="input-label">ชื่อทีมของคุณ</label>
                   <input class="modern-input" v-model="newRoomForm.name" placeholder="ตั้งชื่อทีมสุดเจ๋ง..." maxlength="40" />
                </div>
-
                <div class="setting-row mb-5" @click="newRoomForm.isPrivate = !newRoomForm.isPrivate">
                   <div class="setting-info">
                     <span class="setting-title">ตั้งรหัสผ่านเข้าทีม (Private)</span>
@@ -423,14 +360,12 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
                   </div>
                   <div class="fancy-toggle" :class="{ 'on': newRoomForm.isPrivate }"><div class="fancy-knob"></div></div>
                </div>
-
                <Transition name="fade">
                  <div v-if="newRoomForm.isPrivate" class="input-group mb-5">
                     <label class="input-label text-orange-600">สร้าง PIN 6 หลัก</label>
                     <input class="modern-input" v-model="newRoomForm.code" placeholder="เช่น ABC123" maxlength="6" style="text-transform: uppercase; font-weight: bold; letter-spacing: 2px;" />
                  </div>
                </Transition>
-
                <div class="input-group mb-4">
                   <label class="input-label">จำนวนสมาชิกสูงสุด (คน)</label>
                   <div class="num-grid">
@@ -440,7 +375,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
                   </div>
                </div>
             </div>
-
             <div class="tn-footer">
               <button class="tn-btn-save" @click="handleCreateRoom" :disabled="loading">
                 <Loader2 v-if="loading" class="spin mr-2" :size="18" />
@@ -451,7 +385,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
         </div>
       </Transition>
     </Teleport>
-
     <Teleport to="body">
       <Transition name="modal-fade">
         <div v-if="showCodeModal" class="tn-overlay" @click.self="showCodeModal = false">
@@ -462,22 +395,18 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
                 <X :size="20" />
               </button>
             </div>
-            
             <div class="tn-body text-center flex-col-center">
               <p class="text-gray-500 text-sm mb-6 px-4">
                 {{ joinStep === 1 ? 'ระบุชื่อทีมที่คุณต้องการค้นหา ระบบจะตรวจสอบโดยอัตโนมัติ' : `กรอก PIN 6 หลักเพื่อเข้าทีม: ${selectedRoomToJoin?.name}` }}
               </p>
-
               <div v-if="joinStep === 1" class="input-group text-left mb-4 px-2 w-full">
                  <label class="input-label">ชื่อทีมเป้าหมาย</label>
                  <input id="joinNameInput" class="modern-input text-center font-bold text-lg" v-model="joinTargetName" placeholder="พิมพ์ชื่อทีม..." @keyup.enter="verifyJoinName" />
               </div>
-
               <div v-if="joinStep === 2" class="otp-line mb-6 w-full">
                 <input v-for="(_, i) in codeDigits" :key="i" :id="`otp-${i}`" :value="codeDigits[i]" type="text" maxlength="1" class="otp-input-field" @input="handleDigitInput($event, i)" @keydown="handleDigitKeydown($event, i)" @paste="handleDigitPaste" @focus="handleFocus" />
               </div>
             </div>
-
             <div class="tn-footer">
               <button v-if="joinStep === 1" class="tn-btn-save" @click="verifyJoinName" :disabled="loading">
                 <Loader2 v-if="loading" class="spin mr-2" :size="18" />
@@ -494,7 +423,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
     </Teleport>
   </div>
 </template>
-
 <style scoped>
 .rank-app {
   --primary: #FF6A00;
@@ -508,29 +436,23 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   --radius-lg: 16px;
   --radius-md: 12px;
 }
-
 * { box-sizing: border-box; }
-
 .rank-app {
   background-color: var(--bg-color);
   min-height: 100vh;
   color: var(--text-main);
   font-family: 'Prompt', 'Noto Sans Thai', sans-serif;
 }
-
 .modern-list-view {
   max-width: 1000px;
   margin: 0 auto;
   padding: 24px;
 }
-
 .hub-container {
   width: 100%;
 }
-
 .justify-end { display: flex; justify-content: flex-end; }
 .top-actions-wrapper { margin-bottom: 24px; }
-
 .create-btn-top {
   background: none;
   border: none;
@@ -543,16 +465,13 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   color: #64748B;
   transition: all 0.2s;
 }
-
 .create-btn-top span {
   color: var(--primary);
 }
-
 .create-btn-top:hover {
   transform: translateY(-1px);
   opacity: 0.8;
 }
-
 .my-team-btn {
   background: #FFF7ED;
   border: 1px solid #FFEDD5;
@@ -570,7 +489,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   background: #FFEDD5;
   transform: translateY(-1px);
 }
-
 .btn-primary {
   background: var(--primary);
   color: #fff;
@@ -584,18 +502,15 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   gap: 8px;
   transition: all 0.2s;
 }
-
 .btn-primary:hover {
   background: var(--primary-hover);
   transform: translateY(-1px);
 }
-
 .search-header {
   margin-bottom: 24px;
   display: flex;
   justify-content: center;
 }
-
 .modern-search-box {
   display: flex;
   align-items: center;
@@ -609,20 +524,17 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0,0,0,0.02);
 }
-
 .modern-search-box:focus-within {
   border-color: #FF6A00;
   background: #FFFFFF;
   box-shadow: 0 4px 12px rgba(255, 106, 0, 0.15);
 }
-
 .search-icon {
   width: 18px;
   height: 18px;
   color: #94A3B8;
   margin-right: 8px;
 }
-
 .modern-search-input {
   flex: 1;
   border: none;
@@ -631,11 +543,9 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   color: var(--text-main);
   outline: none;
 }
-
 .modern-search-input::placeholder {
   color: #94A3B8;
 }
-
 .activity-list-container {
   background: var(--surface);
   border-radius: var(--radius-lg);
@@ -643,19 +553,16 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   overflow: hidden;
   border: 1px solid var(--border);
 }
-
 .list-header-bar {
   padding: 16px 24px;
   border-bottom: 1px solid var(--border);
   background: #F8FAFC;
 }
-
 .list-title {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-muted);
 }
-
 .activity-row {
   display: flex;
   align-items: center;
@@ -665,21 +572,17 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   background: var(--surface);
   transition: all 0.2s ease;
 }
-
 .activity-row:last-child {
   border-bottom: none;
 }
-
 .activity-row:hover {
   background: #F8FAFC;
   transform: translateX(4px);
 }
-
 .ar-left {
   width: 80px;
   flex-shrink: 0;
 }
-
 .ev-poster {
   width: 50px;
   height: 50px;
@@ -694,13 +597,11 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   flex-shrink: 0;
   aspect-ratio: 1 / 1;
 }
-
 .ev-poster img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-
 .ev-fallback {
   width: 100%;
   height: 100%;
@@ -712,20 +613,17 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   font-size: 1.2rem;
   background: var(--primary-light);
 }
-
 .ar-middle {
   flex: 1;
   min-width: 0;
   padding-right: 24px;
 }
-
 .ev-name-wrap {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 4px;
 }
-
 .ar-subject {
   font-weight: 500;
   font-size: 1rem;
@@ -735,7 +633,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   text-overflow: ellipsis;
   display: block;
 }
-
 .private-badge {
   color: #F59E0B;
   background: #FEF3C7;
@@ -743,20 +640,17 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   border-radius: 50px;
   display: flex;
 }
-
 .ar-system-name {
   font-size: 0.85rem;
   color: var(--text-muted);
   font-weight: 500;
 }
-
 .ar-right {
   display: flex;
   align-items: center;
   gap: 20px;
   flex-shrink: 0;
 }
-
 .ev-score {
   display: flex;
   align-items: center;
@@ -764,7 +658,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   font-size: 0.85rem;
   font-weight: 700;
 }
-
 .mr-1 { margin-right: 4px; }
 .mr-2 { margin-right: 8px; }
 .mt-4 { margin-top: 16px; }
@@ -781,7 +674,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
 .text-orange-600 { color: #ea580c; }
 .text-gray-500 { color: #6b7280; }
 .flex-col-center { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; }
-
 .btn-outline-sm {
   background: transparent;
   color: var(--primary);
@@ -793,12 +685,10 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   cursor: pointer;
   transition: 0.2s;
 }
-
 .activity-row:hover .btn-outline-sm {
   background: var(--primary);
   color: #fff;
 }
-
 .empty-search {
   padding: 60px 20px;
   text-align: center;
@@ -806,30 +696,25 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   flex-direction: column;
   align-items: center;
 }
-
 .empty-icon-wrap {
   color: #CBD5E1;
   margin-bottom: 16px;
 }
-
 .empty-title {
   font-size: 1.2rem;
   font-weight: 700;
   color: var(--text-main);
   margin: 0 0 8px;
 }
-
 .empty-desc {
   color: var(--text-muted);
   font-size: 0.95rem;
   margin: 0;
 }
-
 .skeleton-list {
   display: flex;
   flex-direction: column;
 }
-
 .skeleton-row {
   height: 80px;
   border-bottom: 1px solid #F1F5F9;
@@ -837,7 +722,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   background-size: 200% 100%;
   animation: skeleton-loading 1.5s infinite;
 }
-
 .pagination { display: flex; justify-content: center; align-items: center; padding: 20px; gap: 16px; border-top: 1px solid var(--border); }
 @media (max-width: 768px) {
   .pagination { border-top: none; padding-top: 0; }
@@ -864,12 +748,10 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
 }
 .pagination button:disabled { opacity: 0.5; cursor: not-allowed; }
 .page-info { font-weight: 600; color: var(--text-muted); }
-
 @keyframes skeleton-loading {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
-
 .table-pagination {
   display: flex;
   justify-content: center;
@@ -878,7 +760,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   gap: 16px;
   border-top: 1px solid var(--border);
 }
-
 .page-btn {
   padding: 10px;
   border-radius: 50%;
@@ -891,23 +772,19 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   align-items: center;
   justify-content: center;
 }
-
 .page-btn:hover:not(:disabled) {
   border-color: var(--primary);
   color: var(--primary);
   background: var(--primary-light);
 }
-
 .page-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
 .page-info {
   font-weight: 600;
   color: var(--text-muted);
 }
-
 .tn-overlay {
   position: fixed;
   inset: 0;
@@ -919,7 +796,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
-
 .tn-sheet {
   width: 100%;
   background: #fff;
@@ -928,7 +804,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   flex-direction: column;
   max-height: 90vh;
 }
-
 .tn-header {
   display: flex;
   align-items: center;
@@ -936,7 +811,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
 }
-
 .tn-title {
   font-size: 1.15rem;
   font-weight: 700;
@@ -944,7 +818,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   text-align: left;
   color: var(--text-main);
 }
-
 .tn-close-btn {
   display: flex;
   background: #F1F5F9;
@@ -962,18 +835,15 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   flex-shrink: 0;
   aspect-ratio: 1 / 1;
 }
-
 .tn-close-btn:hover {
   background: #E2E8F0;
   color: var(--text-main);
 }
-
 .tn-body {
   padding: 24px 20px;
   overflow-y: auto;
   flex: 1;
 }
-
 .tn-footer {
   padding: 16px 20px;
   border-top: 1px solid var(--border);
@@ -982,7 +852,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   background: #fff;
   padding-bottom: calc(16px + env(safe-area-inset-bottom));
 }
-
 .tn-btn-cancel {
   flex: 1;
   padding: 14px;
@@ -995,7 +864,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   transition: 0.2s;
   font-family: inherit;
 }
-
 .tn-btn-save {
   flex: 1;
   padding: 14px;
@@ -1011,29 +879,24 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   transition: 0.2s;
   font-family: inherit;
 }
-
 /* เอาเอฟเฟกต์ตอนกดค้างออก */
 .tn-btn-save:active {
   transform: none !important;
 }
-
 .tn-btn-save:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
-
 .input-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-
 .input-label {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-main);
 }
-
 .modern-input {
   width: 100%;
   padding: 16px;
@@ -1045,14 +908,12 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   background: #F8FAFC;
   color: var(--text-main);
 }
-
 .modern-input:focus {
   border-color: var(--primary);
   outline: none;
   background: #fff;
   box-shadow: 0 0 0 4px var(--primary-light);
 }
-
 .setting-row {
   display: flex;
   justify-content: space-between;
@@ -1063,24 +924,20 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   cursor: pointer;
   border: 1.5px solid var(--border);
 }
-
 .setting-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
-
 .setting-title {
   font-weight: 600;
   color: var(--text-main);
   font-size: 1rem;
 }
-
 .setting-desc {
   font-size: 0.8rem;
   color: var(--text-muted);
 }
-
 .fancy-toggle {
   width: 48px;
   height: 26px;
@@ -1089,11 +946,9 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   position: relative;
   transition: 0.3s;
 }
-
 .fancy-toggle.on {
   background: var(--primary);
 }
-
 .fancy-knob {
   width: 20px;
   height: 20px;
@@ -1105,17 +960,14 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   transition: 0.3s;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
-
 .fancy-toggle.on .fancy-knob {
   left: 25px;
 }
-
 .num-grid {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
-
 .num-btn {
   flex: 1;
   min-width: 45px;
@@ -1130,21 +982,18 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   font-size: 1.1rem;
   font-family: inherit;
 }
-
 .num-btn.active {
   background: #FF6A00 !important; 
   border-color: #FF6A00 !important;
   color: #fff !important;
   box-shadow: 0 4px 12px rgba(255, 106, 0, 0.3);
 }
-
 .otp-line {
   display: flex;
   justify-content: center;
   gap: 8px;
   width: 100%;
 }
-
 .otp-input-field {
   width: 48px;
   height: 60px;
@@ -1159,13 +1008,11 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   background: #F8FAFC;
   font-family: inherit;
 }
-
 .otp-input-field:focus {
   border-color: var(--primary);
   background: #fff;
   box-shadow: 0 0 0 3px var(--primary-light);
 }
-
 .loading-full-screen {
   position: fixed;
   inset: 0;
@@ -1176,7 +1023,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   background: rgba(255,255,255,0.9);
   backdrop-filter: blur(4px);
 }
-
 .loader-premium-card {
   background: transparent;
   display: flex;
@@ -1184,47 +1030,39 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   align-items: center;
   gap: 16px;
 }
-
 .loader-icon-wrap {
   color: var(--primary);
 }
-
 .loader-text {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-main);
 }
-
 .spin {
   animation: spin 1s linear infinite;
 }
-
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.25s ease;
 }
 .fade-enter-from, .fade-leave-to {
   opacity: 0;
 }
-
 .modal-fade-enter-active, .modal-fade-leave-active {
   transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .modal-fade-enter-from, .modal-fade-leave-to {
   opacity: 0;
 }
-
 .modal-fade-enter-active .tn-sheet {
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .modal-fade-leave-active .tn-sheet {
   animation: slideDown 0.3s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
-
 @keyframes slideUp {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
@@ -1233,7 +1071,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
   from { transform: translateY(0); opacity: 1; }
   to { transform: translateY(100%); opacity: 0; }
 }
-
 @media (min-width: 768px) {
   .tn-overlay {
     align-items: center;
@@ -1266,7 +1103,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
     to { transform: scale(0.95); opacity: 0; }
   }
 }
-
 @media (max-width: 768px) {
   .modern-list-view {
     padding: 12px 0 100px 0;
@@ -1322,7 +1158,6 @@ watch(() => uiStore.lastRealtimeUpdate, () => {
     padding-left: 62px;
   }
 }
-
 @media (max-width: 380px) {
   .otp-input-field {
     width: 40px;

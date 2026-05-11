@@ -44,11 +44,26 @@ async function getImageBuffer(imageUrl: string): Promise<any> {
     return Buffer.from(base64Data, "base64");
   }
 
-  // Handle local filesystem paths (legacy)
+  // Handle local filesystem paths in /uploads (current storage location)
   if (imageUrl.includes("/uploads/")) {
     try {
-      const relativePath = imageUrl.substring(imageUrl.indexOf("/uploads/"));
-      const fullPath = path.join(__dirname, "../../public", relativePath);
+      let uploadRelativePath = imageUrl;
+
+      // If absolute URL, extract only pathname
+      if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+        uploadRelativePath = new URL(imageUrl).pathname;
+      }
+
+      const uploadsIndex = uploadRelativePath.indexOf("/uploads/");
+      const relativeFromUploads = uploadRelativePath.substring(
+        uploadsIndex + "/uploads/".length,
+      );
+
+      const fullPath = path.join(
+        __dirname,
+        "../../public/uploads",
+        relativeFromUploads,
+      );
       return await fs.readFile(fullPath);
     } catch (err) {
       console.warn(
@@ -56,6 +71,11 @@ async function getImageBuffer(imageUrl: string): Promise<any> {
         err,
       );
     }
+  }
+
+  // Relative URL that is not absolute cannot be fetched by axios in Node.
+  if (imageUrl.startsWith("/")) {
+    throw new Error(`INVALID_LOCAL_URL:${imageUrl}`);
   }
 
   // Fallback for external URLs (LINE, Google, or old absolute ngrok links)
@@ -66,7 +86,8 @@ async function getImageBuffer(imageUrl: string): Promise<any> {
 // OCR for distance (Using Typhoon Vision)
 router.post("/ocr/distance", async (req, res) => {
   const { imageUrl } = req.body;
-  if (!imageUrl) return res.status(400).json({ error: "Image URL is required" });
+  if (!imageUrl)
+    return res.status(400).json({ error: "Image URL is required" });
 
   try {
     const buffer = await getImageBuffer(imageUrl);
@@ -153,7 +174,9 @@ router.post("/analyze-mission", aiLimiter, async (req, res) => {
       .linear(1.25, -20)
       .toBuffer();
 
-    console.log(`[AI-MISSION] Starting Smart Analysis for user ${userId} | Task: ${taskTitle}`);
+    console.log(
+      `[AI-MISSION] Starting Smart Analysis for user ${userId} | Task: ${taskTitle}`,
+    );
 
     const brainPrompt = `You are a precise health and fitness data extractor. You MUST follow all rules strictly.
 
@@ -176,7 +199,7 @@ You must extract ONLY the value that corresponds to the TARGET UNIT:
 ════════════════════════════════════════
 OCR MISALIGNMENT WARNING:
 ════════════════════════════════════════
-OCR data is often misaligned or nested incorrectly (e.g., {"กิโลเมตร": [{"208": "แคลอรี"}]}). 
+OCR data is often misaligned or nested incorrectly (e.g., {"กิโลเมตร": [{"208": "แคลอรี"}]}).
 IGNORE the JSON grouping. Rely ONLY on the semantic meaning of the numbers and their adjacent words:
 - "3.02" is distance.
 - "38:52" is time.
@@ -197,7 +220,7 @@ EXTRACTION RULES (follow in order):
        English: SUM only (REM + Core + Deep). Exclude "Awake".
        Thai: SUM only (หลับฝัน + หลับจริง + หลับลึก). Exclude "หลับตื้น" (Awake/Orange dot).
    - If neither total nor stages are found, fallback to finding bedtime (เวลาเข้านอน) and wake time/นาฬิกาปลุก (เวลาตื่น), then calculate duration (wake - bedtime).
-   - CRITICAL: Use EXACT arithmetic result without second-guessing! 
+   - CRITICAL: Use EXACT arithmetic result without second-guessing!
 
 3. STEPS tasks:
    - Extract integer step count directly. No conversion needed.
@@ -250,10 +273,9 @@ Output ONLY valid JSON — no extra text:
     });
   } catch (error: any) {
     console.error("Mission analysis error:", error);
-    res.status(500).json({ error: error.message || "Mission analysis failed" });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
 
 router.post("/analyze-tanita", aiLimiter, async (req, res) => {
   const { imageUrl, imageBase64, userId } = req.body;
@@ -263,7 +285,9 @@ router.post("/analyze-tanita", aiLimiter, async (req, res) => {
     return res.status(400).json({ error: "Image is required" });
 
   try {
-    console.log(`[AI-TANITA] User ${userId} — Direct typhoon-ocr single-shot JSON extraction`);
+    console.log(
+      `[AI-TANITA] User ${userId} — Direct typhoon-ocr single-shot JSON extraction`,
+    );
 
     let fileBuffer: Buffer;
     if (imageBase64) {
@@ -275,11 +299,11 @@ router.post("/analyze-tanita", aiLimiter, async (req, res) => {
 
     // ── Pre-processing: Enhanced for small digits and pale text ──
     const enhancedBuffer = await sharp(fileBuffer)
-      .resize({ width: 1600 })                             // Ensure minimum resolution for OCR accuracy
-      .grayscale()                                        // remove color noise
-      .normalize()                                        // stretch contrast
-      .sharpen({ sigma: 1.8, m1: 1.5, m2: 0.7 })       // crisp edges for small digits
-      .linear(1.25, -20)                                  // boost contrast: brighten whites, darken text
+      .resize({ width: 1600 }) // Ensure minimum resolution for OCR accuracy
+      .grayscale() // remove color noise
+      .normalize() // stretch contrast
+      .sharpen({ sigma: 1.8, m1: 1.5, m2: 0.7 }) // crisp edges for small digits
+      .linear(1.25, -20) // boost contrast: brighten whites, darken text
       .toBuffer();
 
     const metadata = await sharp(enhancedBuffer).metadata();
@@ -288,7 +312,9 @@ router.post("/analyze-tanita", aiLimiter, async (req, res) => {
     const isLongSlip = height > width * 1.8;
 
     // ── Stage 1: Smart Dual-Pass Extraction (different perspectives) ──
-    console.log(`[AI-TANITA] Stage 1: ${isLongSlip ? "Long Slip Detected. Sectioning..." : "Standard Analysis..."}`);
+    console.log(
+      `[AI-TANITA] Stage 1: ${isLongSlip ? "Long Slip Detected. Sectioning..." : "Standard Analysis..."}`,
+    );
 
     // Two different prompts so each pass catches what the other may miss
     const ocrPromptLabels = `You are a strict OCR engine. Extract all text from this image exactly as it is written.
@@ -310,27 +336,32 @@ Output raw text only — no markdown, no tables.`;
       // Run both OCR passes in parallel to cut processing time in half
       const [o1, o2] = await Promise.all([
         callTyphoonVisionAction(buf, ocrPromptLabels, "typhoon-ocr"),
-        callTyphoonVisionAction(buf, ocrPromptNumbers, "typhoon-ocr")
+        callTyphoonVisionAction(buf, ocrPromptNumbers, "typhoon-ocr"),
       ]);
-      
+
       // RELEVANCY CHECK (EARLY EXIT):
       if (o1.includes("INVALID_IMAGE")) return "INVALID_IMAGE";
-      
+
       // STRICT CHECK: Look for 'value+unit' patterns typical of a personal measurement slip
       // e.g. "59.4kg", "166cm", "16.0%", not just keywords in an infographic
       const hasValueUnit = /\d+\.?\d*\s*(kg|cm|%|kcal|kj)/i.test(o1);
-      
+
       // Also check for measurement slip headers (Tanita, InBody, BC-xxx, DC-xxx, or common Thai headers)
-      const hasSlipHeader = /(tanita|inbody|bc-|dc-|body\s*composition|analyzer|องค์ประกอบ|ไขมัน|มวล|น้ำหนัก|bmi|bmr)/i.test(o1);
-      
+      const hasSlipHeader =
+        /(tanita|inbody|bc-|dc-|body\s*composition|analyzer|องค์ประกอบ|ไขมัน|มวล|น้ำหนัก|bmi|bmr)/i.test(
+          o1,
+        );
+
       // Count actual data numbers (decimal or multi-digit)
       const numbersCount = (o1.match(/\d+\.\d+|\d{2,}/g) || []).length;
-      
+
       // Must have EITHER: a value+unit pattern OR a slip header, AND at least 5 numbers
       const isValid = (hasValueUnit || hasSlipHeader) && numbersCount >= 5;
-      
+
       if (!isValid) {
-        console.log(`[AI-TANITA] Relevancy Check Failed: ValueUnit=${hasValueUnit}, SlipHeader=${hasSlipHeader}, Numbers=${numbersCount}`);
+        console.log(
+          `[AI-TANITA] Relevancy Check Failed: ValueUnit=${hasValueUnit}, SlipHeader=${hasSlipHeader}, Numbers=${numbersCount}`,
+        );
         return "INVALID_IMAGE";
       }
 
@@ -338,7 +369,7 @@ Output raw text only — no markdown, no tables.`;
     };
 
     let fullOcrData = await getOcrOutput(enhancedBuffer);
-    
+
     if (fullOcrData === "INVALID_IMAGE") {
       const err: any = new Error("INVALID_IMAGE");
       err.status = 422;
@@ -348,8 +379,10 @@ Output raw text only — no markdown, no tables.`;
     console.log(`[AI-TANITA] Multi-Pass Smart Extraction completed.`);
 
     // ── Stage 2: Supreme Auditor (Consensus + Mathematical Reconstruction) ──
-    console.log(`[AI-TANITA] Stage 2: Supreme Auditor with anatomical reasoning`);
-    
+    console.log(
+      `[AI-TANITA] Stage 2: Supreme Auditor with anatomical reasoning`,
+    );
+
     const brainPrompt = `You are the Supreme Tanita Auditor. You have multiple OCR passes of a health slip.
 Your goal is to reach a CONSENSUS and extract every value with maximum accuracy.
 
@@ -366,10 +399,10 @@ Formula to verify: expected_height_cm = sqrt(Weight / BMI) * 100
 Rule: Use OCR height by default. Only override if OCR height is CLEARLY wrong (>10cm off from expected).
 
 ### YOUR TASK:
-Cross-reference the OCR data chunks and reconstruct the perfect JSON. 
+Cross-reference the OCR data chunks and reconstruct the perfect JSON.
 CRITICAL: Rely ONLY on the numbers found in the text below. DO NOT make up data. If a value is genuinely missing, set it to null. Always include "is_valid": true in your output.
 
---- 
+---
 [OCR DATA START]
 ${fullOcrData}
 [OCR DATA END]
@@ -378,14 +411,14 @@ ${fullOcrData}
 JSON Keys required:
 {
   "is_valid": true,
-  "body_type": "STANDARD", "gender": "MALE" or "FEMALE", "age": number, "height": number, "clothes_weight": number, 
-  "weight": number, "fat_pc": number, "fat_mass": number, "ffm": number, "muscle_mass": number, 
-  "tbw_mass": number, "tbw_pc": number, "bone_mass": number, "bmr_kj": number, "bmr_kcal": number, 
+  "body_type": "STANDARD", "gender": "MALE" or "FEMALE", "age": number, "height": number, "clothes_weight": number,
+  "weight": number, "fat_pc": number, "fat_mass": number, "ffm": number, "muscle_mass": number,
+  "tbw_mass": number, "tbw_pc": number, "bone_mass": number, "bmr_kj": number, "bmr_kcal": number,
   "metabolic_age": number, "visceral_fat": number, "bmi": number, "ideal_weight": number, "obesity_degree": number, "physique_rating": string or null
 }
 
 // ⚠️ CRITICAL WARNING FOR FUTURE AI AGENTS ⚠️
-// DO NOT remove or alter the Anatomical Reconstruction math checking rule! 
+// DO NOT remove or alter the Anatomical Reconstruction math checking rule!
 // Tanita slips often cause OCR alignment shifts (values drift up/down by 1 row).
 // This specific instruction forces the LLM to mathematically prove row alignment before outputting JSON.
 Instructions:
@@ -397,10 +430,14 @@ Instructions:
 
     const llmResult = await callTyphoon(
       [
-        { role: "system", content: "You are the Supreme Auditor. You use mathematical formulas (FFM, BMI) to fix misread digits across multiple OCR segments. Output only JSON." },
-        { role: "user", content: brainPrompt }
+        {
+          role: "system",
+          content:
+            "You are the Supreme Auditor. You use mathematical formulas (FFM, BMI) to fix misread digits across multiple OCR segments. Output only JSON.",
+        },
+        { role: "user", content: brainPrompt },
       ],
-      "typhoon-v2.5-30b-a3b-instruct"
+      "typhoon-v2.5-30b-a3b-instruct",
     );
 
     console.log(`[AI-TANITA] Brain Output:\n${llmResult}`);
@@ -414,27 +451,40 @@ Instructions:
     }
 
     const data = JSON.parse(llmResult.substring(jsonStart, jsonEnd));
-    
+
     // Check validation flag from Auditor
     if (data.is_valid === false) {
       const err: any = new Error("INVALID_IMAGE");
       err.status = 422;
       throw err;
     }
-    
+
     console.log(`[AI-TANITA] Final Processed Data:`, data);
     res.json(data);
-
   } catch (error: any) {
     console.error("[AI-TANITA] Error:", error.message);
+
+    const silentHeader = req.headers["x-client-silent-errors"];
+    const shouldSilenceClientError =
+      silentHeader === "1" || req.query.silent === "1";
+
     if (error.message === "INVALID_IMAGE" || error.status === 422) {
-      return res.status(422).json({ error: "รูปภาพที่ส่งมาไม่ใช่ใบตรวจสุขภาพ (ไม่มีค่าน้ำหนักหรือไขมัน) กรุณาลองใหม่อีกครั้ง หรือกรอกข้อมูลด้วยตนเองครับ" });
+      const msg =
+        "รูปภาพที่ส่งมาไม่ใช่ใบตรวจสุขภาพ (ไม่มีค่าน้ำหนักหรือไขมัน) กรุณาลองใหม่อีกครั้ง หรือกรอกข้อมูลด้วยตนเองครับ";
+
+      if (shouldSilenceClientError) {
+        return res.status(200).json({
+          ok: false,
+          code: "INVALID_IMAGE",
+          error: msg,
+        });
+      }
+
+      return res.status(422).json({ error: msg });
     }
-    res.status(500).json({ error: error.message || "Tanita analysis failed" });
+
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-
-
 export default router;
-

@@ -5,7 +5,6 @@ import {
   AlignJustify, AlignLeft, RefreshCw, ChevronRight as ChevronRightIcon,
   Settings, Search, Filter
 } from 'lucide-vue-next';
-
 export interface SmartTableColumn<T = any> {
   key: string;
   label: string;
@@ -19,12 +18,10 @@ export interface SmartTableColumn<T = any> {
   hidden?: boolean;
   fixed?: boolean;
 }
-
 export interface SortRule {
   key: string;
   dir: 'asc' | 'desc';
 }
-
 const props = withDefaults(defineProps<{
   data: T[];
   columns: SmartTableColumn<T>[];
@@ -61,13 +58,11 @@ const props = withDefaults(defineProps<{
   hideDense: false,
   hideRefresh: false,
 });
-
 const emit = defineEmits<{
   (e: 'refresh'): void;
   (e: 'export'): void;
   (e: 'update:selected', ids: (string | number)[]): void;
 }>();
-
 const search = ref('');
 const sorts = ref<SortRule[]>([]);
 const dense = ref(false);
@@ -75,18 +70,15 @@ const page = ref(1);
 const perPage = ref(20);
 const selectedIds = ref<(string | number)[]>([]);
 const expandedIds = ref<(string | number)[]>([]);
-
 interface ColState extends SmartTableColumn<T> {
   visible: boolean;
   currentWidth?: number;
 }
 const colsState = ref<ColState[]>([]);
-
 onMounted(() => {
   if (props.defaultSortKey) {
     sorts.value = [{ key: props.defaultSortKey, dir: props.defaultSortDir || 'desc' }];
   }
-
   let prefsParams: any = null;
   if (props.storageKey) {
     const saved = localStorage.getItem(`smart-table-prefs-${props.storageKey}`);
@@ -94,7 +86,6 @@ onMounted(() => {
       try { prefsParams = JSON.parse(saved); } catch (e) {}
     }
   }
-
   colsState.value = props.columns.map(c => {
     let prefWidth: number | undefined;
     let prefVisible = !c.hidden;
@@ -104,17 +95,13 @@ onMounted(() => {
     }
     return { ...c, visible: prefVisible, currentWidth: prefWidth } as ColState;
   });
-
   if (prefsParams?.dense !== undefined) dense.value = prefsParams.dense;
   if (prefsParams?.perPage !== undefined) perPage.value = prefsParams.perPage;
-
   document.addEventListener('click', closeSettingsOutside);
 });
-
 onUnmounted(() => {
   document.removeEventListener('click', closeSettingsOutside);
 });
-
 const savePrefs = () => {
   if (!props.storageKey) return;
   const prefs = {
@@ -126,7 +113,6 @@ const savePrefs = () => {
 };
 watch([dense, perPage], savePrefs);
 watch(colsState, savePrefs, { deep: true });
-
 const showSettings = ref(false);
 const showFilters = ref(false);
 const settingsRef = ref<HTMLElement | null>(null);
@@ -139,7 +125,6 @@ const toggleColVisibility = (col: ColState) => {
   if (col.fixed) return;
   col.visible = !col.visible;
 };
-
 const toggleSort = (key: string, e: MouseEvent) => {
   const col = props.columns.find(c => c.key === key);
   if (!col || col.sortable === false) return;
@@ -161,7 +146,6 @@ const toggleSort = (key: string, e: MouseEvent) => {
   }
 };
 const getSortIndex = (key: string) => sorts.value.findIndex(s => s.key === key);
-
 const processedData = computed(() => {
   let res = [...props.data];
   if (search.value) {
@@ -192,15 +176,12 @@ const processedData = computed(() => {
   }
   return res;
 });
-
 const totalPages = computed(() => Math.ceil(processedData.value.length / perPage.value) || 1);
 const paginatedData = computed(() => {
   const start = (page.value - 1) * perPage.value;
   return processedData.value.slice(start, start + perPage.value);
 });
-
 watch(totalPages, nv => { if (page.value > nv && nv > 0) page.value = nv; });
-
 const handleSelectAll = (e: Event) => {
   const el = e.target as HTMLInputElement;
   selectedIds.value = el.checked ? paginatedData.value.map(r => r.id as string | number) : [];
@@ -219,59 +200,47 @@ const toggleExpand = (id: string | number) => {
 };
 const clearSelection = () => { selectedIds.value = []; emit('update:selected', []); };
 defineExpose({ clearSelection });
-
 const pagesArray = computed(() => {
   const arr: (number | string)[] = [];
   const maxVisible = 5;
   const current = page.value;
   const total = totalPages.value;
-
   if (total <= maxVisible) {
     for (let i = 1; i <= total; i++) arr.push(i);
     return arr;
   }
-
   let start = Math.max(1, current - 2);
   let end = Math.min(total, start + 4);
   if (end - start < 4) {
     start = Math.max(1, end - 4);
   }
-
   if (start > 1) {
     arr.push(1);
     if (start > 2) {
       arr.push('...');
     }
   }
-
   for (let i = start; i <= end; i++) {
     arr.push(i);
   }
-
   return arr;
 });
-
 const visibleCols = computed(() => colsState.value.filter(c => c.visible));
-
 // ─── Export Excel Logic ───
 const showExportModal = ref(false);
 const exportStartDate = ref('');
 const exportEndDate = ref('');
 const selectedExportDateKey = ref(props.exportDateKey || '');
-
 watch(() => props.exportDateKey, (nv) => {
   if (nv) selectedExportDateKey.value = nv;
 });
-
 const handleExportExcel = async () => {
   let dataToExport = props.data;
-  
   if (selectedExportDateKey.value && exportStartDate.value && exportEndDate.value) {
     const start = new Date(exportStartDate.value);
     start.setHours(0,0,0,0);
     const end = new Date(exportEndDate.value);
     end.setHours(23,59,59,999);
-    
     dataToExport = dataToExport.filter((row: any) => {
       const val = row[selectedExportDateKey.value];
       if (!val) return false;
@@ -280,22 +249,16 @@ const handleExportExcel = async () => {
       return d >= start && d <= end;
     });
   }
-  
   const exportData = dataToExport.map((row: any) => {
     const mappedRow: any = {};
-    
     // นำเฉพาะคอลัมน์ที่ถูกตั้งค่าไว้ใน columns (อิงตาม UI) มาแสดง
     props.columns.forEach(c => {
        // ข้ามคอลัมน์ที่เป็นปุ่มจัดการ หรือคอลัมน์ที่ไม่มีชื่อ/key
        if (c.key === 'actions' || (!c.label && !c.key)) return;
-       
        // ข้ามคอลัมน์ที่ถูกซ่อน (ยกเว้นกรณีต้องการส่งออกทั้งหมด แต่อิงตาม UI จะดีกว่า)
        // ในที่นี้เราจะส่งออกเฉพาะคอลัมน์ที่มีในนิยาม เพื่อให้ Excel สวยงามตามตาราง
-       
        let val = c.exportRender ? c.exportRender(row) : (c.render ? c.render(row) : row[c.key]);
-       
        const headerName = c.label || c.key;
-       
        if (val instanceof Date) {
           mappedRow[headerName] = val.toLocaleString('th-TH');
        } else if (typeof val === 'object' && val !== null) {
@@ -309,23 +272,18 @@ const handleExportExcel = async () => {
           mappedRow[headerName] = val;
        }
     });
-
     return mappedRow;
   });
-  
   const XLSX = await import('xlsx');
   const ws = XLSX.utils.json_to_sheet(exportData);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Data");
   XLSX.writeFile(wb, `${props.exportFileName}.xlsx`);
-  
   showExportModal.value = false;
 };
 </script>
-
 <template>
   <div class="st">
-
     <!-- ── Toolbar ── -->
     <div v-if="!hideToolbar" class="st-toolbar">
       <div class="st-toolbar-left">
@@ -341,29 +299,23 @@ const handleExportExcel = async () => {
             class="st-search"
           />
         </div>
-
         <div class="st-toolbar-actions">
           <slot name="toolbar-actions" />
-
           <button v-if="$slots.filters" @click="showFilters = !showFilters" class="st-btn st-btn-label" :class="showFilters ? 'st-btn--active' : ''" :title="showFilters ? 'ซ่อนตัวกรอง' : 'เปิดตัวกรอง'">
             <Filter :size="14" />
             <span class="st-btn-text">ตัวกรอง</span>
           </button>
-
           <button v-if="!hideDense" @click="dense = !dense" class="st-btn" :title="dense ? 'มุมมองปกติ' : 'มุมมองแน่น'">
             <AlignJustify v-if="dense" :size="15" />
             <AlignLeft v-else :size="15" />
           </button>
-
           <button v-if="!hideExport" @click="showExportModal = true" class="st-btn st-btn-label">
             <Download :size="14" />
             <span>Excel</span>
           </button>
-
           <button v-if="!hideRefresh" @click="$emit('refresh')" class="st-btn">
             <RefreshCw :size="15" />
           </button>
-
           <div v-if="!hideSettings" class="st-settings-wrap" ref="settingsRef">
             <button
               @click="showSettings = !showSettings"
@@ -400,12 +352,10 @@ const handleExportExcel = async () => {
         </div>
       </div>
     </div>
-
     <!-- ── Filters Panel ── -->
     <div v-show="showFilters" v-if="$slots.filters" class="st-filters-panel">
       <slot name="filters" />
     </div>
-
     <!-- ── Bulk Actions ── -->
     <div v-if="selectable && selectedIds.length > 0" class="st-bulk">
       <div class="st-bulk-info">
@@ -417,20 +367,16 @@ const handleExportExcel = async () => {
         <slot name="bulk-actions" :selected="selectedIds" />
       </div>
     </div>
-
     <!-- ── Table ── -->
     <div class="st-table-wrap">
-
       <!-- Loading -->
       <transition name="st-fade">
         <div v-if="loading" class="st-loading">
           <div class="st-spinner" />
         </div>
       </transition>
-
       <div class="st-scroll" :style="stickyHeader ? 'max-height:65vh' : ''">
         <table class="st-table" :class="dense ? 'st-table--dense' : ''">
-
           <thead class="st-thead" :class="stickyHeader ? 'st-thead--sticky' : ''">
             <tr>
               <th v-if="expandable" class="st-th st-th-icon" :class="stickyHeader ? 'st-col-sticky-0' : ''" />
@@ -442,7 +388,6 @@ const handleExportExcel = async () => {
                   class="st-checkbox-input"
                 />
               </th>
-
               <th
                 v-for="col in visibleCols"
                 :key="col.key"
@@ -466,16 +411,13 @@ const handleExportExcel = async () => {
                   </span>
                 </div>
               </th>
-
               <th v-if="$slots.actions" class="st-th st-th-actions" :class="stickyHeader ? 'st-col-sticky-r' : ''">
                 จัดการ
               </th>
             </tr>
           </thead>
-
           <tbody>
             <template v-for="(row, index) in paginatedData" :key="row.id ?? index">
-
               <tr
                 class="st-row"
                 :class="[expandedIds.includes(row.id) ? 'st-row--expanded' : '', rowClass(row)]"
@@ -489,7 +431,6 @@ const handleExportExcel = async () => {
                     <ChevronRightIcon :size="15" />
                   </button>
                 </td>
-
                 <td v-if="selectable" class="st-td st-td-icon" :class="stickyHeader ? 'st-col-sticky-1' : ''">
                   <input
                     type="checkbox"
@@ -498,7 +439,6 @@ const handleExportExcel = async () => {
                     class="st-checkbox-input"
                   />
                 </td>
-
                 <td
                   v-for="col in visibleCols"
                   :key="col.key"
@@ -509,12 +449,10 @@ const handleExportExcel = async () => {
                     {{ col.render ? col.render(row) : row[col.key] }}
                   </slot>
                 </td>
-
                 <td v-if="$slots.actions" class="st-td st-td-actions" :class="stickyHeader ? 'st-col-sticky-r' : ''">
                   <slot name="actions" :row="row" />
                 </td>
               </tr>
-
               <!-- Expansion Row -->
               <tr v-if="expandable && expandedIds.includes(row.id)" class="st-expansion-row">
                 <td :colspan="100" class="st-expansion-td">
@@ -523,9 +461,7 @@ const handleExportExcel = async () => {
                   </div>
                 </td>
               </tr>
-
             </template>
-
             <!-- Empty State -->
             <tr v-if="!loading && paginatedData.length === 0">
               <td :colspan="100" class="st-empty">
@@ -540,14 +476,12 @@ const handleExportExcel = async () => {
         </table>
       </div>
     </div>
-
     <!-- ── Pagination ── -->
     <div v-if="!loading && processedData.length > 0" class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 pb-2 px-4 border-t border-slate-100">
       <div class="flex items-center gap-4">
         <span class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
           แสดง {{ (page - 1) * perPage + 1 }}–{{ Math.min(page * perPage, processedData.length) }} จาก {{ processedData.length }} {{ itemName }}
         </span>
-        
         <div class="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-1.5 border border-slate-100">
           <label class="text-[10px] font-bold text-slate-500 uppercase tracking-tight">ต่อหน้า</label>
           <select v-model="perPage" class="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer">
@@ -558,7 +492,6 @@ const handleExportExcel = async () => {
           </select>
         </div>
       </div>
-
       <div class="flex items-center gap-1.5">
         <button 
           @click="page--" 
@@ -568,7 +501,6 @@ const handleExportExcel = async () => {
         >
           <ChevronLeft :size="16" />
         </button>
-        
         <div class="flex items-center gap-1">
           <button 
             v-for="(p, i) in pagesArray" 
@@ -587,7 +519,6 @@ const handleExportExcel = async () => {
             {{ p }}
           </button>
         </div>
-
         <button 
           @click="page++" 
           :disabled="page === totalPages"
@@ -598,13 +529,11 @@ const handleExportExcel = async () => {
         </button>
       </div>
     </div>
-
     <!-- ── Export Modal ── -->
     <transition name="st-fade">
       <div v-if="showExportModal" class="st-export-modal-overlay" @click.self="showExportModal = false">
         <div class="st-export-modal">
           <h3 class="st-export-modal-title">ส่งออกข้อมูล (Excel)</h3>
-          
           <div class="st-export-modal-body">
             <div class="st-field">
               <label>อ้างอิงช่วงเวลาจากคอลัมน์</label>
@@ -613,7 +542,6 @@ const handleExportExcel = async () => {
                 <option v-for="col in columns" :key="col.key" :value="col.key">{{ col.label }} ({{ col.key }})</option>
               </select>
             </div>
-
             <div class="st-field-row" v-if="selectedExportDateKey">
               <div class="st-field">
                 <label>ตั้งแต่วันที่</label>
@@ -628,7 +556,6 @@ const handleExportExcel = async () => {
               กรุณาเลือกวันที่เริ่มต้นและสิ้นสุดให้ครบ เพื่อกรองข้อมูลตามวัน
             </p>
           </div>
-
           <div class="st-export-modal-footer">
             <button @click="showExportModal = false" class="st-btn">ยกเลิก</button>
             <button @click="handleExportExcel" class="st-btn st-btn-primary" :disabled="!!(selectedExportDateKey && (!exportStartDate || !exportEndDate))">
@@ -638,10 +565,8 @@ const handleExportExcel = async () => {
         </div>
       </div>
     </transition>
-
   </div>
 </template>
-
 <style scoped>
 /* ─── Root ─────────────────────────────────────── */
 .st {
@@ -653,7 +578,6 @@ const handleExportExcel = async () => {
   font-size: 13px;
   color: #1e293b;
 }
-
 /* ─── Toolbar ───────────────────────────────────── */
 .st-toolbar {
   display: flex;
@@ -681,7 +605,6 @@ const handleExportExcel = async () => {
   align-items: center;
   gap: 6px;
 }
-
 /* Search */
 .st-search-wrap {
   position: relative;
@@ -711,7 +634,6 @@ const handleExportExcel = async () => {
 }
 .st-search::placeholder { color: #94a3b8; }
 .st-search:focus { border-color: #356768; }
-
 /* Toolbar buttons */
 .st-btn {
   display: inline-flex;
@@ -733,7 +655,6 @@ const handleExportExcel = async () => {
 .st-btn--active { background: #f1f5f9; border-color: #cbd5e1; color: #1e293b; }
 .st-btn-label { gap: 6px; }
 .st-btn-text { white-space: nowrap; }
-
 /* ─── Filters Panel ────────────────────────────── */
 .st-filters-panel {
   display: flex;
@@ -744,7 +665,6 @@ const handleExportExcel = async () => {
   border-bottom: 1px dashed #cbd5e1;
   align-items: flex-end;
 }
-
 /* ─── Settings Panel ────────────────────────────── */
 .st-settings-wrap { position: relative; }
 .st-settings-panel {
@@ -821,7 +741,6 @@ const handleExportExcel = async () => {
   padding: 1px 4px;
   font-size: 9px;
 }
-
 /* Checkbox shared */
 .st-checkbox {
   width: 15px;
@@ -840,7 +759,6 @@ const handleExportExcel = async () => {
   color: #fff;
 }
 .st-checkbox svg { width: 9px; height: 9px; }
-
 /* ─── Bulk Actions ──────────────────────────────── */
 .st-bulk {
   display: flex;
@@ -885,7 +803,6 @@ const handleExportExcel = async () => {
   align-items: center;
   gap: 8px;
 }
-
 /* ─── Table Wrapper ─────────────────────────────── */
 .st-table-wrap {
   position: relative;
@@ -894,7 +811,6 @@ const handleExportExcel = async () => {
   border-radius: 12px;
   overflow: hidden;
 }
-
 /* Loading overlay */
 .st-loading {
   position: absolute;
@@ -916,7 +832,6 @@ const handleExportExcel = async () => {
   animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-
 /* Scroll container */
 .st-scroll {
   overflow-x: auto;
@@ -926,7 +841,6 @@ const handleExportExcel = async () => {
 .st-scroll::-webkit-scrollbar-track { background: #f8fafc; }
 .st-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
 .st-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
 /* ─── Table ─────────────────────────────────────── */
 .st-table {
   width: 100%;
@@ -934,15 +848,12 @@ const handleExportExcel = async () => {
   white-space: nowrap;
   font-size: 12.5px;
 }
-
 /* Dense mode */
 .st-table--dense .st-th,
 .st-table--dense .st-td { padding-top: 7px !important; padding-bottom: 7px !important; }
-
 /* Header */
 .st-thead { background: #f8fafc; }
 .st-thead--sticky { position: sticky; top: 0; z-index: 40; }
-
 .st-th {
   padding: 11px 16px;
   font-size: 10px;
@@ -966,7 +877,6 @@ const handleExportExcel = async () => {
 }
 .st-th--sort { cursor: pointer; }
 .st-th--sort:hover { background: #f1f5f9; color: #334155; }
-
 /* ─── Export Modal ─────────────────────────────── */
 .st-export-modal-overlay {
   position: fixed;
@@ -1056,13 +966,11 @@ const handleExportExcel = async () => {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
 .st-th-inner {
   display: flex;
   align-items: center;
   gap: 5px;
 }
-
 /* Sort icons */
 .st-sort-icon {
   display: inline-flex;
@@ -1080,7 +988,6 @@ const handleExportExcel = async () => {
   line-height: 1;
   color: #356768;
 }
-
 /* Sticky columns */
 .st-col-sticky-0 {
   position: sticky;
@@ -1098,7 +1005,6 @@ const handleExportExcel = async () => {
   z-index: 30;
   box-shadow: -1px 0 0 #e8edf2;
 }
-
 /* ─── Rows ──────────────────────────────────────── */
 .st-row {
   border-bottom: 1px solid #f1f5f9;
@@ -1106,7 +1012,6 @@ const handleExportExcel = async () => {
 }
 .st-row:hover { background: #fafbfc; }
 .st-row--expanded { background: #fafbfc; }
-
 .st-td {
   padding: 12px 16px;
   color: #334155;
@@ -1116,7 +1021,6 @@ const handleExportExcel = async () => {
 .st-table--dense .st-th { padding: 8px 12px; }
 .st-table--dense .st-td { padding: 6px 12px; }
 .st-table--dense .st-td-icon, .st-table--dense .st-td-actions { padding: 6px 10px; }
-
 .st-td-icon {
   padding: 12px 10px;
   text-align: center;
@@ -1125,7 +1029,6 @@ const handleExportExcel = async () => {
   text-align: center;
   padding: 12px 10px;
 }
-
 /* Checkbox input */
 .st-checkbox-input {
   width: 15px;
@@ -1135,7 +1038,6 @@ const handleExportExcel = async () => {
   cursor: pointer;
   accent-color: #356768;
 }
-
 /* Expand button */
 .st-expand-btn {
   display: inline-flex;
@@ -1155,7 +1057,6 @@ const handleExportExcel = async () => {
   color: #356768;
   transform: rotate(90deg);
 }
-
 /* ─── Expansion Row ─────────────────────────────── */
 .st-expansion-row { background: #fafbfc; }
 .st-expansion-td { padding: 0; border-bottom: 1px solid #f1f5f9; }
@@ -1169,7 +1070,6 @@ const handleExportExcel = async () => {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
 /* ─── Empty State ───────────────────────────────── */
 .st-empty { padding: 60px 16px; background: #fff; }
 .st-empty-inner {
@@ -1190,7 +1090,6 @@ const handleExportExcel = async () => {
   padding: 2px 10px;
   border-radius: 20px;
 }
-
 /* ─── Pagination ────────────────────────────────── */
 .st-pagination {
   display: flex;
@@ -1210,7 +1109,6 @@ const handleExportExcel = async () => {
   color: #475569;
 }
 .st-pagination-total { color: #94a3b8; font-weight: 500; margin-left: 4px; }
-
 .st-pagination-controls {
   display: flex;
   align-items: center;
@@ -1238,7 +1136,6 @@ const handleExportExcel = async () => {
   transition: all 0.15s;
 }
 .st-per-page-select:focus { border-color: #f97316; background: #fff; }
-
 .st-pages {
   display: flex;
   align-items: center;
@@ -1275,18 +1172,15 @@ const handleExportExcel = async () => {
   color: #fff !important;
   box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
 }
-
 /* ─── Transitions ───────────────────────────────── */
 .st-fade-enter-active,
 .st-fade-leave-active { transition: opacity 0.18s ease; }
 .st-fade-enter-from,
 .st-fade-leave-to { opacity: 0; }
-
 .st-pop-enter-active,
 .st-pop-leave-active { transition: opacity 0.14s ease, transform 0.14s ease; }
 .st-pop-enter-from,
 .st-pop-leave-to { opacity: 0; transform: translateY(-6px) scale(0.98); }
-
 .st-checkbox-input { accent-color: #f97316; }
 .st-checkbox--on { background: #f97316; border-color: #f97316; }
 </style>

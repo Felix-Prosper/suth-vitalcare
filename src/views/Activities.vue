@@ -9,7 +9,6 @@ import {
 import { useActivities } from '../composables/useActivities';
 import AppPagination from '../components/common/AppPagination.vue';
 import MultiSelectFilter from '../components/common/MultiSelectFilter.vue';
-
 const {
   searchQuery, debouncedQuery, activeBanners, currentBannerIndex, loadingBanners,
   sortBy, filterContinuousReg, filterHasGoals, filterFavorites,
@@ -21,7 +20,6 @@ const {
   goToDetail, onBannerClick, toggleFavorite, getActivityStatus, setSection,
   fetchActivities, prefetchDetailPages, hasMore, currentPage, totalPages, changePage
 } = useActivities();
-
 const filterOptions = [
   { id: 'registered', label: 'กิจกรรมของฉัน' },
   { id: 'favorites', label: 'รายการโปรด' },
@@ -34,7 +32,6 @@ const filterOptions = [
   { id: 'continuous', label: 'รับสมัครตลอด' },
   { id: 'goals', label: 'มีเป้าหมาย' },
 ];
-
 const sortOptions = [
   { value: 'newest', label: 'มาใหม่ล่าสุด' },
   { value: 'popular', label: 'คนร่วมเยอะที่สุด' },
@@ -44,7 +41,6 @@ const sortOptions = [
   { value: 'az', label: 'ชื่อ (ก-ฮ)' },
   { value: 'za', label: 'ชื่อ (ฮ-ก)' }
 ];
-
 const selectedFilterIds = computed({
   get: () => {
     const active = [];
@@ -73,33 +69,26 @@ const selectedFilterIds = computed({
     filterHasGoals.value = newVal.includes('goals');
   }
 });
-
 // ==========================================
 // 🌟 ระบบ Carousel ลื่นๆ + เมาส์ลาก (Grab) 🌟
 // ==========================================
 const bannerTrack = ref<HTMLElement | null>(null);
-
 // 1. ระบบ Auto Slide
 let slideInterval: any = null;
-
 const startAutoSlide = () => {
   // 🛡️ ป้องกันการสร้าง Interval ซ้อนกัน (Fix: Slider เร็วขึ้นเรื่อยๆ)
   stopAutoSlide(); 
-  
   if (activeBanners.value.length <= 1) return;
-
   slideInterval = setInterval(() => {
     currentBannerIndex.value = (currentBannerIndex.value + 1) % activeBanners.value.length;
   }, 4000); // ปรับเป็น 4 วินาทีให้ดูพรีเมียมขึ้น
 };
-
 const stopAutoSlide = () => {
   if (slideInterval) {
     clearInterval(slideInterval);
     slideInterval = null;
   }
 };
-
 // 2. ดักการเปลี่ยน Index เพื่อสั่งให้รางเลื่อนสมูทๆ (คำนวณให้อยู่กึ่งกลางเป๊ะๆ)
 watch(currentBannerIndex, (newIdx) => {
   if (!bannerTrack.value || isDragging.value) return;
@@ -112,7 +101,6 @@ watch(currentBannerIndex, (newIdx) => {
     track.scrollTo({ left: targetLeft, behavior: 'smooth' });
   }
 });
-
 // 3. ฟังก์ชันปุ่มลูกศร
 const scrollNext = () => {
   if (activeBanners.value.length > 0) {
@@ -124,12 +112,10 @@ const scrollPrev = () => {
     currentBannerIndex.value = (currentBannerIndex.value - 1 + activeBanners.value.length) % activeBanners.value.length;
   }
 };
-
 // 4. 🌟 ฟังก์ชัน Grab to Scroll (ลากเมาส์ในคอม) 🌟
 const isDragging = ref(false);
 const startX = ref(0);
 const startScrollLeft = ref(0);
-
 const startDrag = (e: MouseEvent) => {
   isDragging.value = true;
   stopAutoSlide(); // หยุดออโต้ชั่วคราวตอนคนกำลังลาก
@@ -138,7 +124,6 @@ const startDrag = (e: MouseEvent) => {
     startScrollLeft.value = bannerTrack.value.scrollLeft;
   }
 };
-
 const doDrag = (e: MouseEvent) => {
   if (!isDragging.value || !bannerTrack.value) return;
   e.preventDefault();
@@ -146,30 +131,24 @@ const doDrag = (e: MouseEvent) => {
   const walk = (x - startX.value) * 1.5; // เลข 1.5 คือความหนืดของการลาก
   bannerTrack.value.scrollLeft = startScrollLeft.value - walk;
 };
-
 const stopDrag = () => {
   isDragging.value = false;
   startAutoSlide(); // กลับมาเลื่อนออโต้ต่อ
 };
-
 onMounted(() => {
   startAutoSlide();
 });
-
 onUnmounted(() => {
   stopAutoSlide();
 });
 </script>
-
 <template>
   <div class="shop-layout">
-    
     <header class="shop-header">
       <div class="brand-title">
         <h1>ค้นหากิจกรรม</h1>
       </div>
     </header>
-
     <div class="shop-search-section">
       <div class="search-and-sort">
         <div class="search-pill-container">
@@ -183,9 +162,7 @@ onUnmounted(() => {
             <X :size="18" />
           </button>
         </div>
-
       </div>
-
       <div class="filter-chips-wrapper">
         <div class="chips-scroll-main">
           <button 
@@ -200,17 +177,12 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-
     <main class="shop-main">
-      
       <section class="shop-hero-wrapper" v-if="filterSection === 'all' && !debouncedQuery && activeBanners.length > 0 && !hasActiveFilters">
-        
         <div class="carousel-container" @mouseenter="stopAutoSlide" @mouseleave="startAutoSlide">
-          
           <button class="carousel-arrow left-arrow" @click="scrollPrev" v-if="activeBanners.length > 1">
             <ChevronLeft :size="24" />
           </button>
-
           <div class="banner-track" 
                :class="{ 'is-dragging': isDragging, 'justify-center': activeBanners.length === 1 }"
                ref="bannerTrack"
@@ -220,32 +192,25 @@ onUnmounted(() => {
                @mouseleave="stopDrag"
           >
             <div v-for="banner in activeBanners" :key="banner.id" class="hero-card">
-              
               <div class="hero-image-side">
                 <img :src="banner.image_url" :alt="banner.title" draggable="false" />
               </div>
-
               <div class="hero-content-side">
                 <h2 class="hero-title">{{ banner.title || 'ไม่พบหัวข้อแบนเนอร์' }}</h2>
                 <p class="hero-subtitle" v-if="banner.subtitle">{{ banner.subtitle }}</p>
-                
                 <div class="hero-actions" v-if="banner.link_type !== 'none'">
                   <button class="btn-hero-solid" @click="onBannerClick(banner)">
                     ดูรายละเอียด <ArrowRight :size="16" class="ml-1"/>
                   </button>
                 </div>
               </div>
-
             </div>
           </div>
-
           <button class="carousel-arrow right-arrow" @click="scrollNext" v-if="activeBanners.length > 1">
             <ChevronRight :size="24" />
           </button>
-
         </div>
       </section>
-
       <section class="shop-categories" v-if="hasActiveFilters">
         <div class="section-title-row">
           <h3>ตัวกรองที่เลือกไว้</h3>
@@ -253,20 +218,17 @@ onUnmounted(() => {
             ล้างทั้งหมด <X :size="16"/>
           </button>
         </div>
-        
         <div class="chips-scroll">
           <div v-for="id in selectedFilterIds" :key="id" class="flat-chip active">
             {{ filterOptions.find(o => o.id === id)?.label }}
             <X :size="14" class="ml-1 cursor-pointer" @click="selectedFilterIds = selectedFilterIds.filter(f => f !== id)" />
           </div>
-          
           <div v-if="sortBy !== 'newest'" class="flat-chip active">
             เรียงตาม: {{ sortOptions.find(o => o.value === sortBy)?.label }}
             <X :size="14" class="ml-1 cursor-pointer" @click="sortBy = 'newest'" />
           </div>
         </div>
       </section>
-
       <div v-if="loadingActivities" class="flat-grid">
         <div v-for="n in 4" :key="n" class="flat-skel">
           <div class="skel-img"></div>
@@ -274,16 +236,13 @@ onUnmounted(() => {
           <div class="skel-line w-half mt-2"></div>
         </div>
       </div>
-
       <div v-else-if="totalFiltered === 0" class="shop-empty">
         <div class="empty-icon"><Search :size="48" /></div>
         <h3>ไม่พบกิจกรรมที่ค้นหา</h3>
         <p>ลองเปลี่ยนคำค้นหา หรือลดตัวกรองลงนะ</p>
       </div>
-
       <div v-else class="shop-feed">
         <section v-for="sec in viewSections" :key="sec.id" class="feed-section">
-          
           <div class="section-title-row" v-if="sec.title">
             <h3 v-if="!sec.isFlash">
               {{ sec.title }}
@@ -297,7 +256,6 @@ onUnmounted(() => {
                 ({{ totalFiltered }} รายการ)
               </span>
             </h3>
-            
             <button class="text-btn" v-if="sec.isFiltered" @click="setSection('all')">
               กลับ <X :size="16"/>
             </button>
@@ -305,7 +263,6 @@ onUnmounted(() => {
               ดูทั้งหมด <ArrowRight :size="16"/>
             </button>
           </div>
-
           <div class="flat-grid" :class="{'is-horizontal': !sec.isFiltered && sec.id !== 'all-home' && isMobileScreen}">
             <div 
               v-for="act in sec.items" 
@@ -321,7 +278,6 @@ onUnmounted(() => {
                 <div v-else class="img-fallback">
                   <ImageIcon :size="32" class="fallback-icon" />
                 </div>
-                
                 <div class="dark-badge" :class="getActivityStatus(act)">
                   <template v-if="getActivityStatus(act) === 'ended'">สิ้นสุดกิจกรรม</template>
                   <template v-else-if="getActivityStatus(act) === 'ongoing'">กำลังดำเนินการ</template>
@@ -329,38 +285,30 @@ onUnmounted(() => {
                   <template v-else-if="getActivityStatus(act) === 'full'">กิจกรรมเต็มแล้ว</template>
                   <template v-else>เปิดรับสมัคร</template>
                 </div>
-                
                 <button class="heart-btn" :class="{'active': favoriteIds.has(act.id)}" @click.stop="toggleFavorite($event, act.id)">
                   <Heart :size="18" :fill="favoriteIds.has(act.id) ? '#FF6A00' : 'none'" />
                 </button>
               </div>
-
               <div class="info-box">
                 <h4 class="title" :title="act.title">{{ act.title }}</h4>
-                
                 <div class="meta-row text-primary">
                   <CalendarDays :size="14" />
                   <span>รับสมัคร: {{ act.is_continuous_registration ? 'เปิดรับตลอด' : (act.registration_end_date ? formatDateThai(act.registration_end_date) : 'ไม่ระบุ') }}</span>
                 </div>
-                
                 <div class="meta-row text-gray">
                   <CalendarDays :size="14" />
                   <span>จัดกิจกรรม: {{ act.is_continuous_event ? 'ต่อเนื่องตลอด' : (act.start_date ? formatDateThai(act.start_date) : 'ไม่ระบุ') }}</span>
                 </div>
-                
                 <div class="meta-row text-gray mt-1">
                   <Users :size="14" />
                   <span v-if="act.is_unlimited_max_slots">รับจำนวนไม่จำกัด</span>
                   <span v-else>เข้าร่วมแล้ว {{ act.registration_count || 0 }} / {{ act.max_slots || 'ไม่จำกัด' }} คน</span>
                 </div>
               </div>
-
             </div>
           </div>
-
         </section>
       </div>
-
       <!-- Infinite Scroll (On Search / Filtered / Section Views) -->
       <div v-if="(filterSection !== 'all' || searchQuery || hasActiveFilters) && hasMore" ref="sentinelEl" class="infinite-scroll-trigger">
         <div v-if="loadingMore" class="loading-more">
@@ -368,7 +316,6 @@ onUnmounted(() => {
           <span>กำลังโหลดกิจกรรมเพิ่ม...</span>
         </div>
       </div>
-
       <!-- Pagination (Only on Home Discovery Feed) -->
       <div class="pagination-wrap" v-if="filterSection === 'all' && !searchQuery && !hasActiveFilters && totalPages > 1">
         <AppPagination 
@@ -377,14 +324,11 @@ onUnmounted(() => {
           @change="changePage"
         />
       </div>
-
     </main>
   </div>
 </template>
-
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap');
-
 .shop-layout {
   --primary: #FF6A00;
   --bg-main: #FFFFFF;
@@ -392,7 +336,6 @@ onUnmounted(() => {
   --text-gray: #6B7280;
   --surface: #F9FAFB;
   --border-light: #E5E7EB;
-  
   background-color: var(--bg-main);
   min-height: 100vh;
   font-family: 'Sarabun', sans-serif;
@@ -401,17 +344,14 @@ onUnmounted(() => {
   overflow-x: hidden;
   width: 100%;
 }
-
 .ml-1 { margin-left: 4px; }
 .mt-1 { margin-top: 4px; }
-
 .shop-header {
   display: flex; justify-content: center; align-items: center;
   padding: 20px 24px 12px; background: var(--bg-main);
   position: sticky; top: 0; z-index: 50;
 }
 .brand-title h1 { font-size: 18px; font-weight: 800; margin: 0; text-transform: uppercase; color: var(--text-dark); }
-
 .shop-search-section { 
   padding: 0 0 24px; 
   width: 100%;
@@ -471,7 +411,6 @@ onUnmounted(() => {
   color: var(--text-dark);
   background: rgba(0,0,0,0.05);
 }
-
 .search-and-sort {
   display: flex;
   gap: 12px;
@@ -480,12 +419,10 @@ onUnmounted(() => {
   padding: 0 24px;
   align-items: center;
 }
-
 .filter-chips-wrapper {
   width: 100%;
   margin-top: 16px;
 }
-
 .chips-scroll-main {
   display: flex;
   gap: 10px;
@@ -495,17 +432,14 @@ onUnmounted(() => {
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
-
 .chips-scroll-main::-webkit-scrollbar {
   display: none;
 }
-
 .filter-controls {
   display: flex;
   gap: 12px;
   flex-shrink: 0;
 }
-
 @media (max-width: 768px) {
   .search-pill-container {
     height: 38px;
@@ -523,19 +457,16 @@ onUnmounted(() => {
     justify-content: flex-start;
   }
 }
-
 /* =====================================
    3. 🌟 HERO BANNER CAROUSEL (GRAB TO SCROLL) 🌟
 ===================================== */
 .shop-main { max-width: 1200px; margin: 0 auto; }
 .shop-hero-wrapper { margin: 0 0 32px 0; overflow: hidden; }
-
 .carousel-container {
   position: relative;
   display: flex;
   align-items: center;
 }
-
 /* รางเลื่อน */
 .banner-track {
   display: flex;
@@ -565,7 +496,6 @@ onUnmounted(() => {
   scroll-snap-align: none;
   margin: 0 auto;
 }
-
 /* การ์ดแบนเนอร์แต่ละใบ */
 .hero-card {
   flex: 0 0 85%; 
@@ -579,7 +509,6 @@ onUnmounted(() => {
   overflow: hidden;
   user-select: none; /* ห้ามคลุมดำตอนลาก */
 }
-
 /* ปุ่มลูกศรซ้ายขวา (ในคอม) */
 .carousel-arrow {
   position: absolute;
@@ -600,7 +529,6 @@ onUnmounted(() => {
 .carousel-arrow:hover { color: var(--primary); border-color: var(--primary); }
 .left-arrow { left: 10px; }
 .right-arrow { right: 10px; }
-
 /* ฝั่งรูปภาพแบนเนอร์ */
 .hero-image-side {
   width: 55%;
@@ -614,7 +542,6 @@ onUnmounted(() => {
   width: 100%; height: 100%; object-fit: cover; pointer-events: none;
   border-radius: 4px; /* 🌟 รักษาความเหลี่ยมเเบบเดิม (เเต่ใส่โค้งนิดเดียวให้ดูพรีเมียม) 🌟 */
 }
-
 /* ฝั่งข้อความและปุ่ม */
 .hero-content-side {
   width: 45%;
@@ -623,13 +550,11 @@ onUnmounted(() => {
 }
 .hero-title { font-size: 22px; font-weight: 800; color: var(--text-dark); margin: 0 0 12px 0; line-height: 1.3; }
 .hero-subtitle { font-size: 15px; color: var(--text-gray); margin: 0 0 24px 0; line-height: 1.5; }
-
 .hero-actions { display: flex; gap: 12px; margin-top: auto; }
 .btn-hero-solid {
   flex: 1; display: flex; align-items: center; justify-content: center; background: var(--primary); color: #fff; border: none; border-radius: 8px; padding: 12px 16px; font-size: 15px; font-weight: 700; cursor: pointer; transition: 0.2s;
 }
 .btn-hero-solid:hover { background: #E65F00; }
-
 @media (max-width: 768px) {
   .shop-search-section { padding: 0 16px 20px; }
   .search-pill-container { height: 38px; padding: 0 12px; gap: 8px; }
@@ -643,7 +568,6 @@ onUnmounted(() => {
   .hero-subtitle { font-size: 13px; margin-bottom: 16px; }
   .btn-hero-solid { width: 100%; padding: 10px; font-size: 14px; }
 }
-
 /* =====================================
    4. Categories (Chips)
 ===================================== */
@@ -652,7 +576,6 @@ onUnmounted(() => {
 .section-title-row h3 { font-size: 18px; font-weight: 700; margin: 0; color: var(--text-dark); }
 .text-btn { background: none; border: none; color: var(--text-gray); font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 4px; cursor: pointer; transition: color 0.2s; }
 .text-btn:hover { color: var(--primary); }
-
 .chips-scroll { display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
 .chips-scroll::-webkit-scrollbar { display: none; }
 .flat-chip { 
@@ -673,18 +596,15 @@ onUnmounted(() => {
 }
 .flat-chip:hover { border-color: #D1D5DB; }
 .flat-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 600; }
-
 /* =====================================
    5. Flat Cards Feed
 ===================================== */
 .shop-feed { padding: 0 24px 40px; }
 .feed-section { margin-bottom: 40px; }
-
 .flat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 24px 20px; }
 .flat-card { display: flex; flex-direction: column; cursor: pointer; opacity: 0; transform: translateY(10px); transition: all 0.4s ease; }
 .flat-card.is-visible { opacity: 1; transform: translateY(0); }
 .flat-card.is-ended { filter: grayscale(1); opacity: 0.7; }
-
 /* 🌟 Image Container ปรับเป็น 1:1 จัตุรัส 🌟 */
 .img-box {
   position: relative; width: 100%; aspect-ratio: 1/1; 
@@ -692,22 +612,18 @@ onUnmounted(() => {
 }
 .img-box img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
 .flat-card:hover .img-box img { transform: scale(1.05); }
-
 .img-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--surface); }
 .fallback-icon { color: #D1D5DB; }
-
 .dark-badge {
   position: absolute; top: 12px; left: 12px; background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(4px);
   color: #fff; font-size: 11px; font-weight: 600; padding: 6px 12px; border-radius: 8px; letter-spacing: 0.5px;
   z-index: 2;
 }
-
 .dark-badge.open { background: rgba(16, 185, 129, 0.9); } /* Green */
 .dark-badge.ongoing { background: rgba(59, 130, 246, 0.9); } /* Blue */
 .dark-badge.registered { background: rgba(255, 106, 0, 0.9); } /* Primary Orange */
 .dark-badge.full { background: rgba(239, 68, 68, 0.9); } /* Red */
 .dark-badge.ended { background: rgba(107, 114, 128, 0.9); } /* Gray */
-
 .heart-btn {
   position: absolute; top: 10px; right: 10px;
   width: 32px; height: 32px; min-width: 32px; min-height: 32px; 
@@ -719,7 +635,6 @@ onUnmounted(() => {
 }
 .heart-btn:active { transform: scale(0.9); }
 .heart-btn.active { color: var(--primary); }
-
 .info-box { padding: 0 4px; }
 .title {
   font-size: 14px; font-weight: 600; color: var(--text-dark); margin: 0 0 8px 0; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
@@ -727,7 +642,6 @@ onUnmounted(() => {
 .meta-row { display: flex; align-items: center; gap: 6px; font-size: 13px; margin-bottom: 4px; }
 .meta-row.text-primary { color: var(--primary); font-weight: 600; }
 .meta-row.text-gray { color: var(--text-gray); font-weight: 500; }
-
 /* =====================================
    6. Mobile Horizontal Scroll
 ===================================== */
@@ -738,24 +652,20 @@ onUnmounted(() => {
   .shop-categories { padding: 0 16px 24px; }
   .shop-feed { padding: 0 0 40px; }
   .section-title-row { padding: 0 16px; }
-  
   .flat-grid.is-horizontal {
     display: flex; overflow-x: auto; overflow-y: hidden;
     scroll-snap-type: x mandatory; gap: 16px; padding: 0 16px; margin: 0;
     scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; scroll-padding-left: 16px;
   }
   .flat-grid.is-horizontal::-webkit-scrollbar { display: none; }
-  
   /* ล็อคให้เป็น 2 คอลัมน์ (2x2) สำหรับมือถือทุกรุ่น */
   .flat-grid:not(.is-horizontal) {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 20px 12px;
     padding: 0 16px;
   }
-
   .flat-grid.is-horizontal .flat-card { width: 65vw; min-width: 65vw; scroll-snap-align: start; scroll-snap-stop: always; flex-shrink: 0; }
   .flat-grid.is-horizontal::after { content: ''; min-width: 16px; padding-right: 1px; }
-
   /* Responsive Adjustments for Card Content */
   .title { font-size: 13px; margin-bottom: 6px; }
   .meta-row { font-size: 11px; gap: 4px; margin-bottom: 2px; }
@@ -764,7 +674,6 @@ onUnmounted(() => {
   .heart-btn { top: 8px; right: 8px; width: 28px; height: 28px; min-width: 28px; min-height: 28px; }
   .heart-btn svg { width: 14px; height: 14px; }
 }
-
 /* =====================================
    7. Utilities (Skeleton, Empty)
 ===================================== */
@@ -772,16 +681,13 @@ onUnmounted(() => {
 .empty-icon { color: var(--text-gray); margin-bottom: 16px; display: flex; justify-content: center; }
 .shop-empty h3 { font-size: 18px; margin: 0 0 8px; }
 .shop-empty p { color: var(--text-gray); font-size: 14px; }
-
 .flat-skel { width: 100%; }
 .skel-img { aspect-ratio: 1/1; background: var(--surface); border-radius: 16px; animation: pulse 1.5s infinite; }
 .skel-line { height: 16px; background: var(--surface); border-radius: 4px; animation: pulse 1.5s infinite; }
 .w-full { width: 100%; } .w-half { width: 50%; } .mt-2 { margin-top: 8px; } .mt-3 { margin-top: 12px; }
-
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 .loading-dot { width: 8px; height: 8px; background: var(--text-dark); border-radius: 50%; margin: 0 auto; animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; }
 @keyframes ping { 75%, 100% { transform: scale(2); opacity: 0; } }
-
 .infinite-scroll-trigger {
   padding: 48px 0;
   display: flex;

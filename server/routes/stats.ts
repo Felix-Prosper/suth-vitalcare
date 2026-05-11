@@ -50,7 +50,7 @@ async function checkManageAccess(req: express.Request, res: express.Response, ne
       }
       next();
   } catch (error: any) {
-      return res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: "Internal Server Error" });
   }
 }
 
@@ -434,7 +434,7 @@ router.get("/summary", checkManageAccess, async (req, res) => {
 
   } catch (error: any) {
     console.error('Stats summary error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -499,7 +499,7 @@ router.get("/activity/:id/participants", checkManageAccess, async (req, res) => 
       res.json(decrypted);
   } catch (error: any) {
       console.error(`[DEBUG] Error for activity ${id}:`, error);
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -685,7 +685,7 @@ router.get("/rankings/:type", async (req, res) => {
 
     res.json(rows);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -767,10 +767,7 @@ router.get("/individual/rank/:id", async (req, res) => {
     }
   } catch (error: any) {
     console.error(`Individual Rank Error Details:`, error);
-    res.status(500).json({ 
-      error: "Internal Server Error: Rank calculation failed",
-      message: error.message
-    });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -846,11 +843,7 @@ router.get("/team/rank/:teamId", async (req, res) => {
     }
   } catch (error: any) {
     console.error(`Team Rank Error Details (ID:${req.params.teamId}, Act:${req.query.activity_id}):`, error);
-    res.status(500).json({ 
-      error: "Internal Server Error: Team rank calculation failed",
-      message: error.message,
-      sqlState: error.sqlState
-    });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -973,7 +966,7 @@ router.get("/goal-progress/:eventId", async (req, res) => {
       }
     }
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1150,7 +1143,7 @@ router.get("/deep-insights", checkManageAccess, async (req, res) => {
     });
 
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1439,7 +1432,7 @@ router.get("/users/all", checkManageAccess, async (req, res) => {
     res.json(result);
   } catch (error: any) {
     console.error('Stats users/all error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1584,7 +1577,7 @@ router.get("/activities/overview", checkManageAccess, async (req, res) => {
     res.json(result);
   } catch (error: any) {
     console.error('Stats activities/overview error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1680,7 +1673,7 @@ router.get("/tanita-insights", checkManageAccess, async (req, res) => {
     res.json(result);
   } catch (error: any) {
     console.error('Stats tanita-insights error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -1742,7 +1735,7 @@ router.get("/users/inactive-streak", checkManageAccess, async (req, res) => {
 
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

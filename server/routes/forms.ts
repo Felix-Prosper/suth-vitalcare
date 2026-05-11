@@ -42,7 +42,7 @@ router.get("/", async (req, res) => {
 
       res.json(transformed);
   } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -65,7 +65,7 @@ router.get("/:id", async (req, res) => {
           }))
       });
   } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -136,7 +136,7 @@ router.post("/", async (req, res) => {
   } catch (err: any) {
     await connection.rollback();
     console.error("[Form Save] Critical Backend Error:", err);
-    res.status(500).json({ error: "Internal Server Error", message: err.message });
+    res.status(500).json({ error: "Internal Server Error" });
   } finally {
     connection.release();
   }
@@ -232,7 +232,7 @@ router.post("/submissions", async (req, res) => {
     });
   } catch (error: any) {
     await connection.rollback();
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: "Internal Server Error" });
   } finally {
     connection.release();
   }
@@ -286,7 +286,7 @@ router.get("/my-submissions/:userId", async (req, res) => {
 
       res.json(transformed);
   } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -330,7 +330,7 @@ router.get("/:id/submissions", async (req, res) => {
 
       res.json(transformed);
   } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
@@ -341,7 +341,7 @@ router.delete("/:id", async (req, res) => {
       await pool.query('DELETE FROM forms WHERE id = ?', [req.params.id]);
       res.json({ success: true });
   } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      res.status(500).json({ error: "Internal Server Error" });
   }
 });
 

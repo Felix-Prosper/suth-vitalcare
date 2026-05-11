@@ -4,18 +4,15 @@ import { useRouter, useRoute } from "vue-router";
 import { User, Lock, Loader2, CheckCircle2, ArrowLeft, HelpCircle } from "lucide-vue-next";
 import Swal from 'sweetalert2';
 import MainFooter from '../components/MainFooter.vue';
-
 const router = useRouter();
 const route = useRoute();
 const API_URL = import.meta.env.VITE_API_URL || '/api';
-
 const identifier = ref(""); // maps to email or phone
 const token = ref("");
 const newPassword = ref("");
 const confirmPassword = ref("");
 const isSubmitting = ref(false);
 const step = ref<"forgot" | "reset" | "success">("forgot");
-
 onMounted(() => {
   const queryToken = route.query.token as string;
   if (queryToken) {
@@ -23,26 +20,20 @@ onMounted(() => {
     step.value = "reset";
   }
 });
-
 const isForgotValid = computed(() => {
   return identifier.value.trim().length > 0;
 });
-
 const handleForgotPassword = async () => {
   if (!isForgotValid.value) return;
-  
   isSubmitting.value = true;
-  
   try {
     const res = await fetch(`${API_URL}/users/forgot-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: identifier.value }) // API likely takes email still
     });
-    
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "ไม่พบข้อมูลผู้ใช้ในระบบ");
-    
     Swal.fire({
       icon: 'success',
       title: 'ส่งลิงก์สำเร็จ',
@@ -50,7 +41,6 @@ const handleForgotPassword = async () => {
       confirmButtonColor: '#f05a23',
       timer: 3000
     });
-    
     // For demo purposes, if the API returns a debug token we automatically jump to the next step
     if (data.debug_token) {
         token.value = data.debug_token;
@@ -71,20 +61,16 @@ const handleForgotPassword = async () => {
     isSubmitting.value = false;
   }
 };
-
 const handleResetPassword = async () => {
   if (newPassword.value !== confirmPassword.value) {
     Swal.fire({ icon: 'error', title: 'รหัสผ่านไม่ตรงกัน', confirmButtonColor: '#f05a23' });
     return;
   }
-  
   if (newPassword.value.length < 6) {
     Swal.fire({ icon: 'error', title: 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร', confirmButtonColor: '#f05a23' });
     return;
   }
-  
   isSubmitting.value = true;
-  
   try {
     const res = await fetch(`${API_URL}/users/reset-password`, {
       method: "POST",
@@ -94,10 +80,8 @@ const handleResetPassword = async () => {
         newPassword: newPassword.value
       })
     });
-    
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "เซสชั่นหมดอายุ กรุณาทำรายการใหม่");
-    
     step.value = "success";
   } catch (error: any) {
     Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: error.message, confirmButtonColor: '#f05a23' });
@@ -106,7 +90,6 @@ const handleResetPassword = async () => {
   }
 };
 </script>
-
 <template>
   <div class="reset-page">
     <!-- Mobile Header -->
@@ -123,7 +106,6 @@ const handleResetPassword = async () => {
         <HelpCircle class="text-primary" />
       </button>
     </header>
-
     <!-- Desktop Header -->
     <header class="desktop-header">
       <div class="header-inner">
@@ -141,7 +123,6 @@ const handleResetPassword = async () => {
         <a href="#" class="help-link">ต้องการความช่วยเหลือ?</a>
       </div>
     </header>
-
     <div class="content-wrapper">
       <div class="content-body">
         <!-- Step 1: Forgot -->
@@ -155,7 +136,6 @@ const handleResetPassword = async () => {
               class="input-line" 
             />
           </div>
-
           <button 
             class="btn-next" 
             :class="{ 'btn-active': isForgotValid }"
@@ -165,10 +145,8 @@ const handleResetPassword = async () => {
             <Loader2 v-if="isSubmitting" class="animate-spin spin-icon" :size="20" />
             <span v-else>ถัดไป</span>
           </button>
-
           <a href="#" class="change-phone-link">เปลี่ยนหมายเลขโทรศัพท์</a>
         </div>
-
         <!-- Step 2: Reset -->
         <div v-if="step === 'reset'" class="form-container">
           <div class="input-line-group">
@@ -189,7 +167,6 @@ const handleResetPassword = async () => {
               class="input-line" 
             />
           </div>
-
           <button 
             class="btn-next btn-active mt-6" 
             :disabled="isSubmitting"
@@ -199,7 +176,6 @@ const handleResetPassword = async () => {
             <span v-else>ยืนยันเปลี่ยนรหัสผ่าน</span>
           </button>
         </div>
-
         <!-- Step 3: Success -->
         <div v-if="step === 'success'" class="form-container text-center py-10">
           <div class="success-icon-wrap">
@@ -207,18 +183,15 @@ const handleResetPassword = async () => {
           </div>
           <h2 class="success-title">ดำเนินการสำเร็จ</h2>
           <p class="success-desc">กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่ของคุณ</p>
-          
           <button class="btn-next btn-active mt-8" @click="router.push('/login')">
             เข้าสู่ระบบ
           </button>
         </div>
       </div>
     </div>
-    
     <MainFooter />
   </div>
 </template>
-
 <style scoped>
 .reset-page {
   position: relative;
@@ -229,14 +202,12 @@ const handleResetPassword = async () => {
   display: flex;
   flex-direction: column;
 }
-
 .content-wrapper {
   display: flex;
   flex-direction: column;
   flex: 1;
   width: 100%;
 }
-
 .top-nav {
   display: flex;
   align-items: center;
@@ -245,15 +216,12 @@ const handleResetPassword = async () => {
   background: #ffffff;
   border-bottom: 1px solid #f0f0f0;
 }
-
 .mobile-only {
   display: flex;
 }
-
 .desktop-header {
   display: none;
 }
-
 .icon-btn {
   background: none;
   border: none;
@@ -263,25 +231,21 @@ const handleResetPassword = async () => {
   align-items: center;
   justify-content: center;
 }
-
 .text-primary {
   color: #f05a23;
 }
-
 .nav-title {
   font-size: 18px;
   font-weight: 500;
   color: #333;
   margin: 0;
 }
-
 .content-body {
   flex: 1;
   padding: 24px 20px;
   display: flex;
   flex-direction: column;
 }
-
 .form-container {
   display: flex;
   flex-direction: column;
@@ -289,7 +253,6 @@ const handleResetPassword = async () => {
   width: 100%;
   margin: 0 auto;
 }
-
 .input-line-group {
   display: flex;
   align-items: center;
@@ -297,12 +260,10 @@ const handleResetPassword = async () => {
   padding-bottom: 10px;
   margin-bottom: 20px;
 }
-
 .input-icon {
   color: #a0a0a0;
   margin-right: 12px;
 }
-
 .input-line {
   flex: 1;
   border: none;
@@ -312,11 +273,9 @@ const handleResetPassword = async () => {
   color: #333;
   background: transparent;
 }
-
 .input-line::placeholder {
   color: #c0c0c0;
 }
-
 .btn-next {
   display: flex;
   align-items: center;
@@ -333,14 +292,12 @@ const handleResetPassword = async () => {
   margin-bottom: 16px;
   margin-top: 4px;
 }
-
 .btn-next.btn-active {
   background-color: #f05a23;
   color: #ffffff;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(240, 90, 35, 0.2);
 }
-
 .change-phone-link {
   text-align: center;
   color: #3b82f6;
@@ -348,54 +305,44 @@ const handleResetPassword = async () => {
   text-decoration: none;
   margin-top: 8px;
 }
-
 .change-phone-link:hover {
   text-decoration: underline;
 }
-
 .mt-4 { margin-top: 16px; }
 .mt-6 { margin-top: 24px; }
 .mt-8 { margin-top: 32px; }
 .text-center { text-align: center; }
 .py-10 { padding-top: 40px; padding-bottom: 40px; }
-
 .success-icon-wrap {
   color: #22c55e;
   margin-bottom: 20px;
   display: flex;
   justify-content: center;
 }
-
 .success-title {
   font-size: 20px;
   font-weight: 600;
   color: #333;
   margin-bottom: 8px;
 }
-
 .success-desc {
   font-size: 15px;
   color: #666;
 }
-
 .spin-icon {
   animation: spin 1s linear infinite;
 }
-
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-
 @media (min-width: 768px) {
   .reset-page {
     background-color: #ffffff;
   }
-  
   .mobile-only {
     display: none !important;
   }
-
   .desktop-header {
     display: block;
     background: white;
@@ -404,7 +351,6 @@ const handleResetPassword = async () => {
     width: 100%;
     flex-shrink: 0;
   }
-
   .header-inner {
     max-width: 1200px;
     margin: 0 auto;
@@ -413,13 +359,11 @@ const handleResetPassword = async () => {
     justify-content: space-between;
     align-items: center;
   }
-
   .brand {
     display: flex;
     align-items: center;
     gap: 16px;
   }
-  
   .desktop-back-btn {
     border: none;
     background: transparent;
@@ -428,24 +372,20 @@ const handleResetPassword = async () => {
     justify-content: center;
     margin-right: -4px;
   }
-
   .mini-logo {
     height: 44px;
     object-fit: contain;
   }
-
   .header-title {
     font-size: 24px;
     font-weight: 500;
     color: #222;
   }
-
   .help-link {
     font-size: 14px;
     color: #f05a23;
     text-decoration: none;
   }
-
   .content-wrapper {
     background: #ffffff;
     max-width: 440px;
@@ -460,4 +400,4 @@ const handleResetPassword = async () => {
     overflow: hidden;
   }
 }
-</style>
+</style>

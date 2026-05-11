@@ -5,19 +5,15 @@ import { Download, Plus, MapPin, X, Trash2, UploadCloud, Search, CheckCircle, Ch
 import AppPagination from '../common/AppPagination.vue';
 import { Doughnut, Line, Bar } from 'vue-chartjs';
 import { Chart as ChartJS, Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, PointElement, LineElement, Filler, BarElement } from 'chart.js';
-
 ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, LinearScale, PointElement, LineElement, Filler, BarElement);
 import { swal } from '../../lib/swal';
-
 const props = defineProps<{
   activityId: number;
   activityTitle: string;
 }>();
-
 const emit = defineEmits<{
   (e: 'back'): void;
 }>();
-
 import { useAdminActivityDashboard } from '../../composables/useAdminActivityDashboard';
 const {
   loading, registrants, teams, eventInfo, eventTasks, submissions, selectedUserIds, 
@@ -38,10 +34,8 @@ const {
   tanitaChanges, assessmentComparison, assessmentPartStats, filteredTanitaChanges, filteredAssessmentComparison, loadingComparison, fetchComparisonData,
   advancedStats, updateSubmissionValue
 } = useAdminActivityDashboard(props.activityId, props.activityTitle);
-
 const showBulkSubMenu = ref(false);
 const activeMenuId = ref<number | string | null>(null);
-
 // Health Assessment Result Modal
 const showAssessmentModal = ref(false);
 const selectedAssessmentUser = ref<any>(null);
@@ -49,7 +43,6 @@ const assessmentModalLoading = ref(false);
 const assessmentModalRecords = ref<any[]>([]);
 const selectedAssessmentRecord = ref<any>(null);
 const assessmentModalView = ref<'list'|'detail'>('list');
-
 const healthSectionIds = ['food','exercise','emotion','smoke','alcohol'];
 const healthSectionLabels: Record<string,string> = {
   food: '1. พฤติกรรมการบริโภคอาหาร',
@@ -64,7 +57,6 @@ const healthLevelMeta = (lvl: string) => {
   if (lvl === 'พอใช้') return { color: '#eab308', bg: '#fefce8', badge: 'bg-yellow-100 text-yellow-700 border-yellow-200' };
   return { color: '#ef4444', bg: '#fef2f2', badge: 'bg-rose-100 text-rose-700 border-rose-200' };
 };
-
 const openAssessmentModal = async (user: any) => {
   selectedAssessmentUser.value = user;
   assessmentModalView.value = 'list';
@@ -102,7 +94,6 @@ const openAssessmentModal = async (user: any) => {
     assessmentModalLoading.value = false;
   }
 };
-
 const parseSectionScores = (record: any) => {
   let raw = record?.summary_json || record?.section_scores || record?.sectionScores || [];
   if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch { raw = []; } }
@@ -110,14 +101,12 @@ const parseSectionScores = (record: any) => {
 };
 const activeMenuType = ref<'submission' | 'participant' | null>(null);
 const menuPos = ref({ top: 0, right: 0, transform: '' });
-
 const toggleRowMenu = (id: number | string, event: MouseEvent, type: 'submission' | 'participant' = 'submission') => {
   if (activeMenuId.value === id && activeMenuType.value === type) {
     activeMenuId.value = null;
     activeMenuType.value = null;
     return;
   }
-  
   const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
   menuPos.value = {
     top: rect.bottom + window.scrollY,
@@ -127,31 +116,25 @@ const toggleRowMenu = (id: number | string, event: MouseEvent, type: 'submission
   activeMenuId.value = id;
   activeMenuType.value = type;
 };
-
 const showGenderModal = ref(false);
 const pendingSubmissionsCount = computed(() => submissions.value.filter(s => s.status === 'pending').length);
 const completedGoalCount = computed(() => registrants.value.filter(r => r.goal_reached).length);
 const inactiveCount = computed(() => registrants.value.filter(r => r.submission_count === 0).length);
-
 const daysRemainingText = computed(() => {
   if (!eventInfo.value) return '-';
   if (eventInfo.value.is_continuous_event) return 'ต่อเนื่อง';
   if (!eventInfo.value.end_date) return '-';
-  
   const now = new Date();
   const end = new Date(eventInfo.value.end_date);
   if (now > end) return 'จบกิจกรรมแล้ว';
-  
   const diffTime = Math.abs(end.getTime() - now.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return `${diffDays} วัน`;
 });
-
 const completionRate = computed(() => {
   if (totalParticipants.value === 0) return 0;
   return Math.round((completedGoalCount.value / totalParticipants.value) * 100);
 });
-
 const nestedUserTypes = computed(() => {
   const map = new Map<string, Record<string, number>>();
   registrants.value.forEach(r => {
@@ -167,11 +150,9 @@ const nestedUserTypes = computed(() => {
     return sumB - sumA;
   });
 });
-
 const monthYearLabel = computed(() => {
   return `${thaiMonthLong[selectedMonth.value]} ${selectedYear.value}`;
 });
-
 const monthInput = computed({
   get() {
     const y = selectedYear.value;
@@ -186,44 +167,33 @@ const monthInput = computed({
     }
   }
 });
-
 const genderChartData = computed(() => ({
   labels: genderStats.value.map(([g]) => g),
   datasets: [{ data: genderStats.value.map(([, c]) => c), backgroundColor: genderStats.value.map(([g]) => g === 'ชาย' ? '#60a5fa' : g === 'หญิง' ? '#f472b6' : '#94a3b8'), borderWidth: 3, borderColor: 'white', hoverOffset: 8 }],
 }));
-
 const registrationChartData = computed(() => ({
   labels: registrationTimes.value.map(([t]) => t.split(' ')[0]),
   datasets: [{ label: 'สมัคร', data: registrationTimes.value.map(([, c]) => Number(c)), backgroundColor: 'rgba(249,115,22,0.08)', borderColor: '#f97316', borderWidth: 2.5, fill: true, tension: 0.4, pointBackgroundColor: '#f97316', pointBorderColor: 'white', pointBorderWidth: 2, pointRadius: 4, pointHoverRadius: 7 }],
 }));
-
 const donutOpts: any = { responsive: true, maintainAspectRatio: true, cutout: '70%', plugins: { legend: { display: true, position: 'bottom' as const, labels: { font: { family: "'Sarabun',sans-serif", size: 11, weight: '600' }, padding: 14, usePointStyle: true, pointStyleWidth: 8, color: '#64748b' } }, tooltip: { cornerRadius: 12, padding: 10, titleFont: { family: "'Sarabun',sans-serif", weight: 'bold' }, bodyFont: { family: "'Sarabun',sans-serif" } } } };
-
 const lineOpts: any = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { cornerRadius: 10, padding: 10, titleFont: { family: "'Sarabun',sans-serif", weight: 'bold' }, bodyFont: { family: "'Sarabun',sans-serif" } } }, scales: { x: { grid: { display: false }, ticks: { font: { family: "'Sarabun',sans-serif", size: 10 }, color: '#94a3b8', maxRotation: 40 }, border: { display: false } }, y: { grid: { color: '#f1f5f9' }, ticks: { font: { family: "'Sarabun',sans-serif", size: 10 }, color: '#94a3b8', precision: 0 }, border: { display: false } } } };
-
 const barOpts: any = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { cornerRadius: 10, padding: 10, titleFont: { family: "'Sarabun',sans-serif", weight: 'bold' }, bodyFont: { family: "'Sarabun',sans-serif" } } }, scales: { x: { grid: { display: false }, ticks: { font: { family: "'Sarabun',sans-serif", size: 10 }, color: '#94a3b8' }, border: { display: false } }, y: { grid: { color: '#f1f5f9' }, ticks: { font: { family: "'Sarabun',sans-serif", size: 10 }, color: '#94a3b8', precision: 0 }, border: { display: false } } } };
-
 const ageChartData = computed(() => ({
   labels: ageRanges.value.map(([range]) => range),
   datasets: [{ label: 'จำนวนคน', data: ageRanges.value.map(([, count]) => count), backgroundColor: 'rgba(99,102,241,0.85)', hoverBackgroundColor: '#4f46e5', borderRadius: 6 }]
 }));
-
 const timeChartData = computed(() => ({
   labels: Object.keys(advancedStats.value.submissionTimes).map(t => t.replace(/\s*\(.*\)/, '').trim()),
   datasets: [{ label: 'ครั้ง', data: Object.values(advancedStats.value.submissionTimes), backgroundColor: ['#818cf8','#f97316','#fbbf24','#34d399','#60a5fa'], hoverBackgroundColor: '#ea580c', borderRadius: 8 }]
 }));
-
 const complianceChartData = computed(() => ({
   labels: ['ทำทันเวลา', 'ส่งช้า/ไม่ส่ง'],
   datasets: [{ data: [advancedStats.value.compliance.onTime, advancedStats.value.compliance.missed], backgroundColor: ['#10b981', '#f43f5e'], borderWidth: 0, hoverOffset: 8 }]
 }));
-
 const showTeamDropdown = ref(false);
-
 const isAllParticipantsSelected = computed(() => {
   return filteredRegistrants.value.length > 0 && selectedUserIds.value.length === filteredRegistrants.value.length;
 });
-
 const toggleSelectAllParticipants = () => {
   if (isAllParticipantsSelected.value) {
     selectedUserIds.value = [];
@@ -231,7 +201,6 @@ const toggleSelectAllParticipants = () => {
     selectedUserIds.value = filteredRegistrants.value.map(r => r.user_id);
   }
 };
-
 const toggleParticipantSelect = (id: number | string) => {
   const numId = Number(id);
   const index = selectedUserIds.value.indexOf(numId);
@@ -241,11 +210,9 @@ const toggleParticipantSelect = (id: number | string) => {
     selectedUserIds.value.splice(index, 1);
   }
 };
-
 const isAllSubmissionsSelected = computed(() => {
   return filteredSubmissions.value.length > 0 && selectedSubmissionIds.value.length === filteredSubmissions.value.length;
 });
-
 const toggleSelectAllSubmissions = () => {
   if (isAllSubmissionsSelected.value) {
     selectedSubmissionIds.value = [];
@@ -253,7 +220,6 @@ const toggleSelectAllSubmissions = () => {
     selectedSubmissionIds.value = filteredSubmissions.value.map(s => s.id);
   }
 };
-
 const toggleSubmissionSelect = (id: number) => {
   const index = selectedSubmissionIds.value.indexOf(id);
   if (index === -1) {
@@ -262,47 +228,38 @@ const toggleSubmissionSelect = (id: number) => {
     selectedSubmissionIds.value.splice(index, 1);
   }
 };
-
 const bulkUpdateSubStatus = async (status: 'approved' | 'rejected') => {
   for (const id of selectedSubmissionIds.value) {
     await updateSubStatus(id, status);
   }
   selectedSubmissionIds.value = [];
 };
-
-
 const perPageLimit = 10;
 const registrantsPage = ref(1);
 const trackingPage = ref(1);
 const participationPage = ref(1);
 const submissionsPage = ref(1);
 const rankingsPage = ref(1);
-
 const paginatedRegistrants = computed(() => {
   const start = (registrantsPage.value - 1) * perPageLimit;
   return filteredRegistrants.value.slice(start, start + perPageLimit);
 });
-
 const paginatedTrackingSheet = computed(() => {
   const start = (trackingPage.value - 1) * perPageLimit;
   return userTrackingSheet.value.slice(start, start + perPageLimit);
 });
-
 const paginatedParticipationSheet = computed(() => {
   const start = (participationPage.value - 1) * perPageLimit;
   return userParticipationSheet.value.slice(start, start + perPageLimit);
 });
-
 const paginatedSubmissions = computed(() => {
   const start = (submissionsPage.value - 1) * perPageLimit;
   return filteredSubmissions.value.slice(start, start + perPageLimit);
 });
-
 const paginatedRankings = computed(() => {
   const start = (rankingsPage.value - 1) * perPageLimit;
   return (filteredRankings.value || []).slice(start, start + perPageLimit);
 });
-
 watch([searchQuery, activeTab, selectedYear, selectedMonth], () => {
   registrantsPage.value = 1;
   trackingPage.value = 1;
@@ -342,7 +299,6 @@ const kpiThemes = [
     arrow: 'text-orange-400 group-hover:text-orange-600'
   }
 ];
-
 const handleEditTracking = async (sub: any) => {
   if (!sub) return;
   const unit = sub.metric_unit || sub.metric_type || '';
@@ -360,16 +316,13 @@ const handleEditTracking = async (sub: any) => {
       return null;
     }
   });
-
   if (newVal !== undefined) {
     await updateSubmissionValue(sub.id, newVal);
   }
 };
 </script>
-
 <template>
   <div class="px-3 sm:px-6 md:px-8 py-4 sm:py-6 mb-8 space-y-4 sm:space-y-6 bg-white min-h-screen relative" style="font-family: 'Sarabun', sans-serif;">
-    
     <div v-if="loading" class="space-y-6">
       <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <div v-for="i in 6" :key="i" class="rounded-2xl overflow-hidden animate-pulse" style="min-height:150px;background:linear-gradient(135deg,#e2e8f0,#f1f5f9)">
@@ -393,18 +346,14 @@ const handleEditTracking = async (sub: any) => {
         <span class="text-slate-400 font-bold text-sm" style="font-family:'Sarabun',sans-serif">กำลังโหลดข้อมูลกิจกรรม...</span>
       </div>
     </div>
-
     <template v-else>
       <div class="mb-4">
         <h1 class="flex items-center gap-3 text-2xl sm:text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-500">
           <span>{{ eventInfo?.title || activityTitle }}</span>
-          
         </h1>
         <p class="text-[10px] sm:text-xs font-bold text-slate-400 mt-0.5 uppercase tracking-wider">จัดการข้อมูลและสถิติภาพรวมกิจกรรม #{{ activityId }}</p>
       </div>
-
       <div class="flex gap-2 overflow-x-auto whitespace-nowrap hide-scrollbar pb-2 mb-2 snap-x touch-pan-x">
- 
         <button @click="activeTab = 'overview'" class="snap-start shrink-0 px-5 py-2.5 rounded-full font-bold text-xs sm:text-sm transition-all duration-300 focus:outline-none shadow-sm"
                 :class="activeTab === 'overview' ? 'bg-orange-500 text-white' : 'bg-white text-slate-500 hover:bg-slate-50 border border-slate-200'">
           ภาพรวม
@@ -438,11 +387,8 @@ const handleEditTracking = async (sub: any) => {
           เปรียบเทียบผลทดสอบ
         </button>
       </div>
-
       <div v-if="activeTab === 'overview'" class="space-y-6">
-
         <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
-
           <div :class="['ov-card group relative overflow-hidden soft-shadow transition-all duration-300 hover:-translate-y-1', kpiThemes[0].wrapper]">
             <div class="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-40 blur-2xl transition-all duration-500 group-hover:scale-150 bg-blue-200"></div>
             <div class="flex flex-col h-full justify-between gap-3 relative z-10">
@@ -463,7 +409,6 @@ const handleEditTracking = async (sub: any) => {
               </div>
             </div>
           </div>
-
           <div @click="activeTab = 'submissions'" :class="['ov-card group cursor-pointer relative overflow-hidden soft-shadow transition-all duration-300 hover:-translate-y-1', kpiThemes[1].wrapper]">
             <div class="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-40 blur-2xl transition-all duration-500 group-hover:scale-150 bg-emerald-200"></div>
             <div class="flex flex-col h-full justify-between gap-3 relative z-10">
@@ -485,7 +430,6 @@ const handleEditTracking = async (sub: any) => {
               </div>
             </div>
           </div>
-
           <div :class="['ov-card group relative overflow-hidden soft-shadow transition-all duration-300 hover:-translate-y-1', kpiThemes[2].wrapper]">
             <div class="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-40 blur-2xl transition-all duration-500 group-hover:scale-150 bg-purple-200"></div>
             <div class="flex flex-col h-full justify-between gap-3 relative z-10">
@@ -508,7 +452,6 @@ const handleEditTracking = async (sub: any) => {
               </div>
             </div>
           </div>
-
           <div :class="['ov-card group relative overflow-hidden soft-shadow transition-all duration-300 hover:-translate-y-1', kpiThemes[3].wrapper]">
             <div class="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-40 blur-2xl transition-all duration-500 group-hover:scale-150 bg-orange-200"></div>
             <div class="flex flex-col h-full justify-between gap-3 relative z-10">
@@ -526,7 +469,6 @@ const handleEditTracking = async (sub: any) => {
               </div>
             </div>
           </div>
-
           <div @click="activeTab = 'rankings'; fetchRankings()" :class="['ov-card group cursor-pointer col-span-2 xl:col-span-2 relative overflow-hidden soft-shadow transition-all duration-300 hover:-translate-y-1', kpiThemes[0].wrapper]">
             <div class="absolute -right-8 -top-8 w-32 h-32 rounded-full opacity-30 blur-2xl transition-all duration-500 group-hover:scale-150 bg-blue-200"></div>
             <div class="flex flex-col h-full justify-between gap-3 relative z-10">
@@ -555,11 +497,8 @@ const handleEditTracking = async (sub: any) => {
               </div>
             </div>
           </div>
-
         </div>
-
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
-
           <div class="ov-panel flex flex-col">
             <div class="ov-panel-header shrink-0">
               <div class="flex items-center gap-2">
@@ -583,7 +522,6 @@ const handleEditTracking = async (sub: any) => {
               </div>
             </div>
           </div>
-
           <div class="ov-panel flex flex-col">
             <div class="ov-panel-header shrink-0">
               <div class="flex items-center gap-2">
@@ -601,7 +539,6 @@ const handleEditTracking = async (sub: any) => {
               </div>
             </div>
           </div>
-
           <div class="ov-panel flex flex-col">
             <div class="ov-panel-header shrink-0">
               <div class="flex items-center gap-2">
@@ -610,7 +547,6 @@ const handleEditTracking = async (sub: any) => {
               </div>
             </div>
             <div class="flex-1 overflow-y-auto custom-scroll pr-1 relative mt-2 space-y-4 max-h-[260px]">
-
               <!-- Role Type (นักเรียน/นักศึกษา/บุคลากร) -->
               <div v-if="Object.keys(advancedStats.userTypes).length > 0">
                 <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">ประเภท</div>
@@ -624,7 +560,6 @@ const handleEditTracking = async (sub: any) => {
                   </div>
                 </div>
               </div>
-
               <!-- Year / Level (ชั้นปี/ตำแหน่ง) -->
               <div v-if="Object.keys(advancedStats.userYears).length > 0">
                 <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">ชั้นปี / ระดับ</div>
@@ -638,7 +573,6 @@ const handleEditTracking = async (sub: any) => {
                   </div>
                 </div>
               </div>
-
               <!-- Faculty / Institution (คณะ/หน่วยงาน) -->
               <div v-if="Object.keys(advancedStats.userRoles).length > 0">
                 <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">คณะ / หน่วยงาน</div>
@@ -652,7 +586,6 @@ const handleEditTracking = async (sub: any) => {
                   </div>
                 </div>
               </div>
-
               <!-- Main Goal -->
               <div v-if="Object.keys(advancedStats.mainGoals).length > 0">
                 <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">เป้าหมายของผู้เข้าร่วม</div>
@@ -666,18 +599,14 @@ const handleEditTracking = async (sub: any) => {
                   </div>
                 </div>
               </div>
-
               <div v-if="Object.keys(advancedStats.userTypes).length === 0" class="flex flex-col items-center justify-center absolute inset-0 text-slate-300 gap-3">
                 <Inbox :size="24" class="text-slate-300" />
                 <span class="text-[11px] font-bold text-slate-400">ไม่มีข้อมูล</span>
               </div>
             </div>
           </div>
-
         </div>
-
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
-
           <div class="ov-panel flex flex-col">
             <div class="ov-panel-header shrink-0">
               <div class="flex items-center gap-2">
@@ -702,7 +631,6 @@ const handleEditTracking = async (sub: any) => {
               </div>
             </div>
           </div>
-
           <div class="ov-panel flex flex-col">
             <div class="ov-panel-header shrink-0">
               <div class="flex items-center gap-2">
@@ -716,11 +644,8 @@ const handleEditTracking = async (sub: any) => {
               </div>
             </div>
           </div>
-
         </div>
-
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
-
           <div class="ov-panel flex flex-col" @click="activeTab = 'changes'; fetchComparisonData()">
             <div class="ov-panel-header shrink-0 cursor-pointer hover:bg-slate-50 transition-colors">
               <div class="flex items-center gap-2">
@@ -738,7 +663,6 @@ const handleEditTracking = async (sub: any) => {
                     </div>
                     <span class="text-lg font-black text-emerald-600">{{ advancedStats.tanita.improvedPercentage }}%</span>
                  </div>
-                 
                  <div class="grid grid-cols-2 gap-3">
                    <div v-for="(data, gender) in advancedStats.tanita.byGender" :key="gender" class="bg-slate-50 p-3 rounded-xl border border-slate-100">
                      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ gender }}</div>
@@ -761,7 +685,6 @@ const handleEditTracking = async (sub: any) => {
                </div>
             </div>
           </div>
-
           <div class="ov-panel flex flex-col" @click="activeTab = 'responses'; fetchComparisonData()">
             <div class="ov-panel-header shrink-0 cursor-pointer hover:bg-slate-50 transition-colors">
               <div class="flex items-center gap-2">
@@ -806,11 +729,8 @@ const handleEditTracking = async (sub: any) => {
                </div>
             </div>
           </div>
-
         </div>
-
       </div>
-      
       <div v-else-if="activeTab === 'participants'" class="space-y-5">
           <div class="flex items-center justify-between">
             <div class="search-pill-container">
@@ -823,7 +743,6 @@ const handleEditTracking = async (sub: any) => {
                </span>
             </div>
           </div>
-
           <div class="overflow-x-auto custom-scroll w-full border border-slate-200 rounded-2xl bg-white relative custom-table-wrapper">
             <table class="w-full text-left border-separate border-spacing-0 whitespace-nowrap text-sm">
               <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
@@ -932,13 +851,11 @@ const handleEditTracking = async (sub: any) => {
               </tbody>
             </table>
           </div>
-
           <AppPagination 
             :currentPage="registrantsPage" 
             :totalPages="Math.ceil(filteredRegistrants.length / perPageLimit)" 
             @change="registrantsPage = $event" 
           />
-
           <Transition name="slide-up">
             <div v-if="selectedUserIds.length > 0" 
               class="fixed bottom-0 right-0 z-[100] flex items-center p-4 sm:p-6 pointer-events-none"
@@ -952,7 +869,6 @@ const handleEditTracking = async (sub: any) => {
                     ยกเลิก
                   </button>
                 </div>
-                
                 <div class="flex items-center gap-4">
                   <div class="hidden sm:flex items-center gap-3">
                     <span class="text-sm font-bold text-slate-400">ย้ายทีม:</span>
@@ -995,7 +911,6 @@ const handleEditTracking = async (sub: any) => {
             </div>
           </Transition>
       </div>
-
       <div v-else-if="activeTab === 'submissions'" class="space-y-5">
          <div class="flex items-center justify-between">
             <div class="search-pill-container">
@@ -1008,7 +923,6 @@ const handleEditTracking = async (sub: any) => {
                </span>
             </div>
           </div>
-
           <div class="overflow-x-auto custom-scroll w-full border border-slate-200 rounded-2xl bg-white relative custom-table-wrapper">
             <table class="w-full text-left whitespace-nowrap border-separate border-spacing-0 text-sm text-slate-600 clean-table">
               <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 shadow-sm">
@@ -1110,13 +1024,11 @@ const handleEditTracking = async (sub: any) => {
               </tbody>
             </table>
           </div>
-
           <AppPagination 
             :currentPage="submissionsPage" 
             :totalPages="Math.ceil(filteredSubmissions.length / perPageLimit)" 
             @change="submissionsPage = $event" 
           />
-
           <Transition name="slide-up">
             <div v-if="selectedSubmissionIds.length > 0" 
               class="fixed bottom-0 right-0 z-[100] flex items-center p-4 sm:p-6 pointer-events-none"
@@ -1130,7 +1042,6 @@ const handleEditTracking = async (sub: any) => {
                     ยกเลิก
                   </button>
                 </div>
-                
                 <div class="flex items-center gap-2">
                   <button @click="bulkUpdateSubStatus('approved')" class="bg-[#10b981] text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-600 transition-all flex items-center gap-2">
                     <CheckCircle :size="16" stroke-width="2.5" />
@@ -1141,7 +1052,6 @@ const handleEditTracking = async (sub: any) => {
                     <span class="hidden sm:inline">ปฏิเสธทั้งหมด</span><span class="sm:hidden">ปฏิเสธ</span>
                   </button>
                   <div class="w-px h-6 bg-slate-200 mx-1"></div>
-                  
                   <button @click="bulkDeleteSubmissions" class="bg-rose-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-rose-600 transition-all flex items-center gap-2 shadow-lg shadow-rose-500/20">
                     <Trash2 :size="16" stroke-width="2.5" />
                     <span class="hidden sm:inline">ลบที่เลือก</span><span class="sm:hidden">ลบ</span>
@@ -1151,14 +1061,12 @@ const handleEditTracking = async (sub: any) => {
             </div>
           </Transition>
       </div>
-
       <div v-else-if="activeTab === 'tracking'" class="space-y-5">
          <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <div class="search-pill-container lg:w-auto w-full">
               <Search :size="18" class="search-icon" />
               <input v-model="searchQuery" type="text" placeholder="ค้นหาชื่อผู้เข้าร่วม..." />
             </div>
-
             <div class="flex items-center gap-2 w-full sm:w-auto overflow-x-auto hide-scrollbar shrink-0 pb-2 sm:pb-0">
                <div class="relative flex items-center bg-white border border-slate-200 rounded-full h-11 px-5 hover:border-orange-400 hover:ring-4 hover:ring-orange-50 transition-all cursor-pointer group" @click="($refs.dateInputRef as any)?.showPicker()">
                    <Calendar class="text-orange-500 mr-3 shrink-0 group-hover:scale-110 transition-transform" :size="18" />
@@ -1170,17 +1078,14 @@ const handleEditTracking = async (sub: any) => {
               </button>
             </div>
           </div>
-
           <div class="overflow-x-auto custom-scroll w-full border border-slate-200 rounded-2xl bg-white relative custom-table-wrapper">
             <table class="w-max text-left whitespace-nowrap border-separate border-spacing-0 text-sm text-slate-600 clean-table">
                <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                 <tr>
                    <th class="p-4 text-sm font-bold text-slate-700 bg-slate-50 border-r border-slate-100 sticky left-0 z-40 whitespace-nowrap min-w-[200px]">ชื่อ-นามสกุล</th>
-                   
                    <th v-for="col in currentMonthColumns" :key="'col-'+col.dStr+'-'+col.task.id" class="p-2 min-w-[40px] text-center font-bold text-slate-500 text-xs z-30" :title="col.task.title">
                      {{ col.date.getDate() }}
                    </th>
-
                    <th class="p-4 text-sm font-bold text-slate-700 bg-slate-50 border-r border-slate-100 whitespace-nowrap min-w-[70px] text-center border-l bg-slate-50/80">ส่ง</th>
                    <th class="p-4 text-sm font-bold text-slate-700 bg-slate-50 border-r border-slate-100 whitespace-nowrap min-w-[70px] text-center bg-slate-50/80">ขาด</th>
                    <th class="p-4 text-sm font-bold text-slate-700 bg-slate-50 border-r border-slate-100 whitespace-nowrap min-w-[70px] text-center bg-slate-50/80">%</th>
@@ -1202,7 +1107,6 @@ const handleEditTracking = async (sub: any) => {
                       </div>
                     </div>
                   </td>
-                  
                   <td v-for="col in currentMonthColumns" :key="'row-'+ut.user_id+'-'+col.dStr+'-'+col.task.id" class="p-1.5 text-center">
                     <div class="flex justify-center items-center w-full h-full min-h-[24px]">
                       <div v-if="ut.taskStatus[`${col.dStr}_${col.task.id}`]" 
@@ -1217,7 +1121,6 @@ const handleEditTracking = async (sub: any) => {
                       <div v-else class="w-1.5 h-1.5 rounded-full bg-slate-200"></div>
                     </div>
                   </td>
-
                   <td class="p-3 text-center text-emerald-600 font-bold border-l border-slate-50 bg-white">{{ ut.completed }}</td>
                   <td class="p-3 text-center text-rose-500 font-bold bg-white">{{ ut.missedCount }}</td>
                   <td class="p-3 text-center text-orange-600 font-bold bg-white">{{ ut.percentage }}%</td>
@@ -1228,21 +1131,18 @@ const handleEditTracking = async (sub: any) => {
               </tbody>
              </table>
           </div>
-
           <AppPagination 
             :currentPage="trackingPage" 
             :totalPages="Math.ceil(userTrackingSheet.length / perPageLimit)" 
             @change="trackingPage = $event" 
           />
       </div>
-
       <div v-else-if="activeTab === 'participation'" class="space-y-5">
          <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <div class="search-pill-container lg:w-auto w-full">
               <Search :size="18" class="search-icon" />
               <input v-model="searchQuery" type="text" placeholder="ค้นหาทีม หรือผู้ร่วมกิจกรรม..." />
             </div>
-            
             <div class="flex items-center gap-2 w-full sm:w-auto overflow-x-auto hide-scrollbar shrink-0 pb-2 sm:pb-0">
               <div class="relative flex items-center bg-white border border-slate-200 rounded-full h-11 px-5 hover:border-orange-400 hover:ring-4 hover:ring-orange-50 transition-all cursor-pointer group" @click="($refs.yearDateInputRef as any)?.showPicker()">
                  <Calendar class="text-orange-500 mr-3 shrink-0 group-hover:scale-110 transition-transform" :size="18" />
@@ -1251,20 +1151,16 @@ const handleEditTracking = async (sub: any) => {
               </div>
             </div>
           </div>
-          
           <div class="overflow-x-auto custom-scroll w-full border border-slate-200 rounded-2xl bg-white relative custom-table-wrapper">
             <table class="w-max text-right whitespace-nowrap border-separate border-spacing-0 text-sm text-slate-600 clean-table">
               <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 shadow-sm">
                  <tr>
                    <th class="p-4 text-sm font-bold text-slate-700 bg-slate-50 border-r border-slate-100 text-left sticky left-0 z-40 whitespace-nowrap min-w-[200px]">ชื่อ - นามสกุล</th>
-                   
                    <th v-for="opt in trackingMonthOptions" :key="'m-'+opt.value" class="p-3 text-center font-bold text-slate-500 min-w-[90px]">
                      {{ opt.label }}<br/><span class="text-[10px] text-slate-400 font-medium">(เป้า: {{ participationExpected.perMonth[opt.value] }})</span>
                    </th>
-                   
                    <th class="p-4 text-sm font-bold text-slate-700 bg-slate-50 border-r border-slate-100 text-center whitespace-nowrap min-w-[100px] border-l">รวมที่ส่ง<br/><span class="text-[10px] text-slate-400 font-medium">(เกณฑ์: {{ participationExpected.total }})</span></th>
                    <th class="p-4 text-sm font-bold text-slate-700 bg-slate-50 border-r border-slate-100 text-center whitespace-nowrap min-w-[100px]">ร้อยละ</th>
-
                 </tr>
                </thead>
               <tbody class="divide-y divide-slate-100 bg-white">
@@ -1283,11 +1179,9 @@ const handleEditTracking = async (sub: any) => {
                       </div>
                     </div>
                   </td>
-                  
                    <td v-for="opt in trackingMonthOptions" :key="'val-'+opt.value" class="p-3 text-slate-700 font-medium">
                      {{ up.monthlySubmissions[opt.value] }}
                   </td>
-                  
                   <td class="p-3 font-bold border-l border-slate-50 bg-white" :class="up.percentage >= 80 ? 'text-emerald-600' : 'text-slate-600'">{{ up.totalUserSubs }}</td>
                   <td class="p-3 font-bold bg-white" :class="up.percentage >= 80 ? 'text-emerald-600' : 'text-slate-600'">{{ up.percentage.toFixed(1) }}%</td>
                 </tr>
@@ -1297,34 +1191,29 @@ const handleEditTracking = async (sub: any) => {
               </tbody>
             </table>
           </div>
-
           <AppPagination 
             :currentPage="participationPage" 
             :totalPages="Math.ceil(userParticipationSheet.length / perPageLimit)" 
              @change="participationPage = $event" 
           />
       </div>
-
       <div v-else-if="activeTab === 'rankings'" class="space-y-5">
          <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div class="search-pill-container lg:w-auto w-full">
               <Search :size="18" class="search-icon" />
               <input v-model="searchQuery" type="text" placeholder="ค้นหาชื่อ หรือทีม..." />
             </div>
-            
             <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-full p-1 w-full sm:w-auto shrink-0">
               <button @click="rankingsTab = 'individual'" class="w-full sm:w-auto shrink-0 px-5 py-2 text-sm font-bold rounded-full transition-all" :class="rankingsTab === 'individual' ? 'bg-orange-500 text-white' : 'bg-transparent text-slate-600 hover:bg-slate-50'">อันดับบุคคล</button>
               <button @click="rankingsTab = 'team'" class="w-full sm:w-auto shrink-0 px-5 py-2 text-sm font-bold rounded-full transition-all" :class="rankingsTab === 'team' ? 'bg-orange-500 text-white' : 'bg-transparent text-slate-600 hover:bg-slate-50'">อันดับทีม</button>
             </div>
           </div>
-          
           <div class="overflow-x-auto custom-scroll w-full border border-slate-200 rounded-2xl bg-white relative custom-table-wrapper">
             <table class="w-full text-left whitespace-nowrap border-separate border-spacing-0 text-sm text-slate-600 clean-table">
               <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 shadow-sm">
                  <tr>
                   <th class="p-4 text-sm font-bold text-slate-700 bg-slate-50 border-r border-slate-100 sticky left-0 z-20 whitespace-nowrap min-w-[200px]">ชื่อ-นามสกุล</th>
                   <th class="p-4 text-sm font-bold text-slate-700 bg-slate-50 border-r border-slate-100 text-right whitespace-nowrap min-w-[120px]">คะแนน</th>
-
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100">
@@ -1362,7 +1251,6 @@ const handleEditTracking = async (sub: any) => {
             @change="rankingsPage = $event" 
           />
       </div>
-
       <div v-else-if="activeTab === 'changes'" class="space-y-5">
         <div class="flex items-center justify-between">
           <div class="search-pill-container lg:w-auto w-full">
@@ -1375,12 +1263,10 @@ const handleEditTracking = async (sub: any) => {
              </span>
           </div>
         </div>
-
         <div v-if="loadingComparison" class="flex flex-col items-center justify-center py-20 bg-white border border-slate-200 rounded-2xl">
           <div class="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></div>
           <p class="text-slate-500 font-bold">กำลังโหลดข้อมูลการเปรียบเทียบ...</p>
         </div>
-        
         <div v-else class="overflow-x-auto custom-scroll w-full border border-slate-200 rounded-2xl bg-white relative custom-table-wrapper">
           <table class="w-max text-left whitespace-nowrap border-separate border-spacing-0 text-sm text-slate-600 clean-table">
             <thead class="bg-slate-50 text-slate-600 font-bold border-b border-slate-200 shadow-sm">
@@ -1437,21 +1323,18 @@ const handleEditTracking = async (sub: any) => {
                 </td>
                 <td class="p-3 text-center border-r border-slate-100">{{ calculateAge(u.birth_date) }}</td>
                 <td class="p-3 text-center border-r border-slate-100">{{ u.gender === 'male' || u.gender === 'ชาย' ? 'ชาย' : u.gender === 'female' || u.gender === 'หญิง' ? 'หญิง' : u.gender || '-' }}</td>
-                
                 <!-- Before -->
                 <td class="p-3 text-center border-r border-slate-50 bg-emerald-50/10">{{ u.first_tanita?.weight ?? '-' }}</td>
                 <td class="p-3 text-center border-r border-slate-50 bg-emerald-50/10">{{ u.first_tanita?.waist ?? '-' }}</td>
                 <td class="p-3 text-center border-r border-slate-50 bg-emerald-50/10">{{ u.first_tanita?.bmi ?? '-' }}</td>
                 <td class="p-3 text-center border-r border-slate-50 bg-emerald-50/10">{{ u.first_tanita?.body_fat ?? '-' }}</td>
                 <td class="p-3 text-center border-r border-slate-200 bg-emerald-50/10">{{ u.first_tanita?.visceral_fat ?? '-' }}</td>
-
                 <!-- After -->
                 <td class="p-3 text-center border-r border-slate-50 bg-amber-50/10">{{ u.latest_tanita?.weight ?? '-' }}</td>
                 <td class="p-3 text-center border-r border-slate-50 bg-amber-50/10">{{ u.latest_tanita?.waist ?? '-' }}</td>
                 <td class="p-3 text-center border-r border-slate-50 bg-amber-50/10">{{ u.latest_tanita?.bmi ?? '-' }}</td>
                 <td class="p-3 text-center border-r border-slate-50 bg-amber-50/10">{{ u.latest_tanita?.body_fat ?? '-' }}</td>
                 <td class="p-3 text-center border-r border-slate-200 bg-amber-50/10">{{ u.latest_tanita?.visceral_fat ?? '-' }}</td>
-
                 <!-- Change -->
                 <td class="p-3 text-center border-r border-slate-50 bg-sky-50/10 font-bold" :class="(Number(u.latest_tanita?.weight || 0) - Number(u.first_tanita?.weight || 0)) <= 0 ? 'text-emerald-500' : 'text-rose-500'">
                   {{ (Number(u.latest_tanita?.weight || 0) - Number(u.first_tanita?.weight || 0)).toFixed(1) }}
@@ -1468,14 +1351,12 @@ const handleEditTracking = async (sub: any) => {
                 <td class="p-3 text-center border-r border-slate-200 bg-sky-50/10 font-medium">
                   {{ (Number(u.latest_tanita?.visceral_fat || 0) - Number(u.first_tanita?.visceral_fat || 0)).toFixed(0) }}
                 </td>
-
                 <!-- Score -->
                 <td class="p-3 text-center border-r border-slate-50 bg-slate-50/10">{{ u.latest_tanita?.weight_score || 0 }}</td>
                 <td class="p-3 text-center border-r border-slate-50 bg-slate-50/10">{{ u.latest_tanita?.waist_score || 0 }}</td>
                 <td class="p-3 text-center border-r border-slate-50 bg-slate-50/10">{{ u.latest_tanita?.bmi_score || 0 }}</td>
                 <td class="p-3 text-center border-r border-slate-50 bg-slate-50/10">{{ u.latest_tanita?.fat_score || 0 }}</td>
                 <td class="p-3 text-center border-r border-slate-200 bg-slate-50/10">{{ u.latest_tanita?.vp_score || 0 }}</td>
-
                 <td class="p-3 text-center border-r border-slate-200 font-black text-slate-800">{{ u.latest_tanita?.total_points || u.latest_tanita?.total_score || 0 }}</td>
                 <td class="p-3 text-center min-w-[160px] bg-slate-50/30">
                   <div class="flex items-center justify-center gap-2 px-2">
@@ -1493,7 +1374,6 @@ const handleEditTracking = async (sub: any) => {
           </table>
         </div>
       </div>
-
       <div v-else-if="activeTab === 'responses'" class="space-y-5">
         <div class="flex items-center justify-between">
           <div class="search-pill-container lg:w-auto w-full">
@@ -1506,12 +1386,10 @@ const handleEditTracking = async (sub: any) => {
              </span>
           </div>
         </div>
-
         <div v-if="loadingComparison" class="flex flex-col items-center justify-center py-20 bg-white border border-slate-200 rounded-2xl">
           <div class="w-8 h-8 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mb-4"></div>
           <p class="text-slate-500 font-bold">กำลังโหลดข้อมูลผลการทดสอบ...</p>
         </div>
-
         <div v-else class="space-y-6">
           <!-- Part stats summary cards -->
           <div v-if="assessmentPartStats.partStats && assessmentPartStats.partStats.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1533,7 +1411,6 @@ const handleEditTracking = async (sub: any) => {
               </div>
             </div>
           </div>
-
           <!-- Individual comparison table -->
           <div class="overflow-x-auto custom-scroll w-full border border-slate-200 rounded-2xl bg-white relative custom-table-wrapper">
           <table class="w-full text-left whitespace-nowrap border-separate border-spacing-0 text-sm text-slate-600 clean-table">
@@ -1597,10 +1474,8 @@ const handleEditTracking = async (sub: any) => {
         </div>
         </div>
       </div>
-
     </template>
   </div>
-
   <Teleport to="body">
     <Transition name="fade">
       <div v-if="showGenderModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in" @click.self="showGenderModal = false">
@@ -1616,7 +1491,6 @@ const handleEditTracking = async (sub: any) => {
                <div class="text-5xl font-extrabold text-slate-800">{{ totalParticipants }}</div>
               <div class="text-sm font-bold text-slate-500 mt-2">ผู้เข้าร่วมทั้งหมด</div>
             </div>
-            
             <div class="space-y-3" v-if="genderStats && genderStats.length > 0">
               <div v-for="[gender, count] in genderStats" :key="gender" class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between transition-all hover:shadow-md">
                 <div class="flex items-center gap-3">
@@ -1639,7 +1513,6 @@ const handleEditTracking = async (sub: any) => {
         </div>
       </div>
     </Transition>
-
     <Transition name="fade">
       <div v-if="showUserProfileModal" class="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in" @click.self="showUserProfileModal = false">
          <div class="bg-white rounded-3xl w-full max-w-[95%] sm:max-w-4xl max-h-[90vh] sm:max-h-[85vh] flex flex-col overflow-hidden">
@@ -1647,7 +1520,6 @@ const handleEditTracking = async (sub: any) => {
             <h3 class="text-lg font-bold text-slate-900">ข้อมูลผู้ใช้งาน & ประวัติ</h3>
             <button @click="showUserProfileModal = false" class="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-2 rounded-full transition-colors"><X :size="20" /></button>
           </div>
-          
            <div class="flex-1 overflow-y-auto p-5 bg-white custom-scroll" v-if="selectedUserProfile">
              <div class="flex flex-col sm:flex-row gap-5 items-center sm:items-start mb-6 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                 <div class="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 text-3xl overflow-hidden shrink-0 border-4 border-white">
@@ -1660,7 +1532,6 @@ const handleEditTracking = async (sub: any) => {
                   <div class="mt-3 text-xs font-bold bg-orange-50 text-orange-600 border border-orange-100 px-3 py-1 rounded-lg inline-block">{{ selectedUserProfile.role_type || selectedUserProfile.role || 'สมาชิก' }}</div>
                 </div>
              </div>
-             
              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-slate-600 mb-6">
                 <div class="p-5 bg-white border border-slate-200 rounded-2xl shadow-sm">
                    <div class="font-bold text-slate-800 mb-3 flex items-center gap-2"><User :size="16" class="text-orange-500"/> ข้อมูลส่วนตัว</div>
@@ -1676,7 +1547,6 @@ const handleEditTracking = async (sub: any) => {
                   <div class="font-bold text-slate-800 leading-relaxed">{{ selectedUserProfile.main_goal || 'ไม่ได้ระบุเป้าหมาย' }}</div>
                 </div>
              </div>
-             
              <h4 class="font-bold text-slate-900 mb-3 px-1 text-base flex items-center gap-2"><ClipboardCheck :size="18" class="text-slate-500" /> ประวัติการส่งภารกิจ</h4>
              <div class="border border-slate-200 rounded-2xl overflow-hidden bg-white shadow-sm">
                  <div class="overflow-x-auto w-full no-scrollbar">
@@ -1706,7 +1576,6 @@ const handleEditTracking = async (sub: any) => {
       </div>
     </Transition>
   </Teleport>
-
   <Teleport to="body">
     <div v-if="activeMenuId !== null" 
          class="fixed inset-0 z-[1000]" 
@@ -1714,17 +1583,14 @@ const handleEditTracking = async (sub: any) => {
       <div class="fixed z-[1001] w-56 bg-white border border-slate-200 shadow-2xl rounded-2xl flex flex-col overflow-hidden transition-all duration-200 animate-in fade-in zoom-in-95"
            :style="{ top: menuPos.top + 'px', right: menuPos.right + 'px', transform: menuPos.transform }"
            @click.stop>
-        
         <div class="px-4 py-2 mb-1 border-b border-slate-50">
           <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">จัดการรายการนี้</p>
         </div>
-
         <button @click="updateSubStatus(Number(activeMenuId), 'approved'); activeMenuId = null" 
                 class="w-full px-4 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 transition-colors flex items-center gap-3">
           <div class="p-1.5 bg-emerald-100/50 rounded-lg text-emerald-500"><Check :size="16" stroke-width="3" /></div>
           อนุมัติรายการ
         </button>
-
         <button @click="deleteSubmission(Number(activeMenuId)); activeMenuId = null" 
                 class="w-full px-4 py-2.5 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-3">
           <div class="p-1.5 bg-rose-100/50 rounded-lg text-rose-500"><Trash2 :size="16" /></div>
@@ -1733,13 +1599,11 @@ const handleEditTracking = async (sub: any) => {
       </div>
     </div>
   </Teleport>
-
   <!-- Health Assessment Result Modal -->
   <Teleport to="body">
     <Transition name="fade">
       <div v-if="showAssessmentModal" class="fixed inset-0 z-[200] flex items-center justify-center p-3 bg-slate-900/60 backdrop-blur-sm" @click.self="showAssessmentModal = false">
         <div class="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
-
           <!-- Header -->
           <div class="flex items-center justify-between p-5 border-b border-slate-100 shrink-0">
             <div class="flex items-center gap-3">
@@ -1760,13 +1624,11 @@ const handleEditTracking = async (sub: any) => {
               <X :size="18" />
             </button>
           </div>
-
           <!-- Loading -->
           <div v-if="assessmentModalLoading" class="flex-1 flex items-center justify-center py-16 gap-3">
             <div class="w-6 h-6 border-4 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
             <span class="text-slate-400 font-bold text-sm">กำลังโหลดข้อมูล...</span>
           </div>
-
           <!-- LIST VIEW: show all records -->
           <div v-else-if="assessmentModalView === 'list'" class="flex-1 overflow-y-auto custom-scroll p-5 space-y-3">
             <div v-if="assessmentModalRecords.length === 0" class="flex flex-col items-center justify-center py-16 gap-3 text-slate-300">
@@ -1802,7 +1664,6 @@ const handleEditTracking = async (sub: any) => {
               </div>
             </div>
           </div>
-
           <!-- DETAIL VIEW: show result like Health.vue -->
           <div v-else-if="assessmentModalView === 'detail' && selectedAssessmentRecord" class="flex-1 overflow-y-auto custom-scroll">
             <!-- Overall banner -->
@@ -1820,7 +1681,6 @@ const handleEditTracking = async (sub: any) => {
                 </div>
               </div>
             </div>
-
             <!-- Section scores -->
             <div class="p-5 space-y-3">
               <template v-if="parseSectionScores(selectedAssessmentRecord).length > 0">
@@ -1842,7 +1702,6 @@ const handleEditTracking = async (sub: any) => {
                   </div>
                 </div>
               </template>
-
               <!-- Responses/Answers -->
               <template v-if="selectedAssessmentRecord.responses && selectedAssessmentRecord.responses.length > 0">
                 <div class="text-xs font-black text-slate-400 uppercase tracking-widest mt-5 mb-3">คำตอบของผู้ประเมิน</div>
@@ -1857,28 +1716,22 @@ const handleEditTracking = async (sub: any) => {
                   </div>
                 </div>
               </template>
-
               <div v-if="parseSectionScores(selectedAssessmentRecord).length === 0 && (!selectedAssessmentRecord.responses || selectedAssessmentRecord.responses.length === 0)"
                    class="py-10 text-center text-slate-400 font-bold text-sm">
                 ไม่มีข้อมูลรายละเอียดการประเมิน
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </Transition>
   </Teleport>
-
 </template>
-
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
-
 .font-sarabun {
   font-family: 'Sarabun', sans-serif;
 }
-
 .hide-scrollbar {
   -ms-overflow-style: none;  
   scrollbar-width: none;
@@ -1886,14 +1739,11 @@ const handleEditTracking = async (sub: any) => {
 .hide-scrollbar::-webkit-scrollbar {
   display: none; 
 }
-
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
 .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
 .custom-scroll::-webkit-scrollbar-track { background: transparent; }
 .custom-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
-
 .search-pill-container { 
   display: flex; 
   align-items: center; 
@@ -1928,7 +1778,6 @@ const handleEditTracking = async (sub: any) => {
   color: #1e293b; 
 }
 .search-pill-container input::placeholder { color: #9CA3AF; font-weight: 500; }
-
 .custom-table-wrapper { border: 1px solid #e2e8f0 !important; }
 .custom-table-wrapper th, .clean-table th {
   background-color: #f8fafc;
@@ -1941,15 +1790,12 @@ const handleEditTracking = async (sub: any) => {
   border-bottom: 1px solid #f1f5f9;
   padding: 16px;
 }
-
 thead th.sticky {
   z-index: 20;
 }
-
 @media (max-width: 640px) {
   .custom-table-wrapper th { padding: 12px 10px; font-size: 0.75rem; }
   .custom-table-wrapper td { padding: 12px 10px; font-size: 0.75rem; }
-  
   .sticky.left-0 { 
     left: 0 !important; 
   }
@@ -1981,22 +1827,18 @@ thead th.sticky {
     border-left: none !important;
   }
 }
-
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
-
 @keyframes slideUp {
   from { transform: translateY(100%); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
-
 .slide-up-enter-active {
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .slide-up-leave-active {
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) reverse;
 }
-
 @keyframes zoomIn {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
@@ -2004,7 +1846,6 @@ thead th.sticky {
 .animate-in { 
   animation: zoomIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
 .ov-card {
   position: relative;
   background: #ffffff;
@@ -2065,7 +1906,6 @@ thead th.sticky {
   border-radius: 99px;
   border: 1px solid #e2e8f0;
 }
-
 .dashboard-hidden-date::-webkit-calendar-picker-indicator {
     cursor: pointer;
     opacity: 0; 
@@ -2104,4 +1944,4 @@ input[type="number"]::-webkit-outer-spin-button {
     0 10px 25px -5px rgba(15, 23, 42, 0.1),
     0 25px 50px -12px rgba(15, 23, 42, 0.15);
 }
-</style>
+</style>

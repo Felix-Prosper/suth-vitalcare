@@ -41,10 +41,8 @@ import { useAdminTeam, type Team } from '../../composables/useAdminTeam';
 import { authStore } from '../../store/auth';
 import { useRoute, useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
-
 const route = useRoute();
 const router = useRouter();
-
 const {
   teams,
   loading,
@@ -60,16 +58,13 @@ const {
   fetchAllUsers,
   addMember
 } = useAdminTeam();
-
 // --- 🌟 Table State ---
 const dtSortKey = ref('id');
 const dtSortDir = ref('desc');
 const dtCurrentPage = ref(1);
 const dtPerPage = ref(10);
-
 const localSearchQuery = ref("");
 const clearSearch = () => { localSearchQuery.value = ""; };
-
 const visiblePages = computed(() => {
   const current = dtCurrentPage.value;
   const total = totalPages.value;
@@ -77,13 +72,11 @@ const visiblePages = computed(() => {
   const range = [];
   const rangeWithDots = [];
   let l;
-
   for (let i = 1; i <= total; i++) {
     if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
       range.push(i);
     }
   }
-
   for (let i of range) {
     if (l) {
       if (i - l === 2) {
@@ -97,11 +90,9 @@ const visiblePages = computed(() => {
   }
   return rangeWithDots;
 });
-
 // --- 🚀 Process Data ---
 const processedTeams = computed(() => {
   const list = [...(teams.value || [])];
-  
   if (localSearchQuery.value) {
     const q = localSearchQuery.value.toLowerCase();
     return list.filter(t => 
@@ -111,37 +102,29 @@ const processedTeams = computed(() => {
       String(t.hostId).includes(q)
     );
   }
-
   // Sort
   list.sort((a: any, b: any) => {
     let valA = a[dtSortKey.value];
     let valB = b[dtSortKey.value];
-
     if (valA == null) valA = "";
     if (valB == null) valB = "";
-
     if (typeof valA === 'string') valA = valA.toLowerCase();
     if (typeof valB === 'string') valB = valB.toLowerCase();
-
     if (valA < valB) return dtSortDir.value === 'asc' ? -1 : 1;
     if (valA > valB) return dtSortDir.value === 'asc' ? 1 : -1;
     return 0;
   });
-
   return list;
 });
-
 // --- 📄 Pagination ---
 const totalPages = computed(() => Math.ceil(processedTeams.value.length / dtPerPage.value));
 const paginatedTeams = computed(() => {
   const start = (dtCurrentPage.value - 1) * dtPerPage.value;
   return processedTeams.value.slice(start, start + dtPerPage.value);
 });
-
 const setPage = (p: number) => {
   if (p >= 1 && p <= totalPages.value) dtCurrentPage.value = p;
 };
-
 const toggleSort = (key: string) => {
   if (dtSortKey.value === key) {
     dtSortDir.value = dtSortDir.value === 'asc' ? 'desc' : 'asc';
@@ -150,11 +133,9 @@ const toggleSort = (key: string) => {
     dtSortDir.value = 'asc';
   }
 };
-
 // --- 🔗 Selection Logic ---
 const selectedIds = ref<number[]>([]);
 const isAllSelected = computed(() => paginatedTeams.value.length > 0 && paginatedTeams.value.every(t => selectedIds.value.includes(t.id)));
-
 const toggleOne = (id: number) => {
   if (selectedIds.value.includes(id)) {
     selectedIds.value = selectedIds.value.filter(i => i !== id);
@@ -162,7 +143,6 @@ const toggleOne = (id: number) => {
     selectedIds.value.push(id);
   }
 };
-
 const toggleAll = () => {
   if (isAllSelected.value) {
     selectedIds.value = selectedIds.value.filter(id => !paginatedTeams.value.some(t => t.id === id));
@@ -174,7 +154,6 @@ const toggleAll = () => {
     selectedIds.value = newIds;
   }
 };
-
 const bulkDelete = async () => {
   if (selectedIds.value.length === 0) return;
   const ok = await Swal.fire({
@@ -191,7 +170,6 @@ const bulkDelete = async () => {
     },
     buttonsStyling: false
   });
-
   if (ok.isConfirmed) {
     submitting.value = true;
     let successCount = 0;
@@ -202,7 +180,6 @@ const bulkDelete = async () => {
         if (success) successCount++;
       }
     }
-    
     if (successCount > 0) {
       Swal.fire({
         icon: 'success',
@@ -211,13 +188,11 @@ const bulkDelete = async () => {
         confirmButtonColor: '#f97316'
       });
     }
-
     selectedIds.value = [];
     fetchTeams();
     submitting.value = false;
   }
 };
-
 // --- 📝 Modal Management ---
 const modalMode = ref<'create' | 'edit' | 'members' | null>(null);
 const targetTeam = ref<Team | null>(null);
@@ -229,14 +204,12 @@ const form = ref({
   isPrivate: false,
   code: ''
 });
-
 // --- Sync Modal with URL ---
 watch(
   () => [route.query.sub, route.query.id, teams.value],
   ([newSub, newId, teamList]) => {
     const sub = String(newSub || "");
     const validSub = ["create", "edit", "members"].includes(sub);
-    
     if (validSub) {
       if (modalMode.value !== sub) {
         modalMode.value = sub as any;
@@ -254,10 +227,8 @@ watch(
   },
   { immediate: true }
 );
-
 const setupModalData = (mode: 'create' | 'edit' | 'members', team?: Team) => {
   if (team) targetTeam.value = team;
-  
   if (mode === 'edit' && team) {
     form.value = {
       name: team.name,
@@ -286,27 +257,22 @@ const setupModalData = (mode: 'create' | 'edit' | 'members', team?: Team) => {
     fetchAllUsers();
   }
 };
-
 const openModal = (mode: 'create' | 'edit' | 'members', team?: Team) => {
   modalMode.value = mode;
   if (team) targetTeam.value = team;
-  
   // Push to URL
   router.push({ query: { ...route.query, sub: mode, id: team?.id || undefined } });
   setupModalData(mode, team);
 };
-
 const selectingHost = ref(false);
 const hostSearchQuery = ref("");
 const filteredHostUsers = computed(() => {
   if (!allUsers.value) return [];
   const q = hostSearchQuery.value.toLowerCase().trim();
-  
   return allUsers.value.filter(u => {
     // 1. Must not be in any team (except if editing and it's the current host)
     const inTeam = u.team_id && (!targetTeam.value || u.team_id !== targetTeam.value.id);
     if (inTeam) return false;
-
     // 2. Search filter
     if (!q) return true;
     return String(u.id).includes(q) || 
@@ -314,16 +280,13 @@ const filteredHostUsers = computed(() => {
            (u.nickname || "").toLowerCase().includes(q);
   }).slice(0, 50);
 });
-
 const selectHost = (user: any) => {
   form.value.hostId = user.id;
   form.value.hostName = user.fname_th;
   selectingHost.value = false;
 };
-
 const selectedCurrentMembers = ref<number[]>([]);
 const selectedAvailableUsers = ref<number[]>([]);
-
 const currentMembersSearchQuery = ref("");
 const filteredCurrentMembers = computed(() => {
   if (!targetTeam.value) return [];
@@ -335,12 +298,10 @@ const filteredCurrentMembers = computed(() => {
     (m.nickname || "").toLowerCase().includes(q)
   );
 });
-
 const isAllCurrentMembersSelected = computed(() => {
   const current = filteredCurrentMembers.value;
   return current.length > 0 && current.every(m => selectedCurrentMembers.value.includes(m.id));
 });
-
 const toggleSelectAllCurrentMembers = () => {
   if (isAllCurrentMembersSelected.value) {
     selectedCurrentMembers.value = [];
@@ -348,18 +309,15 @@ const toggleSelectAllCurrentMembers = () => {
     selectedCurrentMembers.value = filteredCurrentMembers.value.map(m => m.id);
   }
 };
-
 const allUsersSearchQuery = ref("");
 const filteredAllUsers = computed(() => {
   if (!allUsers.value) return [];
   let list = allUsers.value;
-  
   // Filter out members already in this team
   if (targetTeam.value) {
     const memberIds = targetTeam.value.members.map(m => m.id);
     list = list.filter(u => !memberIds.includes(u.id));
   }
-
   if (allUsersSearchQuery.value) {
     const q = allUsersSearchQuery.value.toLowerCase();
     list = list.filter(u => 
@@ -371,12 +329,10 @@ const filteredAllUsers = computed(() => {
   }
   return list.slice(0, 50); // Limit to 50 for performance
 });
-
 const isAllAvailableUsersSelected = computed(() => {
   const current = filteredAllUsers.value;
   return current.length > 0 && current.every(u => selectedAvailableUsers.value.includes(u.id));
 });
-
 const toggleSelectAllAvailableUsers = () => {
   if (isAllAvailableUsersSelected.value) {
     selectedAvailableUsers.value = [];
@@ -384,17 +340,14 @@ const toggleSelectAllAvailableUsers = () => {
     selectedAvailableUsers.value = filteredAllUsers.value.map(u => u.id);
   }
 };
-
 const handleBulkAddMembers = async () => {
   if (!targetTeam.value || selectedAvailableUsers.value.length === 0) return;
-  
   submitting.value = true;
   let successCount = 0;
   for (const userId of selectedAvailableUsers.value) {
     const success = await addMember(targetTeam.value.id, userId, true);
     if (success) successCount++;
   }
-  
   if (successCount > 0) {
     Swal.fire({
       icon: 'success',
@@ -408,10 +361,8 @@ const handleBulkAddMembers = async () => {
   }
   submitting.value = false;
 };
-
 const handleBulkKickMembers = async () => {
   if (!targetTeam.value || selectedCurrentMembers.value.length === 0) return;
-  
   const ok = await Swal.fire({
     title: 'คัดสมาชิกออก',
     text: `คุณต้องการคัด ${selectedCurrentMembers.value.length} สมาชิกที่เลือกออกจากทีมใช่หรือไม่?`,
@@ -421,9 +372,7 @@ const handleBulkKickMembers = async () => {
     cancelButtonText: 'ยกเลิก',
     confirmButtonColor: '#f43f5e'
   });
-  
   if (!ok.isConfirmed) return;
-
   submitting.value = true;
   let successCount = 0;
   for (const userId of selectedCurrentMembers.value) {
@@ -431,7 +380,6 @@ const handleBulkKickMembers = async () => {
     const success = await kickMember(targetTeam.value.id, userId, true);
     if (success) successCount++;
   }
-  
   if (successCount > 0) {
     Swal.fire({
       icon: 'success',
@@ -445,7 +393,6 @@ const handleBulkKickMembers = async () => {
   }
   submitting.value = false;
 };
-
 const handleAddMember = async (userId: number) => {
   if (!targetTeam.value) return;
   const success = await addMember(targetTeam.value.id, userId);
@@ -454,7 +401,6 @@ const handleAddMember = async (userId: number) => {
     if (updatedTeam) targetTeam.value = updatedTeam;
   }
 };
-
 const closeModal = () => {
   if (route.query.sub) {
     router.back();
@@ -463,34 +409,28 @@ const closeModal = () => {
     targetTeam.value = null;
   }
 };
-
 const handleKick = async (teamId: number, userId: number) => {
   const success = await kickMember(teamId, userId);
   if (success && targetTeam.value) {
     // fetchTeams will refresh the list
   }
 };
-
 const handleToggleRights = async (teamId: number, userId: number) => {
   await toggleActivityRights(teamId, userId);
 };
-
 const handleSubmit = async () => {
   if (!form.value.hostId) {
     Swal.fire('ข้อผิดพลาด', 'กรุณาเลือกผู้ดูแลทีม (Host)', 'error');
     return;
   }
-  
   if (form.value.isPrivate && (!form.value.code || form.value.code.length < 4)) {
     Swal.fire('ข้อผิดพลาด', 'กรุณาระบุ PIN สำหรับทีมส่วนตัว', 'error');
     return;
   }
-
   // If public, clear code to match user-side logic
   if (!form.value.isPrivate) {
     form.value.code = '';
   }
-
   let success = false;
   if (modalMode.value === 'create') {
     success = await createTeam(form.value);
@@ -499,11 +439,9 @@ const handleSubmit = async () => {
   }
   if (success) closeModal();
 };
-
 // --- 🎛️ Action Menu (3-Dots) ---
 const localActiveMenuId = ref<number | null>(null);
 const localMenuPos = ref({ top: 0, right: 0 });
-
 const toggleMenu = (id: number, event?: MouseEvent) => {
   if (localActiveMenuId.value === id) {
     localActiveMenuId.value = null;
@@ -516,7 +454,6 @@ const toggleMenu = (id: number, event?: MouseEvent) => {
     const menuHeight = 180;
     const spaceBelow = window.innerHeight - rect.bottom;
     const right = Math.max(8, window.innerWidth - rect.right);
-
     if (spaceBelow < menuHeight && rect.top > menuHeight) {
       localMenuPos.value = { top: rect.top - menuHeight - 4, right };
     } else {
@@ -524,7 +461,6 @@ const toggleMenu = (id: number, event?: MouseEvent) => {
     }
   }
 };
-
 onMounted(() => {
   const handleGlobalClick = (e: MouseEvent) => {
     if (localActiveMenuId.value && !(e.target as HTMLElement).closest('.action-menu-wrapper')) {
@@ -535,13 +471,10 @@ onMounted(() => {
   fetchTeams();
 });
 onUnmounted(() => window.removeEventListener('click', () => {}));
-
 </script>
-
 <template>
   <div class="font-sarabun bg-white min-h-screen w-full relative pb-24">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-in">
-      
       <!-- Search -->
       <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div class="flex items-center gap-2 sm:gap-4 w-full">
@@ -554,25 +487,21 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
           </div>
         </div>
       </div>
-
       <div class="flex items-center justify-between px-1">
         <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
           แสดง {{ paginatedTeams.length }} / {{ processedTeams.length }} รายการ
         </p>
       </div>
-
       <!-- Teams Table -->
       <div v-if="loading" class="space-y-4">
         <div v-for="i in 5" :key="i" class="h-16 bg-white border border-slate-100 animate-pulse rounded-2xl"></div>
       </div>
-
       <div v-else-if="processedTeams.length === 0" class="py-24 text-center bg-white rounded-3xl border border-dashed border-slate-300 flex flex-col items-center justify-center">
         <div class="w-20 h-20 bg-white border border-slate-100 rounded-full flex items-center justify-center mb-5">
            <Search :size="32" class="text-slate-300" />
         </div>
         <p class="text-slate-800 font-bold text-xl mb-2">ไม่พบข้อมูลทีม</p>
       </div>
-
       <div v-else class="w-full">
         <div class="overflow-x-auto no-scrollbar pb-32">
           <table class="w-full text-left border-collapse whitespace-nowrap text-sm">
@@ -646,7 +575,6 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
           </table>
         </div>
       </div>
-
       <!-- Pagination -->
       <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 pt-4 pb-4">
         <button @click="setPage(dtCurrentPage - 1)" :disabled="dtCurrentPage === 1"
@@ -675,13 +603,11 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
       </div>
       <div class="h-32"></div>
     </div>
-
     <!-- Persistent Bottom Actions Bar -->
     <div class="fixed bottom-0 right-0 z-[40] flex items-center justify-end gap-3 p-4 sm:p-6"
       :style="{ left: selectedIds.length > 0 ? 'var(--sidebar-width, 0)' : 'auto' }">
       <template v-if="selectedIds.length > 0">
         <div class="flex items-center gap-2 w-full justify-between bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl px-3 sm:px-4 py-2.5 sm:py-3 max-w-7xl mx-auto overflow-hidden">
-          
           <div class="flex items-center gap-2 sm:gap-3 shrink-0">
             <div class="bg-orange-500 text-white px-3 sm:px-4 py-2 rounded-xl font-bold text-xs sm:text-sm whitespace-nowrap">
               เลือกไว้ {{ selectedIds.length }} รายการ
@@ -690,7 +616,6 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
               ยกเลิก
             </button>
           </div>
-          
           <!-- Right side actions, horizontally scrollable on small screens -->
           <div class="flex items-center gap-2 overflow-x-auto custom-scrollbar no-scrollbar py-1" style="scrollbar-width: none;">
             <button @click="bulkDelete" class="bg-rose-500 text-white px-3 sm:px-4 h-9 sm:h-10 rounded-xl text-xs sm:text-[13px] font-bold flex items-center gap-1.5 sm:gap-2 hover:bg-rose-600 transition-all shrink-0">
@@ -709,7 +634,6 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
       </button>
       </template>
     </div>
-
     <!-- 3-Dots Action Menu -->
    <!-- 3-Dots Action Menu -->
     <Teleport to="body">
@@ -721,17 +645,14 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
             <div class="px-4 py-2 mb-1 border-b border-slate-100">
               <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">จัดการทีม</p>
             </div>
-            
             <!-- 🌟 ย้ายปุ่ม "แก้ไขข้อมูลทีม" ขึ้นมาไว้ด้านบนสุดตามที่คุณต้องการ -->
             <button @click="openModal('edit', teams.find(t => t.id === localActiveMenuId)!); localActiveMenuId = null" class="w-full px-4 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600 transition-colors flex items-center gap-3">
               <div class="p-1.5 bg-slate-50 rounded-lg text-slate-500"><Pencil :size="16" /></div> แก้ไขข้อมูลทีม
             </button>
-
             <!-- เลื่อนปุ่ม "จัดการสมาชิก" ลงมาเป็นอันดับที่ 2 -->
             <button @click="openModal('members', teams.find(t => t.id === localActiveMenuId)!); localActiveMenuId = null" class="w-full px-4 py-2.5 text-left text-sm font-bold text-slate-700 hover:bg-orange-50 hover:text-orange-600 transition-colors flex items-center gap-3">
               <div class="p-1.5 bg-slate-50 rounded-lg text-slate-500"><Users :size="16" /></div> จัดการสมาชิก
             </button>
-            
             <div class="h-px bg-slate-100 my-1 mx-4"></div>
             <button @click="deleteTeam(teams.find(t => t.id === localActiveMenuId)!); localActiveMenuId = null" class="w-full px-4 py-2.5 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-3">
               <div class="p-1.5 bg-rose-100/50 rounded-lg text-rose-500"><Trash2 :size="16" /></div> ลบทีมถาวร
@@ -740,11 +661,9 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
         </div>
       </div>
     </Teleport>
-
     <!-- Modal: Create/Edit Team -->
     <div v-if="modalMode === 'create' || modalMode === 'edit'" class="fixed inset-0 z-[1000] flex items-center justify-center p-0 sm:p-4">
       <div @click="closeModal" class="absolute inset-0 bg-slate-900/40 backdrop-blur-md"></div>
-      
       <!-- เพิ่ม h-full sm:h-auto และปรับ rounded สำหรับมือถือ -->
       <div class="relative bg-white w-full h-full sm:h-auto max-h-[95vh] sm:max-h-[90vh] max-w-lg rounded-none sm:rounded-[2.5rem] overflow-hidden animate-in zoom-in duration-200 flex flex-col">
         <!-- ใช้ flex-col เพื่อดันปุ่มลงด้านล่างสุดได้ถ้าต้องการ -->
@@ -760,14 +679,12 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
               <X :size="24" />
             </button>
           </div>
-
           <div class="space-y-6">
             <div class="space-y-2">
               <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">ชื่อทีมของคุณ</label>
               <input v-model="form.name" type="text" placeholder="ระบุชื่อทีมสุดเจ๋ง..." 
                      class="w-full px-6 py-4.5 bg-white border border-slate-200 rounded-[1.25rem] outline-none focus:border-orange-500 transition-all font-black text-lg" />
             </div>
-
             <div class="space-y-3">
               <div class="flex items-center justify-between py-2 px-1 cursor-pointer group" @click="form.isPrivate = !form.isPrivate">
                 <div class="flex flex-col">
@@ -778,7 +695,6 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
                   <div class="absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-all shadow-sm" :class="{ 'translate-x-5': form.isPrivate }"></div>
                 </div>
               </div>
-
               <Transition name="fade">
                 <div v-if="form.isPrivate" class="space-y-2">
                   <label class="text-xs font-black text-orange-500 uppercase tracking-widest ml-1">สร้าง PIN เข้าร่วมทีม</label>
@@ -787,7 +703,6 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
                 </div>
               </Transition>
             </div>
-
             <div class="space-y-3">
               <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">จำนวนสมาชิกสูงสุด (คน)</label>
               <div class="grid grid-cols-5 gap-3">
@@ -798,10 +713,8 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
                 </button>
               </div>
             </div>
-
             <div class="space-y-2">
               <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">ผู้ดูแลทีม (Host)</label>
-              
               <div v-if="!selectingHost" class="flex items-center justify-between p-5 bg-white border border-slate-200 rounded-2xl group hover:border-orange-500 transition-all cursor-pointer" @click="selectingHost = true">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 bg-white rounded-full border border-slate-100 flex items-center justify-center text-orange-500 font-black">
@@ -814,7 +727,6 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
                 </div>
                 <div class="text-orange-500 font-black text-xs uppercase tracking-widest">เปลี่ยน</div>
               </div>
-
               <!-- Host Selection Area -->
               <div v-else class="space-y-3 p-5 bg-white border-2 border-orange-100 rounded-3xl animate-in fade-in zoom-in-95">
                 <div class="flex items-center justify-between mb-2">
@@ -845,7 +757,6 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
               <p class="text-[10px] text-slate-400 font-bold px-1">* ผู้ดูแลทีมต้องไม่ได้อยู่ในทีมอื่นอยู่แล้ว</p>
             </div>
           </div>
-
           <!-- ใช้ mt-auto เพื่อดันปุ่มลงล่างสุดในมือถือ -->
           <div class="pt-4 mt-auto flex gap-4">
             <button @click="closeModal" class="flex-1 py-5 bg-slate-50 text-slate-600 rounded-[1.5rem] font-black hover:bg-slate-100 transition-all active:scale-95">ยกเลิก</button>
@@ -858,13 +769,11 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
         </div>
       </div>
     </div>
-
     <!-- Modal: Member Management (Premium UI) -->
     <Teleport to="body">
       <div v-if="modalMode === 'members' && targetTeam" class="fixed inset-0 z-[1000] flex items-center justify-center p-4">
         <div @click="closeModal" class="absolute inset-0 bg-slate-900/60 backdrop-blur-md"></div>
         <div class="relative bg-white w-full max-w-md rounded-[2.5rem] overflow-hidden animate-in zoom-in duration-200 flex flex-col max-h-[90vh]">
-          
           <!-- Header -->
           <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-white">
             <h3 class="font-bold text-orange-800 text-base flex items-center gap-2">
@@ -874,10 +783,8 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
               <X :size="20" />
             </button>
           </div>
-
           <!-- Content Area -->
           <div class="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
-            
             <!-- Team Info Card -->
             <div class="flex items-center gap-4 p-5 bg-white rounded-3xl border-2 border-slate-100">
               <div class="w-14 h-14 bg-white rounded-full flex items-center justify-center text-slate-400 font-black text-xl border-4 border-slate-50">
@@ -888,7 +795,6 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
                 <p class="text-xs text-slate-400 mt-1 font-bold">{{ targetTeam.isPrivate ? 'ทีมส่วนตัว (มีรหัสเข้า)' : 'ทีมสาธารณะ' }}</p>
               </div>
             </div>
-
             <!-- Section 1: Current Members -->
             <div class="space-y-4">
               <div class="flex items-center justify-between px-1">
@@ -904,25 +810,21 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
                   </div>
                 </button>
               </div>
-
               <!-- Search Current Members -->
               <div v-if="targetTeam.members.length > 5" class="relative group">
                 <Search :size="16" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
                 <input v-model="currentMembersSearchQuery" type="text" placeholder="ค้นหาสมาชิกในทีม..." 
                        class="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs focus:border-orange-500 transition-all outline-none font-bold" />
               </div>
-              
               <div class="flex flex-col gap-2 max-h-60 overflow-y-auto custom-scrollbar pr-1 py-1">
                 <div v-for="m in filteredCurrentMembers" :key="m.id" 
                      @click="selectedCurrentMembers.includes(m.id) ? selectedCurrentMembers = selectedCurrentMembers.filter(id => id !== m.id) : selectedCurrentMembers.push(m.id)"
                      class="group flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-2xl hover:border-orange-200 transition-all cursor-pointer"
                      :class="{ 'bg-orange-50/30 border-orange-200': selectedCurrentMembers.includes(m.id) }">
-                  
                   <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
                     :class="selectedCurrentMembers.includes(m.id) ? 'bg-orange-500 border-orange-500' : 'bg-white border-slate-200 group-hover:border-slate-300'">
                     <Check v-if="selectedCurrentMembers.includes(m.id)" :size="14" class="text-white" stroke-width="4" />
                   </div>
-
                 <div class="flex items-center gap-3">
                   <img :src="m.avatar || m.picture_url || 'https://ui-avatars.com/api/?name=' + m.fname_th" class="w-10 h-10 rounded-full border-2 border-white object-cover shrink-0" />
                   <div class="flex-1 min-w-0">
@@ -930,18 +832,15 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
                     <p class="text-[10px] text-slate-400 font-bold mt-0.5">ID: {{ m.id }} <span v-if="m.id === targetTeam.hostId" class="ml-2 text-orange-500">★ เจ้าของทีม</span></p>
                   </div>
                 </div>
-
                   <button @click.stop="handleKick(targetTeam.id, m.id)" v-if="m.id !== targetTeam.hostId"
                           class="p-2.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
                     <LogOut :size="18" />
                   </button>
                 </div>
-
                 <div v-if="filteredCurrentMembers.length === 0" class="py-12 text-center bg-white rounded-3xl border border-dashed border-slate-200">
                   <p class="text-slate-400 font-bold italic text-xs">ไม่พบรายชื่อสมาชิก</p>
                 </div>
               </div>
-
               <!-- Bulk Removal Button -->
               <transition name="fade">
                 <button v-if="selectedCurrentMembers.length > 0" @click="handleBulkKickMembers" :disabled="submitting"
@@ -952,7 +851,6 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
                 </button>
               </transition>
             </div>
-
             <!-- Section 2: Add New Members -->
             <div class="pt-6 border-t border-slate-100 space-y-4">
               <div class="flex items-center justify-between px-1">
@@ -968,38 +866,31 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
                   </div>
                 </button>
               </div>
-
               <!-- Search Input -->
               <div class="relative group">
                 <Search :size="16" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" />
                 <input v-model="allUsersSearchQuery" type="text" placeholder="ค้นหาชื่อผู้ใช้งานเพื่อเพิ่มเข้าทีม..." 
                        class="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-2xl text-xs focus:border-orange-500 transition-all outline-none font-bold" />
               </div>
-
               <div class="flex flex-col gap-2 max-h-60 overflow-y-auto custom-scrollbar pr-1 py-1">
                 <div v-for="u in filteredAllUsers" :key="u.id" 
                      @click="selectedAvailableUsers.includes(u.id) ? selectedAvailableUsers = selectedAvailableUsers.filter(id => id !== u.id) : selectedAvailableUsers.push(u.id)"
                      class="group flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-2xl hover:border-blue-200 transition-all cursor-pointer"
                      :class="{ 'bg-blue-50/30 border-blue-200': selectedAvailableUsers.includes(u.id) }">
-                  
                   <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
                     :class="selectedAvailableUsers.includes(u.id) ? 'bg-blue-500 border-blue-500' : 'bg-white border-slate-200 group-hover:border-blue-300'">
                     <Check v-if="selectedAvailableUsers.includes(u.id)" :size="14" class="text-white" stroke-width="4" />
                   </div>
-
                   <img :src="u.picture_url || u.avatar || 'https://ui-avatars.com/api/?name=' + u.fname_th" class="w-10 h-10 rounded-full border border-slate-100 object-cover shrink-0" />
-                  
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-bold text-slate-700 truncate group-hover:text-blue-600 transition-colors leading-tight">{{ u.fname_th }}</p>
                     <p class="text-[10px] text-slate-400 font-bold mt-0.5">ID: {{ u.id }} <span v-if="u.team_name" class="ml-2 px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded-md uppercase text-[8px]">IN: {{ u.team_name }}</span></p>
                   </div>
                 </div>
-
                 <p v-if="filteredAllUsers.length === 0" class="text-center py-10 text-xs text-slate-400 font-bold italic bg-white rounded-2xl border border-dashed border-slate-200">
                   ไม่พบผู้ใช้ที่ต้องการเพิ่ม
                 </p>
               </div>
-
               <!-- Confirm Bulk Add Button -->
               <transition name="fade">
                 <button v-if="selectedAvailableUsers.length > 0" @click="handleBulkAddMembers" :disabled="submitting"
@@ -1011,7 +902,6 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
               </transition>
             </div>
           </div>
-
           <!-- Footer -->
           <div class="p-6 bg-white border-t border-slate-100">
             <button @click="closeModal" class="w-full py-4 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all active:scale-95">
@@ -1021,24 +911,19 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
         </div>
       </div>
     </Teleport>
-
   </div>
 </template>
-
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
-
 .font-sarabun {
   font-family: 'Sarabun', sans-serif;
 }
 .font-sarabun input, .font-sarabun select, .font-sarabun button, .font-sarabun textarea {
   font-family: 'Sarabun', sans-serif;
 }
-
 /* Transitions */
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
-
 @keyframes zoomIn {
   from { opacity: 0; transform: scale(0.98); }
   to { opacity: 1; transform: scale(1); }
@@ -1046,10 +931,8 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
 .animate-in { 
   animation: zoomIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
 /* ─── Search Pill ─── */
 .search-pill-container { 
   display: flex; 
@@ -1080,7 +963,6 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
   transition: all 0.2s;
 }
 .btn-clear-search:hover { background: #E5E7EB; color: #1e293b; }
-
 /* ─── Sticky Table Adjustments ─── */
 @media (max-width: 768px) {
   table th, table td {
@@ -1091,7 +973,6 @@ onUnmounted(() => window.removeEventListener('click', () => {}));
   .sticky.left-14 { left: 44px !important; min-width: 160px !important; max-width: 160px !important; border-left: none !important; }
   td.sticky.right-0 { width: 50px !important; min-width: 50px !important; box-shadow: none !important; }
 }
-
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }

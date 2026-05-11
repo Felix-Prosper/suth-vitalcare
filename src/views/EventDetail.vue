@@ -4,7 +4,6 @@
       class="spin-lg border-t-orange-500 border-4 border-slate-200 rounded-full w-12 h-12"
     ></div>
   </div>
-
   <div v-else-if="loadError" class="error-page flex-center full-h">
     <AlertCircleIcon :size="40" class="error-ico text-orange-500" />
     <p class="mt-4 text-slate-600 font-bold">ไม่พบข้อมูลกิจกรรม</p>
@@ -15,7 +14,6 @@
       กลับหน้าหลัก
     </button>
   </div>
-
   <div v-else-if="event" class="event-page pb-40 md:pb-12">
     <div class="hero-blur-container">
       <div
@@ -26,7 +24,6 @@
       ></div>
       <div class="hero-blur-overlay"></div>
     </div>
-
     <main class="main-content">
       <Transition name="slide-down">
         <div
@@ -37,17 +34,14 @@
           <span class="text-sm">บันทึกข้อมูลเรียบร้อยแล้ว</span>
         </div>
       </Transition>
-
       <div v-if="event" class="title-with-back">
         <button class="btn-back-hero" @click="handleBack">
           <ArrowLeftIcon :size="24" />
         </button>
         <h1 class="event-title-hero">{{ event.title }}</h1>
       </div>
-
       <div class="content-grid">
         <div class="left-column">
-
           <div class="poster-wrapper mb-6">
             <img
               :src="
@@ -59,13 +53,10 @@
               class="poster-img"
             />
           </div>
-
           <div class="mobile-details-block mobile-only-block mb-8 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-            
             <div v-if="event.organizer" class="inline-flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100 mb-4 max-w-full overflow-hidden">
               <span class="font-bold text-sm text-slate-700 truncate min-w-0">จัดโดย: {{ event.organizer }}</span>
             </div>
-
             <div class="flex flex-col gap-3 pb-4 border-b border-slate-100 mb-4">
               <div class="flex gap-2 min-w-0">
                 <span class="min-w-[100px] font-bold shrink-0">สิทธิ์การเข้าร่วม :</span>
@@ -84,7 +75,6 @@
                 <span class="text-slate-600 flex-1">{{ currentUserRoleLabel || 'บุคคลทั่วไป' }}</span>
               </div>
             </div>
-
             <!-- No permission error block -->
             <div v-if="!isRegistered && !hasPermissionToJoin" class="alert-box error mb-6 p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm">
               <div class="flex items-start gap-3">
@@ -101,7 +91,6 @@
                 </div>
               </div>
             </div>
-
             <div class="rc-info-list mb-6 space-y-2 text-sm border-b border-slate-100 pb-5">
               <div class="flex gap-2 min-w-0">
                 <span class="min-w-[100px] font-bold shrink-0">วันเริ่มกิจกรรม :</span>
@@ -129,13 +118,11 @@
                 </span>
               </div>
             </div>
-
             <div class="rc-header mb-4 flex justify-between items-center gap-2 min-w-0">
               <h2 class="text-lg font-bold text-slate-800 truncate flex-1 min-w-0">ช่วงรับสมัคร</h2>
               <div v-if="slotFull" class="badge-status closed text-xs bg-red-100 text-red-700 px-2 py-1 rounded whitespace-nowrap shrink-0">กิจกรรมเต็ม</div>
               <div v-else class="badge-status open text-xs bg-green-100 text-green-700 px-2 py-1 rounded whitespace-nowrap shrink-0">เปิดรับสมัคร</div>
             </div>
-
             <div class="rc-info-list space-y-2 text-sm min-w-0">
               <div class="flex gap-2 min-w-0">
                 <span class="min-w-[100px] font-bold shrink-0">เปิดรับสมัคร :</span>
@@ -172,7 +159,6 @@
                 <CheckCircleIcon :size="16" class="inline" />
               </div>
             </div>
-
             <div class="glass-widget full-width flex-col items-start" v-if="certConfigParsed.enabled">
               <div class="flex items-center gap-3 w-full">
                 <div class="gw-icon bg-orange-100 text-orange-600 flex-shrink-0">
@@ -193,7 +179,6 @@
                   {{ certStatus === "issued" ? "ดาวน์โหลด" : isEligible ? "กดรับเลย" : "ล็อค" }}
                 </button>
               </div>
-
               <!-- Detailed Criteria Checklist -->
               <div v-if="isRegistered && certStatus !== 'issued' && certCriteria" class="w-full mt-3 pt-3 border-t border-slate-100 space-y-2">
                 <div v-if="certCriteria.preTest && assessmentConfig.pre_test?.enabled" class="flex items-center justify-between text-xs">
@@ -204,7 +189,6 @@
                   </div>
                   <span v-if="certCriteria.preTest.completed" class="text-[10px] text-green-600 font-bold">สำเร็จ</span>
                 </div>
-
                 <div v-if="certCriteria.goal && goalConfigParsed.enabled" class="flex flex-col gap-1 text-xs">
                   <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
@@ -220,7 +204,6 @@
                     <div class="h-full bg-orange-400 transition-all" :style="{ width: `${Math.min(100, (certCriteria.goal.current / certCriteria.goal.target) * 100)}%` }"></div>
                   </div>
                 </div>
-
                 <div v-if="certCriteria.postTest && assessmentConfig.post_test?.enabled" class="flex items-center justify-between text-xs">
                   <div class="flex items-center gap-2">
                     <CheckCircleIcon v-if="certCriteria.postTest.completed" :size="14" class="text-green-500" />
@@ -231,7 +214,6 @@
                 </div>
               </div>
             </div>
-
             <div class="glass-widget full-width" v-if="assessmentConfig.pre_test?.enabled">
               <div class="gw-icon bg-orange-50 text-orange-600 flex-shrink-0">
                 <ClipboardListIcon :size="20" class="text-orange-600" />
@@ -249,7 +231,6 @@
                 เข้าทำ
               </button>
             </div>
-
             <div class="glass-widget full-width" v-if="assessmentConfig.post_test?.enabled">
               <div class="gw-icon bg-orange-50 text-orange-600 flex-shrink-0">
                 <ClipboardCheckIcon :size="20" class="text-orange-600" />
@@ -268,7 +249,6 @@
                 เข้าทำ
               </button>
             </div>
-
             <div class="glass-widget full-width flex-col items-start" v-if="shouldShowTanita">
               <div class="flex items-center justify-between w-full">
                 <div class="flex items-center gap-3">
@@ -314,7 +294,6 @@
               </div>
             </div>
           </div>
-
           <div v-if="event.inclusions" class="content-section highlight-box mt-6">
             <h3 class="section-title text-orange-600">
               <SparklesIcon :size="18" class="inline mr-1 flex-shrink-0" />
@@ -322,24 +301,20 @@
             </h3>
             <p class="prose">{{ event.inclusions }}</p>
           </div>
-
           <div v-if="event.rules_regulations" class="content-section mt-6">
             <h3 class="section-title">กติกาและเงื่อนไข</h3>
             <div class="prose" v-html="sanitizedRules"></div>
           </div>
-
           <div v-for="(sec, i) in parsedSections" :key="i" class="content-section mt-6">
             <h3 class="section-title">{{ sec.title }}</h3>
             <img v-if="sec.image" :src="sec.image" class="w-full rounded-2xl mb-4 object-cover shadow-sm" />
             <div class="prose" v-html="sanitizeHtml(sec.content)"></div>
           </div>
-
           <div v-if="hasGoalConfig" id="goal-section" class="content-section goal-motivation-card mt-8">
             <div class="goal-card-header">
               <TrendingUpIcon class="goal-icon text-orange-500 flex-shrink-0" :size="24" />
               <h2 class="goal-title text-orange-600">เป้าหมายและความคืบหน้า</h2>
             </div>
-
             <div v-if="goalConfigParsed.enabled" class="goal-hero-card" style="color: #ffffff !important;">
               <div class="gh-content text-center">
                 <div class="gh-label" style="color: rgba(255, 255, 255, 0.8) !important;">เป้าหมายรวม (TARGET)</div>
@@ -352,14 +327,12 @@
                 </div>
               </div>
             </div>
-
             <div v-if="goalLoading" class="goal-loading p-8 flex-center">
               <div class="spin-lg border-t-orange-500 border-4 border-slate-200 rounded-full w-8 h-8"></div>
             </div>
             <div v-else-if="goalData.length === 0" class="goal-empty p-8 text-center text-slate-400">
               ยังไม่มีข้อมูลผู้เข้าร่วม
             </div>
-
             <div v-else class="goal-table-container mt-6">
               <div class="gt-controls flex flex-col sm:flex-row gap-3 mb-4">
                 <div class="gt-search-box flex-1 flex items-center bg-white shadow-sm rounded-lg px-3 border border-slate-100 focus-within:border-orange-400">
@@ -384,7 +357,6 @@
                     </div>
                     <ChevronRightIcon :size="16" class="text-slate-400 transition-transform duration-300 flex-shrink-0" :class="{ 'rotate-90': isSortDropdownOpen }" />
                   </button>
-                  
                   <transition name="fade">
                     <div v-if="isSortDropdownOpen" class="absolute right-0 top-full mt-2 w-full min-w-[200px] bg-white border border-slate-100 rounded-2xl shadow-2xl z-[100] overflow-hidden py-1.5 animate-in slide-in-top">
                       <div v-for="opt in sortOptions" :key="opt.value" 
@@ -403,7 +375,6 @@
                   </transition>
                 </div>
               </div>
-
               <div class="gt-rows flex flex-col gap-2">
                 <div
                   v-for="item in paginatedGoalData"
@@ -439,7 +410,6 @@
                   </div>
                 </div>
               </div>
-
               <div v-if="totalGoalPages > 1" class="flex justify-center items-center gap-4 mt-6">
                 <button @click="goalCurrentPage--" :disabled="goalCurrentPage === 1" class="flex items-center justify-center border border-slate-200 rounded-full hover:bg-slate-50 disabled:opacity-50 text-orange-500 flex-shrink-0" style="width: 40px; height: 40px; min-width: 40px; min-height: 40px; padding: 0 !important;">
                   <ChevronLeftIcon :size="16" />
@@ -452,14 +422,11 @@
             </div>
           </div>
         </div>
-
         <div class="right-column desktop-only-block">
           <div class="registration-card shadow-sm border border-slate-100 p-6 rounded-2xl bg-white">
-            
             <div v-if="event.organizer" class="inline-flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100 mb-4 max-w-full">
               <span class="font-bold text-sm text-slate-700 truncate">จัดโดย: {{ event.organizer }}</span>
             </div>
-
             <div class="rc-info-list mb-6 space-y-2 text-sm border-b border-slate-100 pb-5">
               <div class="flex gap-2">
                 <span class="min-w-[100px] font-bold shrink-0">วันเริ่มกิจกรรม :</span>
@@ -487,13 +454,11 @@
                 </span>
               </div>
             </div>
-
             <div class="rc-header mb-4 flex justify-between items-center gap-2">
               <h2 class="text-lg font-bold text-slate-800 truncate">ช่วงรับสมัคร</h2>
               <div v-if="slotFull" class="badge-status closed text-xs bg-red-100 text-red-700 px-2 py-1 rounded whitespace-nowrap shrink-0">กิจกรรมเต็ม</div>
               <div v-else class="badge-status open text-xs bg-green-100 text-green-700 px-2 py-1 rounded whitespace-nowrap shrink-0">เปิดรับสมัคร</div>
             </div>
-
             <div class="rc-info-list mb-6 space-y-2 text-sm">
               <div class="flex gap-2">
                 <span class="min-w-[100px] font-bold shrink-0">เปิดรับสมัคร :</span>
@@ -508,9 +473,7 @@
                 <span class="flex-1 break-words">หรือปิดรับสมัครทันทีเมื่อผู้สมัครครบเต็มจำนวน</span>
               </p>
             </div>
-
             <div class="action-section-sidebar mt-2">
-
               <div class="flex flex-col gap-3 pb-4 border-b border-slate-100 mb-4">
                 <div class="flex gap-2 min-w-0">
                   <span class="min-w-[100px] font-bold shrink-0">สิทธิ์การเข้าร่วม :</span>
@@ -529,7 +492,6 @@
                   <span class="text-slate-600 flex-1">{{ currentUserRoleLabel || 'บุคคลทั่วไป' }}</span>
                 </div>
               </div>
-
               <!-- No permission error block -->
               <div v-if="!isRegistered && !hasPermissionToJoin" class="alert-box error mb-4 p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm">
                 <div class="flex items-start gap-3">
@@ -546,7 +508,6 @@
                   </div>
                 </div>
               </div>
-
               <template v-if="!isRegistered">
                 <button class="btn-massive primary-orange w-full force-white-text" style="color: #ffffff !important;" @click="joinActivity" :disabled="joining || slotFull || !hasPermissionToJoin">
                   <LoaderIcon v-if="joining" class="spin" />
@@ -555,7 +516,6 @@
                   <span v-else style="color: #ffffff !important;"><ActivityIcon :size="18" class="mr-2 inline" style="color: #ffffff !important;" /> สมัครเข้าร่วมกิจกรรม</span>
                 </button>
               </template>
-
               <template v-else>
                 <button class="btn-outline-red w-full" @click="leaveActivity" :disabled="joining">
                   ออกจากกิจกรรม
@@ -566,7 +526,6 @@
           </div>
       </div>
     </main>
-
     <div class="mobile-bar mobile-only-flex">
       <template v-if="!isRegistered">
         <button class="mob-btn-primary force-white-text" style="color: #ffffff !important;" :disabled="slotFull || joining || !hasPermissionToJoin" @click="joinActivity">
@@ -583,7 +542,6 @@
         </button>
       </template>
     </div>
-
     <Teleport to="body">
       <Transition name="ios-slide">
         <div v-if="showTanitaModal" class="hc-overlay" @click.self="showTanitaModal = false">
@@ -621,9 +579,6 @@
           </div>
         </div>
       </Transition>
-
-
-
       <Transition name="fade-scale">
         <div v-if="popupQueue.length > 0 && !popupsDismissed" class="assessment-popup-overlay">
           <div class="carousel-container" @touchstart="handleTouchStart" @touchend="handleTouchEnd">
@@ -659,7 +614,6 @@
     </Teleport>
   </div>
 </template>
-
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from "vue";
 import { useRouter } from "vue-router";
@@ -696,9 +650,7 @@ import {
   X as XIcon,
   Target as TargetIcon,
 } from "lucide-vue-next";
-
 import { useEventDetail } from "../composables/useEventDetail";
-
 const router = useRouter();
 const {
   event,
@@ -790,8 +742,6 @@ const {
   dismissAllPopups,
   currentUserRoleLabel,
 } = useEventDetail();
-
-
 const openTanitaEntryModal = (roundIndex: number) => {
   const eventId = route.params.id;
   router.push({
@@ -802,7 +752,6 @@ const openTanitaEntryModal = (roundIndex: number) => {
     }
   });
 };
-
 // Custom Sort Dropdown
 const isSortDropdownOpen = ref(false);
 const sortOptions = [
@@ -812,17 +761,14 @@ const sortOptions = [
   { value: "points_asc", label: "คะแนนสะสมน้อยสุด", icon: "TargetIcon" },
   { value: "name_asc", label: "ชื่อ (ก-ฮ)", icon: "UserIcon" },
 ];
-
 const currentSortLabel = computed(() => {
   return sortOptions.find(o => o.value === goalSortBy.value)?.label || "จัดเรียง";
 });
-
 const selectSort = (val: string) => {
   goalSortBy.value = val;
   isSortDropdownOpen.value = false;
   goalCurrentPage.value = 1;
 };
-
 // Close dropdown on click outside
 onMounted(() => {
   window.addEventListener('click', (e) => {
@@ -832,10 +778,8 @@ onMounted(() => {
   });
 });
 </script>
-
 <style scoped>
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Sarabun:wght@400;500;600;700;800&display=swap");
-
 .event-page {
   font-family: "Sarabun", "Inter", sans-serif;
   background-color: #FFFFFF;
@@ -846,12 +790,10 @@ onMounted(() => {
   overflow: clip;
   width: 100%;
 }
-
 .event-page, 
 .event-page * {
   font-family: "Sarabun", "Inter", sans-serif !important;
 }
-
 .event-page :deep(.text-slate-900),
 .event-page :deep(.text-slate-800),
 .event-page :deep(.text-slate-700),
@@ -870,15 +812,11 @@ onMounted(() => {
 .event-page :deep(button:not(.primary-orange):not(.btn-orange):not(.btn-teal):not(.btn-massive)) {
   color: #000000 !important;
 }
-
 /* Specific overrides for buttons and status badges that should keep some color but have black text if appropriate */
 .event-page :deep(.badge-status.open) {
   color: #166534 !important; /* Darker green for readability with Sarabun */
 }
-
-
 *, *::before, *::after { box-sizing: border-box !important; }
-
 /* Sort Dropdown Animations */
 .slide-in-top {
   animation: slideInTop 0.2s cubic-bezier(0, 0, 0.2, 1);
@@ -887,15 +825,12 @@ onMounted(() => {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
 .gt-sort-container button {
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
-
 .gt-sort-container button:hover {
   box-shadow: 0 4px 12px rgba(255, 107, 0, 0.1);
 }
-
 .fade-enter-active, .fade-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
@@ -904,7 +839,6 @@ onMounted(() => {
   transform: translateY(-8px);
 }
 </style>
-
 <style>
 html, body {
   overflow-x: clip !important;
@@ -914,18 +848,15 @@ html, body {
   padding: 0 !important;
 }
 </style>
-
 <style scoped>
 .mobile-only-flex { display: none; }
 .mobile-only-block { display: none; }
 .desktop-only-block { display: block; }
-
 .flex-center { display: flex; align-items: center; justify-content: center; flex-direction: column; }
 .flex-col { flex-direction: column; }
 .items-start { align-items: flex-start; }
 .full-h { min-height: 100vh; }
 .loading-page, .error-page { width: 100%; background: #fff; }
-
 .hero-blur-container {
   position: absolute; top: 0; left: 0; right: 0; height: 50vh;
   z-index: 0; overflow: hidden;
@@ -938,7 +869,6 @@ html, body {
 .hero-blur-overlay {
   position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 0%, rgba(255,255,255,1) 100%);
 }
-
 .main-content {
   position: relative; z-index: 10; max-width: 1200px;
   margin: 0 auto 100px; padding: 40px 24px 0;
@@ -985,7 +915,6 @@ html, body {
   min-width: 0;
 }
 .left-column { width: 100%; max-width: 100%; }
-
 .right-column {
   position: -webkit-sticky;
   position: sticky;
@@ -993,7 +922,6 @@ html, body {
   align-self: start; 
   width: 100%;
 }
-
 .poster-wrapper {
   position: relative;
   width: 100%; aspect-ratio: 1/1; border-radius: 16px; overflow: hidden;
@@ -1007,7 +935,6 @@ html, body {
 }
 .status-badge.live { background: rgba(255, 255, 255, 0.95); color: #ea580c; }
 .status-badge.upcoming { background: rgba(0, 0, 0, 0.6); color: #fff; }
-
 .widgets-container { 
   display: grid; 
   grid-template-columns: 1fr; 
@@ -1016,7 +943,6 @@ html, body {
 .glass-widget.full-width {
   grid-column: span 2;
 }
-
 @media (max-width: 768px) {
   .widgets-container {
     grid-template-columns: 1fr;
@@ -1044,12 +970,10 @@ html, body {
 .gw-info { flex: 1; min-width: 0; }
 .gw-info h4 { margin: 0 0 2px; font-size: 0.85rem; font-weight: 700; color: #000000; }
 .gw-info p { margin: 0; font-size: 0.75rem; color: #64748b; }
-
 .content-section { margin-top: 32px; width: 100%; overflow: hidden; }
 .highlight-box { background: #fff7ed; border-radius: 16px; padding: 24px; }
 .section-title { font-size: 1.4rem; font-weight: 800; color: #000000; margin: 0 0 16px; }
 .prose { font-size: 1rem; line-height: 1.7; color: #000000; overflow-wrap: break-word; word-break: break-word; }
-
 .btn-massive { width: 100%; padding: 16px; border-radius: 12px; font-size: 1.05rem; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; }
 .primary-orange { background: #f97316; color: #ffffff !important; }
 .green { background: #10b981; color: #fff; }
@@ -1064,28 +988,23 @@ html, body {
 .btn-light-orange { background: #fff7ed; color: #f97316; border: 1px solid #ffedd5; }
 .btn-teal { background: #f0fdfa; color: #0d9488; border: 1px solid #ccfbf1; }
 .btn-disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
-
 @media (max-width: 992px) {
   .desktop-only-block { display: none !important; }
   .mobile-only-block { display: block !important; }
   .mobile-only-flex { display: flex !important; }
   .mobile-bar { display: flex !important; }
-  
   .content-grid { display: block; width: 100%; }
   .left-column { width: 100%; max-width: 100%; }
   .event-title-hero { font-size: 2.2rem; }
 }
-
 @media (max-width: 640px) {
   .event-title-hero { font-size: 1.6rem; }
   .main-content { margin-top: 0; padding: 24px 12px 0; }
   .mobile-details-block { padding: 16px !important; max-width: 100%; }
-  
   .gt-col.col-progress { width: 80px !important; }
   .gt-col.col-status { width: 50px !important; }
   .gt-col.col-rank { width: 24px !important; }
 }
-
 @media (max-width: 375px) {
   .main-content { padding: 20px 8px 0; }
   .mobile-details-block { padding: 12px !important; }
@@ -1093,7 +1012,6 @@ html, body {
   .rc-header { flex-direction: column; align-items: flex-start !important; gap: 4px !important; }
   .badge-status { align-self: flex-start; }
 }
-
 .mobile-bar {
   position: fixed;
   bottom: calc(84px + env(safe-area-inset-bottom, 0px));
@@ -1139,7 +1057,6 @@ html, body {
   background: #fee2e2;
 }
 .mob-btn-primary:disabled { background: #cbd5e1; color: #f8fafc; cursor: not-allowed; box-shadow: none; }
-
 .goal-motivation-card { padding: 32px; text-align: center; }
 .goal-card-header { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; }
 .goal-title { font-size: 1.5rem; font-weight: 800; margin: 0; }
@@ -1152,7 +1069,6 @@ html, body {
 .gh-label { font-size: 11px; font-weight: 800; letter-spacing: 1px; color: rgba(255, 255, 255, 0.8) !important; margin-bottom: 4px; }
 .gh-value { font-size: 36px; font-weight: 800; line-height: 1; color: #ffffff !important; }
 .gh-unit { font-size: 16px; font-weight: 600; opacity: 0.9; margin-left: 4px; color: #ffffff !important; }
-
 .hc-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; padding: 20px; }
 .hc-sheet { background: #ffffff; width: 100%; max-width: 500px; max-height: 90vh; border-radius: 24px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
 .hc-header { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; background: #fff; }
@@ -1164,7 +1080,6 @@ html, body {
 .hc-glance-card { background: white; padding: 16px; border-radius: 16px; text-align: center; border: 1px solid #e2e8f0; }
 .hgc-lbl { display: block; font-size: 0.8rem; font-weight: 700; color: #64748b; margin-bottom: 4px; }
 .hgc-val { font-size: 1.5rem; font-weight: 800; color: #f97316; }
-
 .assessment-popup-overlay { position: fixed; inset: 0; z-index: 10000; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(5px); display: flex; align-items: center; justify-content: center; padding: 20px; }
 .carousel-container { width: 100%; max-width: 360px; position: relative; overflow: hidden; border-radius: 24px; background: #fff; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3); }
 .carousel-track { display: flex; transition: transform 0.3s ease; width: 100%; }
@@ -1183,11 +1098,8 @@ html, body {
 .nav-arrow:hover { border-color: #f97316; color: #f97316; }
 .nav-arrow.left { left: 10px; }
 .nav-arrow.right { right: 10px; }
-
 @keyframes spinAnim { to { transform: rotate(360deg); } }
 .spin, .spin-lg { animation: spinAnim 0.7s linear infinite; }
 .force-white-text, .force-white-text * { color: #ffffff !important; }
-
 /* --- ฟอร์มสไตล์ Signup --- */
-
 </style>
