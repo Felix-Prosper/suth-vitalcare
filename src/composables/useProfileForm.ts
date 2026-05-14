@@ -226,8 +226,14 @@ export function useProfileForm(user: any, tanitaRef: any) {
         authStore.setUser(updated);
         form.value = { ...updated };
         editing.value = false;
+        // Optionally show success message
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        showError(errorData.error || "ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.error("[saveEdit] Error:", err);
+      showError("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์");
     } finally {
       isSubmitting.value = false;
     }
@@ -261,6 +267,9 @@ export function useProfileForm(user: any, tanitaRef: any) {
       const username =
         user.value?.nickname || user.value?.fname_th || `user${user.value.id}`;
       const params = new URLSearchParams({ type: "profile", name: username });
+      if (user.value?.picture_url) {
+        params.append("oldUrl", user.value.picture_url);
+      }
       const formData = new FormData();
       formData.append("image", file);
       console.log("[upload:profile:start]", {
