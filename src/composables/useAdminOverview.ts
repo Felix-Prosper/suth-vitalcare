@@ -327,6 +327,11 @@ export function useAdminOverview() {
   const deep = ref<DeepInsights | null>(null);
   const growthMode = ref<"cum" | "new">("new");
 
+  // --- Growth Chart Filters ---
+  const growthFilterType = ref<"weekly" | "monthly" | "custom">("monthly");
+  const growthStartDate = ref("");
+  const growthEndDate = ref("");
+
   // --- Tanita State ---
   const tanitaInsights = ref<TanitaInsightUser[]>([]);
   const loadingTanita = ref(false);
@@ -459,6 +464,19 @@ export function useAdminOverview() {
   /* ==========================================
      COMPUTED PROPERTIES
   ========================================== */
+
+  const topSubmittedActivities = computed(() => {
+    return (data.value.activityBreakdown || [])
+      .map((a) => ({
+        id: a.id,
+        title: a.title,
+        participant_count: a.participant_count,
+        total_submissions: a.total_submissions,
+      }))
+      .filter((a) => a.total_submissions > 0)
+      .sort((a, b) => b.total_submissions - a.total_submissions)
+      .slice(0, 5);
+  });
 
   const highRiskCounts = computed(() => {
     let obese3 = 0,
@@ -2667,6 +2685,9 @@ export function useAdminOverview() {
     showTeamsListModal,
     teamsListSearch,
     roleDistributionData,
+    growthFilterType,
+    growthStartDate,
+    growthEndDate,
 
     // Computed
     totalUsersCount,
@@ -2688,6 +2709,7 @@ export function useAdminOverview() {
     ongoingActivities,
     submissionTimeStats,
     goalAchievementStats,
+    topSubmittedActivities,
 
     // Methods
     openStatsModal,

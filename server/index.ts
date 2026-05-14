@@ -37,6 +37,8 @@ import healthRouter from "./routes/health.js";
 import logsRouter from "./routes/logs.js";
 import exportRouter from "./routes/export.js";
 import registrationRouter from "./routes/registration.js";
+import titlesRouter from "./routes/titles.js";
+import { decrypt } from "./lib/crypto.js";
 import { initRealtime } from "./lib/realtime.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -231,6 +233,136 @@ async function startServer() {
   app.use("/api/health", healthRouter);
   app.use("/api/logs", logsRouter);
   app.use("/api/export", exportRouter);
+  app.use("/api/admin/titles", titlesRouter);
+
+  // ─── User-Facing Titles API ──────────────────────────────────────────────
+  // GET /api/titles — all active titles, with is_unlocked flag for the requesting user
+  app.get("/api/titles", async (req, res) => {
+    const userId = req.headers["x-user-id"];
+    try {
+      const [titleRows]: any = await pool.query(
+        "SELECT * FROM gamification_titles WHERE is_active=1 ORDER BY created_at ASC"
+      );
+      let unlockedIds: Set<string> = new Set();
+      if (userId && userId !== "undefined") {
+        const [unlocked]: any = await pool.query(
+          "SELECT title_id FROM user_titles WHERE user_id=?",
+          [userId]
+        );
+        unlocked.forEach((r: any) => unlockedIds.add(r.title_id));
+      }
+      const [userRow]: any = await pool.query(
+        "SELECT equipped_title_id FROM users WHERE id=?",
+        [userId]
+      );
+      const equippedId = userRow[0]?.equipped_title_id || null;
+
+      const titles = titleRows.map((r: any) => ({
+        ...r,
+        conditions:
+          typeof r.conditions === "string"
+            ? JSON.parse(r.conditions)
+            : r.conditions,
+        is_active: Boolean(r.is_active),
+        is_unlocked: unlockedIds.has(r.id),
+        is_equipped: r.id === equippedId,
+        unlock_type: r.unlock_type || "conditions",
+        unlock_code: undefined, // never expose
+      }));
+      res.json(titles);
+    } catch (err: any) {
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
+
+  // POST /api/titles/:id/claim — user claims a title (open or code-based)
+  app.post("/api/titles/:id/claim", async (req, res) => {
+    const { id } = req.params;
+    const userId = req.headers["x-user-id"];
+    const { code } = req.body;
+    if (!userId || userId === "undefined")
+      return res.status(401).json({ error: "กรุณาเข้าสู่ระบบก่อน" });
+    try {
+      const [rows]: any = await pool.query(
+        "SELECT id, name, rarity, color, unlock_type, unlock_code, conditions FROM gamification_titles WHERE id=? AND is_active=1",
+        [id]
+      );
+      if (rows.length === 0)
+        return res.status(404).json({ error: "ไม่พบฉายานี้" });
+      const title = rows[0];
+      const conditions = typeof title.conditions === 'string' ? JSON.parse(title.conditions) : (title.conditions || []);
+
+      if (title.unlock_type === "conditions" && conditions.length > 0)
+        return res.status(403).json({ error: "ฉายานี้ต้องปลดล็อคด้วยเงื่อนไข" });
+
+      if (title.unlock_type === "code") {
+        if (!code || code.trim() !== (title.unlock_code || "").trim())
+          return res.status(400).json({ error: "รหัสปลดล็อคไม่ถูกต้อง" });
+      }
+
+      await pool.query(
+        `INSERT IGNORE INTO user_titles (user_id, title_id) VALUES (?, ?)`,
+        [userId, id]
+      );
+
+      // --- Broadcast Title Claim ---
+      try {
+        const [uRows]: any = await pool.query("SELECT fname_th, nickname, picture_url FROM users WHERE id=?", [userId]);
+        const user = uRows[0];
+        const decryptedFname = decrypt(user?.fname_th);
+        const decryptedNickname = decrypt(user?.nickname);
+        const userName = decryptedNickname || decryptedFname || "ผู้ใช้";
+        const userPictureRaw = user?.picture_url || null;
+        let userPicture = userPictureRaw;
+        if (userPicture && !userPicture.startsWith('http') && !userPicture.startsWith('/')) {
+          userPicture = `/uploads/${userPicture}`;
+        }
+        const { getIO } = await import("./lib/realtime.js");
+        const io = getIO();
+        if (io) {
+          io.emit("TITLE_CLAIMED_BROADCAST", {
+            userName,
+            userPicture,
+            titleName: title.name,
+            rarity: title.rarity,
+            color: title.color
+          });
+        }
+      } catch (err) {
+        console.error("Broadcast error:", err);
+      }
+
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
+
+  // PATCH /api/user/:userId/equip-title — equip a title the user has unlocked
+  app.patch("/api/user/:userId/equip-title", async (req, res) => {
+    const { userId } = req.params;
+    const { title_id } = req.body;
+    const requesterId = req.headers["x-user-id"];
+    if (String(requesterId) !== String(userId))
+      return res.status(403).json({ error: "Forbidden" });
+    try {
+      if (title_id !== null) {
+        const [owned]: any = await pool.query(
+          "SELECT id FROM user_titles WHERE user_id=? AND title_id=?",
+          [userId, title_id]
+        );
+        if (owned.length === 0)
+          return res.status(403).json({ error: "Title not unlocked" });
+      }
+      await pool.query(
+        "UPDATE users SET equipped_title_id=? WHERE id=?",
+        [title_id, userId]
+      );
+      res.json({ success: true, equipped_title_id: title_id });
+    } catch (err: any) {
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
 
   // ── Local File Upload Endpoint ─────────────────────────────────────────────
   // POST /api/upload?type=activity&name=ชื่อกิจกรรม

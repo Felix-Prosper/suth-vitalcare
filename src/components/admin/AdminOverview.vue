@@ -6,6 +6,7 @@ import {
   ArrowDown, ArrowUp
 } from 'lucide-vue-next';
 import { useAdminOverview } from '../../composables/useAdminOverview';
+
 const {
   loading,
   data,
@@ -29,9 +30,15 @@ const {
   ongoingActivities, 
   submissionTimeStats,
   goalAchievementStats,
-  roleDistributionData 
+  roleDistributionData,
+  topSubmittedActivities, // <--- รับค่ามาจาก useAdminOverview
+  growthFilterType,
+  growthStartDate,
+  growthEndDate
 } = useAdminOverview();
+
 defineEmits(['change-tab']);
+
 // --- ส่วนจัดการการเลื่อนกราฟการเติบโตไปวันล่าสุด ---
 const chartGrowthScrollRef = ref<HTMLElement | null>(null);
 const scrollToLatest = async () => {
@@ -40,14 +47,17 @@ const scrollToLatest = async () => {
     chartGrowthScrollRef.value.scrollLeft = chartGrowthScrollRef.value.scrollWidth;
   }
 };
+
 watch(() => data.value?.userGrowth, () => {
   scrollToLatest();
 }, { deep: true });
+
 onMounted(async () => {
   await fetchStats();
   scrollToLatest();
 });
 // ---------------------------------------------
+
 // ธีมสีสำหรับการ์ดสถิติ
 const kpiThemes = [
   {
@@ -79,11 +89,14 @@ const kpiThemes = [
     arrow: 'text-orange-400 group-hover:text-orange-600'
   }
 ];
+
 const submissionTimeLabels: Record<string, string> = {
   morning: 'เช้า', afternoon: 'บ่าย', evening: 'เย็น', night: 'ดึก'
 };
+
 const ongoingActivitiesSort = ref<'desc' | 'asc'>('desc');
 const bmiRiskSort = ref<'desc' | 'asc'>('desc');
+
 const sortedOngoingActivities = computed(() => {
   const list = [...(ongoingActivities.value || [])];
   return list.sort((a: any, b: any) => {
@@ -92,6 +105,7 @@ const sortedOngoingActivities = computed(() => {
     return ongoingActivitiesSort.value === 'desc' ? bv - av : av - bv;
   });
 });
+
 const sortedBmiRiskUsers = computed(() => {
   const list = [...(bmiRiskUsers.value || [])];
   return list.sort((a: any, b: any) => {
@@ -100,12 +114,14 @@ const sortedBmiRiskUsers = computed(() => {
     return bmiRiskSort.value === 'desc' ? bv - av : av - bv;
   });
 });
+
 const ongoingExtremes = computed(() => {
   const list = [...(ongoingActivities.value || [])];
   if (!list.length) return null;
   const sorted = list.sort((a: any, b: any) => (Number(b.participant_count) || 0) - (Number(a.participant_count) || 0));
   return { max: sorted[0], min: sorted[sorted.length - 1] };
 });
+
 const bmiRiskExtremes = computed(() => {
   const list = [...(bmiRiskUsers.value || [])];
   if (!list.length) return null;
@@ -113,10 +129,11 @@ const bmiRiskExtremes = computed(() => {
   return { max: sorted[0], min: sorted[sorted.length - 1] };
 });
 </script>
+
 <template>
   <div class="min-h-screen bg-white text-slate-800 font-sarabun pb-24">
     <div class="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 xl:px-10 py-6 space-y-6">
-      <!-- ส่วนหัวแดชบอร์ด -->
+      
       <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 class="text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-emerald-500">
@@ -124,7 +141,7 @@ const bmiRiskExtremes = computed(() => {
           </h1>
         </div>
       </div>
-      <!-- ส่วนของการ์ดสถิติ (KPI Cards) -->
+
       <div v-if="loading" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div v-for="i in 4" :key="i" class="h-36 bg-slate-50 rounded-3xl animate-pulse soft-shadow"></div>
       </div>
@@ -145,19 +162,45 @@ const bmiRiskExtremes = computed(() => {
               <h3 :class="['text-4xl font-black tracking-tight', kpiThemes[index % kpiThemes.length].value]">
                 {{ typeof s.value === 'number' ? s.value.toLocaleString() : s.value }}
               </h3>
-              <ArrowUpRight v-if="s.label !== 'จำนวนแบนเนอร์'" :class="['w-5 h-5 transition-colors', kpiThemes[index % kpiThemes.length].arrow]" />
+              <ArrowUpRight v-if="s.label !== 'กิจกรรมฉบับร่าง'" :class="['w-5 h-5 transition-colors', kpiThemes[index % kpiThemes.length].arrow]" />
             </div>
           </div>
         </div>
       </div>
-      <!-- กราฟหลัก (การเติบโต และ ช่วงเวลาส่งงาน) -->
+
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6">
         <div class="lg:col-span-2 bg-white rounded-3xl soft-shadow p-5 sm:p-6 flex flex-col h-[420px]">
-          <div class="mb-4">
-            <h2 class="text-lg font-bold text-slate-900">การเติบโตของผู้ใช้งาน</h2>
-            <p class="text-xs font-medium text-slate-400 mt-0.5">ผู้ใช้งานสะสมบนแพลตฟอร์ม</p>
+          <div class="mb-4 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900">การเติบโตของผู้ใช้งาน</h2>
+              <p class="text-xs font-medium text-slate-400 mt-0.5">ผู้ใช้งานสะสมบนแพลตฟอร์ม</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-2 text-sm font-sarabun">
+              <select 
+                v-model="growthFilterType" 
+                class="border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none text-slate-600 font-medium"
+              >
+                <option value="weekly">รายสัปดาห์</option>
+                <option value="monthly">รายเดือน</option>
+                <option value="custom">กำหนดเอง</option>
+              </select>
+
+              <div v-if="growthFilterType === 'custom'" class="flex items-center gap-2">
+                <input 
+                  type="date" 
+                  v-model="growthStartDate" 
+                  class="border border-slate-200 rounded-lg px-2 py-1.5 outline-none text-slate-600 font-medium"
+                />
+                <span class="text-slate-400">-</span>
+                <input 
+                  type="date" 
+                  v-model="growthEndDate" 
+                  class="border border-slate-200 rounded-lg px-2 py-1.5 outline-none text-slate-600 font-medium"
+                />
+              </div>
+            </div>
           </div>
-          <!-- กราฟการเติบโต ปล่อยให้ Scroll ได้เหมือนเดิมเพื่อให้เลื่อนไปวันล่าสุด -->
           <div ref="chartGrowthScrollRef" class="flex-1 w-full relative overflow-x-auto overflow-y-hidden custom-scrollbar-x">
             <div class="h-full" :style="{ minWidth: Math.max((data.userGrowth?.length || 0) * 70, 700) + 'px' }">
               <canvas id="chart-growth"></canvas>
@@ -188,30 +231,39 @@ const bmiRiskExtremes = computed(() => {
           </div>
         </div>
       </div>
-      <!-- กราฟรอง (กลุ่มอายุ และ กิจกรรมยอดฮิต) -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6">
+        <div class="bg-white rounded-3xl soft-shadow p-5 sm:p-6 flex flex-col h-[400px]">
+          <div class="mb-4">
+            <h2 class="text-lg font-bold text-slate-900">ประเภทผู้ใช้งาน</h2>
+            <p class="text-xs font-medium text-slate-400 mt-0.5">แบ่งตามบทบาทในระบบ</p>
+          </div>
+          <div class="flex-1 w-full relative">
+            <canvas id="chart-role"></canvas>
+          </div>
+        </div>
+        
         <div class="bg-white rounded-3xl soft-shadow p-5 sm:p-6 flex flex-col h-[400px]">
           <div class="mb-4">
             <h2 class="text-lg font-bold text-slate-900">กลุ่มอายุ</h2>
             <p class="text-xs font-medium text-slate-400 mt-0.5">แบ่งตามช่วงวัยและเพศ</p>
           </div>
-          <!-- เอา Scroll wrapper ออก เพื่อให้ล็อกตำแหน่งได้พอดีกรอบ -->
           <div class="flex-1 w-full relative">
             <canvas id="chart-demographics"></canvas>
           </div>
         </div>
+
         <div class="bg-white rounded-3xl soft-shadow p-5 sm:p-6 flex flex-col h-[400px]">
           <div class="mb-4">
             <h2 class="text-lg font-bold text-slate-900">กิจกรรมยอดฮิต</h2>
             <p class="text-xs font-medium text-slate-400 mt-0.5">การมีส่วนร่วมสูงสุด (จำนวนคน)</p>
           </div>
-          <!-- เอา Scroll wrapper ออก เพื่อให้ชื่อกิจกรรมถูกล็อกอยู่กับที่ -->
           <div class="flex-1 w-full relative">
             <canvas id="chart-events"></canvas>
           </div>
         </div>
       </div>
-      <!-- กราฟการทำตามเป้าหมายได้สำเร็จ -->
+
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6">
         <div class="lg:col-span-2 bg-white rounded-3xl soft-shadow p-5 sm:p-6 flex flex-col h-[420px]">
           <div class="mb-4 flex items-start justify-between gap-4">
@@ -226,7 +278,6 @@ const bmiRiskExtremes = computed(() => {
               <span class="text-xs font-bold">{{ goalAchievementStats.totalAchievers.toLocaleString() }} คน สำเร็จแล้ว</span>
             </div>
           </div>
-          <!-- เอา Scroll wrapper ออก เพื่อให้ชื่อกิจกรรมถูกล็อกอยู่กับที่ -->
           <div class="flex-1 w-full relative">
             <canvas id="chart-goal-achievement"></canvas>
           </div>
@@ -272,9 +323,8 @@ const bmiRiskExtremes = computed(() => {
           </div>
         </div>
       </div>
-      <!-- ส่วนรายการด้านล่าง (คงเดิม) -->
-      <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 lg:gap-6">
-        <!-- 1. กิจกรรมที่ดำเนินการอยู่ -->
+
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 lg:gap-6">
         <div class="bg-white rounded-3xl soft-shadow flex flex-col h-[450px]">
           <div class="px-6 pt-6 pb-3 border-b border-slate-100/70">
             <div class="flex items-center justify-between mb-3">
@@ -321,7 +371,7 @@ const bmiRiskExtremes = computed(() => {
             </div>
           </div>
         </div>
-        <!-- 2. ผู้ใช้ที่ไม่มีความเคลื่อนไหว -->
+        
         <div class="bg-white rounded-3xl soft-shadow flex flex-col h-[450px]">
           <div class="p-6 border-b border-slate-100/70 flex items-center justify-between">
             <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -358,7 +408,7 @@ const bmiRiskExtremes = computed(() => {
             </div>
           </div>
         </div>
-        <!-- 3. ผู้มีความเสี่ยงสุขภาพสูง -->
+
         <div class="bg-white rounded-3xl soft-shadow flex flex-col h-[450px]">
           <div class="px-6 pt-6 pb-3 border-b border-slate-100/70">
             <div class="flex items-center justify-between mb-3">
@@ -377,9 +427,7 @@ const bmiRiskExtremes = computed(() => {
                 </div>
                 <div class="min-w-0 flex-1">
                   <p class="text-sm font-bold text-slate-800 truncate">{{ u.fname_th }} {{ u.lname_th }}</p>
-                  <span :class="['text-[10px] px-2 py-0.5 rounded-md font-bold', u.bmi_category === 'อ้วนมาก' ? 'bg-rose-100 text-rose-700' : 'bg-orange-100 text-orange-700']">
-                    {{ u.bmi_category }}
-                  </span>
+                  <p class="text-[10px] font-semibold text-slate-400 mt-0.5">ต้องได้รับการดูแลเพิ่มเติม</p>
                 </div>
                 <div class="text-right">
                   <p class="text-xs font-black text-slate-600">{{ u.bmi }}</p>
@@ -389,10 +437,62 @@ const bmiRiskExtremes = computed(() => {
             </div>
           </div>
         </div>
+
+        <div class="bg-white rounded-3xl soft-shadow flex flex-col h-[450px]">
+          <div class="px-6 pt-6 pb-3 border-b border-slate-100/70">
+            <div class="flex items-center justify-between mb-1">
+              <h2 class="text-base font-bold text-slate-900 flex items-center gap-2 truncate">
+                <TrendingUp class="w-5 h-5 text-emerald-500 shrink-0" /> ส่งงานต่อเนื่อง
+              </h2>
+              </div>
+            <p class="text-[11px] font-medium text-slate-400">กิจกรรมที่มีการส่งภารกิจสูงสุด 5 อันดับแรก</p>
+          </div>
+          <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
+            <div v-if="topSubmittedActivities.length === 0" class="h-full flex flex-col items-center justify-center text-slate-300">
+              <Activity class="w-10 h-10 mb-2 text-emerald-400 opacity-40" />
+              <p class="text-sm font-semibold text-center">ยังไม่มีกิจกรรม<br>ที่มีการส่งงาน</p>
+            </div>
+            
+            <div v-else class="space-y-3">
+              <div v-for="(act, index) in topSubmittedActivities" :key="act.id" 
+                   class="flex items-center gap-4 p-3 bg-white rounded-2xl soft-shadow-sm hover:soft-shadow transition-all">
+                
+                <div class="relative w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-600 font-bold shrink-0 overflow-hidden">
+                  <Activity class="w-5 h-5" />
+                  
+                  <div class="absolute -top-1 -right-1 w-4 h-4 text-white rounded-full flex items-center justify-center text-[9px] font-black border-2 border-white z-10"
+                       :class="{
+                         'bg-amber-400': index === 0,
+                         'bg-slate-300': index === 1,
+                         'bg-orange-400': index === 2,
+                         'bg-emerald-500': index > 2
+                       }">
+                    {{ index + 1 }}
+                  </div>
+                </div>
+                
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-bold text-slate-800 truncate">{{ act.title }}</p>
+                  <p class="text-[10px] font-semibold text-slate-400 truncate">ผู้เข้าร่วมทั้งหมด: {{ act.participant_count }} คน</p>
+                </div>
+                
+                <div class="text-right flex flex-col items-end shrink-0">
+                  <span class="text-sm font-black text-emerald-600 flex items-center gap-1">
+                    {{ act.total_submissions }}
+                  </span>
+                  <span class="text-[9px] font-bold text-slate-400">ครั้ง</span>
+                </div>
+                
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
 </template>
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
 .font-sarabun,
@@ -400,6 +500,7 @@ const bmiRiskExtremes = computed(() => {
   font-family: 'Sarabun', 'Noto Sans Thai', system-ui, -apple-system, sans-serif !important;
 }
 </style>
+
 <style scoped>
 .custom-scrollbar::-webkit-scrollbar { width: 5px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }

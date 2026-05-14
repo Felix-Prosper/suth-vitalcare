@@ -16,6 +16,7 @@ import {
     Settings,
     BookOpen,
     ExternalLink,
+    Medal,
 } from "lucide-vue-next";
 import { useRoute, useRouter } from "vue-router";
 import { authStore } from "../store/auth";
@@ -26,6 +27,7 @@ import AdminActivities from "../components/admin/AdminActivities.vue";
 import AdminBanners from "../components/admin/AdminBanners.vue";
 import AdminTeam from "../components/admin/AdminTeam.vue";
 import AdminLogs from "../components/admin/AdminLogs.vue";
+import AdminTitle from "../components/admin/AdminTitle.vue";
 const route = useRoute();
 const router = useRouter();
 const activeTab = ref("");
@@ -52,6 +54,7 @@ const ADMIN_GROUPS = [
             { id: "activities", label: "จัดการกิจกรรม", icon: PlusCircle },
             { id: "teams", label: "จัดการทีม", icon: Users2 },
             { id: "banners", label: "จัดการแบนเนอร์", icon: Image },
+            { id: "titles", label: "จัดการฉายา", icon: Medal },
         ],
     },
     {
@@ -303,6 +306,7 @@ const exitAdmin = () => {
                         <AdminTeam v-else-if="activeTab === 'teams'" />
                         <AdminBanners v-else-if="activeTab === 'banners'" />
                         <AdminLogs v-else-if="activeTab === 'logs'" />
+                        <AdminTitle v-else-if="activeTab === 'titles'" />
                         <div
                             v-else-if="activeTab === 'docs'"
                             class="p-4 sm:p-6 lg:p-8"

@@ -17,8 +17,8 @@
         </div>
       </div>
     </div>
-    <div class="layout-container">
-      <aside class="nav-sidebar">
+    <div class="layout-container" :class="{ 'calendar-fullscreen': !isMobileScreen && activeTab === 'calendar', 'sidebar-hidden': !isSidebarVisible }">
+      <aside class="nav-sidebar" v-if="(!(!isMobileScreen && activeTab === 'calendar') || isSidebarVisible) && (isMobileScreen ? !activeTab : true)">
         <div class="pc-profile-brief" v-if="!isMobileScreen && user">
           <div class="pc-avatar" :class="{ 'skeleton': !user }">
             <img v-if="user?.picture_url" :src="user.picture_url" alt="avatar" loading="lazy" />
@@ -34,6 +34,10 @@
             <div class="menu-more pc-only">ดูทั้งหมด</div>
           </div>
           <div class="menu-items-container" :class="{ 'horizontal-scroll': isMobileScreen }">
+            <div class="menu-item mi-dashboard" :class="{ 'active': !isMobileScreen && activeTab === 'dashboard' }" @click="openTab('dashboard')">
+              <div class="menu-icon-wrap m-purple-gradient"><LayoutDashboard class="menu-icon" /></div>
+              <div class="menu-label">แดชบอร์ด</div>
+            </div>
             <div class="menu-item mi-general" :class="{ 'active': !isMobileScreen && activeTab === 'general' }" @click="openTab('general')">
               <div class="menu-icon-wrap m-blue"><User class="menu-icon" /></div>
               <div class="menu-label">ข้อมูลของฉัน</div>
@@ -46,8 +50,16 @@
               <div class="menu-icon-wrap m-green"><Activity class="menu-icon" /></div>
               <div class="menu-label">ข้อมูลองค์ประกอบร่างกาย</div>
             </div>
+            <div class="menu-item mi-calendar" :class="{ 'active': !isMobileScreen && activeTab === 'calendar' }" @click="openTab('calendar')">
+              <div class="menu-icon-wrap m-pink"><Calendar class="menu-icon" /></div>
+              <div class="menu-label">ปฏิทินภารกิจ</div>
+            </div>
+            <div class="menu-item mi-titles" :class="{ 'active': !isMobileScreen && activeTab === 'titles' }" @click="openTab('titles')">
+              <div class="menu-icon-wrap m-yellow"><Award class="menu-icon" /></div>
+              <div class="menu-label">ฉายา</div>
+            </div>
             <div class="menu-item mi-events" :class="{ 'active': !isMobileScreen && activeTab === 'events' }" @click="openTab('events')">
-              <div class="menu-icon-wrap m-red"><Calendar class="menu-icon" /></div>
+              <div class="menu-icon-wrap m-red"><LayoutGrid class="menu-icon" /></div>
               <div class="menu-label">กิจกรรมที่สมัคร</div>
             </div>
             <div class="menu-item pc-only logout-item" @click="handleLogout" v-if="!isMobileScreen">
@@ -66,11 +78,27 @@
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
                 </button>
               </div>
+              <button v-if="!isMobileScreen && (activeTab === 'calendar' || activeTab === 'dashboard')" class="icon-btn-toggle" @click="toggleSidebar" :title="isSidebarVisible ? 'ซ่อนเมนู' : 'แสดงเมนู'">
+                <PanelLeftClose v-if="isSidebarVisible" />
+                <PanelLeft v-else />
+              </button>
               <div class="header-titles">
                 <h2 class="card-title">{{ currentTabTitle }}</h2>
                 <p class="card-subtitle" v-if="!isMobileScreen">{{ currentTabSubtitle }}</p>
               </div>
               <div class="header-actions">
+                <!-- Streak Cool in Header -->
+                <div v-if="activeTab === 'calendar' || activeTab === 'dashboard'" class="streak-cool-header">
+                  <div class="streak-fire-wrap">
+                    <span class="fire-emoji">🔥</span>
+                    <div class="fire-glow"></div>
+                  </div>
+                  <div class="streak-info">
+                    <div class="streak-count">{{ currentStreak }}</div>
+                    <div class="streak-label">วันต่อเนื่อง</div>
+                  </div>
+                </div>
+
                 <button v-if="canEditTab && !editing" class="btn-text text-o" @click="startEdit">แก้ไข</button>
                 <button v-if="activeTab === 'tanita' && tanita" class="btn-text text-o" @click="openTanitaModal(true)">แก้ไข</button>
               </div>
@@ -98,6 +126,15 @@
               </div>
             </div>
             <div class="card-body">
+              <div v-if="activeTab === 'dashboard'" class="tab-content dashboard-tab">
+                <ProfileDashboard 
+                  :user="user" 
+                  :registrations="registrations" 
+                  :submissions="userSubmissions" 
+                  :streak="currentStreak"
+                  :points="liveTotalPoints"
+                />
+              </div>
               <div v-if="activeTab === 'general'" class="tab-content general-tab">
                 <div class="profile-split-layout" :class="{ 'mobile-split': isMobileScreen }">
                   <div class="profile-avatar-area">
@@ -377,6 +414,250 @@
                   <button class="btn-primary" @click="router.push('/'); closeTab()">ดูแคมเปญกิจกรรม</button>
                 </div>
               </div>
+
+              <!-- Calendar Tab -->
+              <div v-if="activeTab === 'calendar'" class="tab-content calendar-tab">
+                <!-- Dropdown Backdrop -->
+                <div v-if="isCalDropdownOpen" class="cal-dropdown-backdrop" @click="isCalDropdownOpen = false"></div>
+                
+                <div class="calendar-layout-v2">
+                  <div class="calendar-top-bar mb-4">
+                    <div class="cal-filter-wrap">
+                      <button class="cal-dropdown-trigger" @click="isCalDropdownOpen = !isCalDropdownOpen">
+                        <LayoutGrid v-if="!selectedEventId" :size="18" />
+                        <div v-else class="cal-trigger-thumb">
+                          <img :src="registrations.find(r => r.event.id === selectedEventId)?.event.poster" alt="" />
+                        </div>
+                        <span class="cal-trigger-text">{{ currentCalActivityTitle }}</span>
+                        <ChevronDown :size="18" :class="{ 'rotate-180': isCalDropdownOpen }" />
+                      </button>
+
+                      <transition name="dropdown-fade">
+                        <div v-if="isCalDropdownOpen" class="cal-activity-dropdown">
+                          <div class="cal-dropdown-search">
+                            <Search :size="16" />
+                            <input v-model="calActivitySearch" type="text" placeholder="ค้นหากิจกรรม..." />
+                          </div>
+                          <div class="cal-dropdown-list">
+                            <div 
+                              class="cal-dropdown-item" 
+                              :class="{ active: !selectedEventId }"
+                              @click="handleSelectCalActivity(null)"
+                            >
+                              <div class="item-icon-box"><LayoutGrid :size="16" /></div>
+                              <div class="item-info">
+                                <div class="item-name">แสดงภารกิจทั้งหมด</div>
+                                <div class="item-sub">VitalCare System</div>
+                              </div>
+                            </div>
+                            <div 
+                              v-for="reg in filteredCalActivities" 
+                              :key="reg.id" 
+                              class="cal-dropdown-item"
+                              :class="{ active: selectedEventId === reg.event.id }"
+                              @click="handleSelectCalActivity(reg.event.id)"
+                            >
+                              <div class="item-thumb-box">
+                                <img v-if="reg.event.poster" :src="reg.event.poster" alt="" />
+                                <ImageIcon v-else :size="14" />
+                              </div>
+                              <div class="item-info">
+                                <div class="item-name">{{ reg.event.title }}</div>
+                                <div class="item-sub">กิจกรรมที่คุณสมัคร</div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </transition>
+                    </div>
+                  </div>
+
+                  <div class="calendar-main-v2">
+                    <MissionCalendar 
+                      :days="calendarDays"
+                      :monthLabel="calMonthLabel"
+                      :yearLabel="calYearLabel"
+                      :selectedDate="selectedDate"
+                      @prevMonth="prevMonth"
+                      @nextMonth="nextMonth"
+                      @selectDay="d => selectedDate = d.date"
+                    />
+
+                    <!-- Icon Legend -->
+                    <div class="calendar-legend mt-4">
+                      <div class="legend-item">
+                        <span class="legend-icon fire">🔥</span>
+                        <span class="legend-text">ส่งภารกิจแล้ว</span>
+                      </div>
+                      <div class="legend-item">
+                        <span class="legend-icon missed">✕</span>
+                        <span class="legend-text">ขาดส่ง</span>
+                      </div>
+                      <div class="legend-item">
+                        <span class="legend-icon upcoming">🕗</span>
+                        <span class="legend-text">มีภารกิจในวันนั้น(ยังไม่ได้ทำ)</span>
+                      </div>
+                    </div>
+                    
+                    <!-- Mission Stats Summary -->
+                    <div class="mission-stats-summary mt-6">
+                      <div class="section-title-sm mb-4">สรุปการส่งภารกิจทั้งหมด</div>
+                      <div v-if="missionStats.length" class="stats-grid-simple">
+                        <div v-for="stat in missionStats" :key="stat.taskId" class="stat-row">
+                          <div class="stat-info">
+                            <div class="stat-t-name">{{ stat.taskName }}</div>
+                            <div class="stat-e-name">{{ stat.eventName }}</div>
+                          </div>
+                          <div class="stat-metrics">
+                            <div class="metric">
+                              <span class="m-label">ส่งแล้ว</span>
+                              <span class="m-val success">{{ stat.completed }}</span>
+                            </div>
+                            <div class="metric">
+                              <span class="m-label">ขาดส่ง</span>
+                              <span class="m-val danger">{{ stat.missed }}</span>
+                            </div>
+                            <div class="metric">
+                              <span class="m-label">เป้าหมาย</span>
+                              <span class="m-val">{{ stat.expected }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div v-else class="empty-mini">
+                        <p>ยังไม่มีข้อมูลสรุปภารกิจ</p>
+                      </div>
+                    </div>
+
+                    <div class="day-missions mt-6">
+                      <div class="section-title-sm mb-4">ภารกิจวันที่ {{ formatDate(selectedDate) }}</div>
+                      <div v-if="selectedDateMissions.length" class="mission-list">
+                        <div v-for="m in selectedDateMissions" :key="m.id" class="mission-item">
+                          <div class="m-status-icon-new">
+                            <span v-if="m.status === 'approved' || m.status === 'pending'" class="m-emoji fire">🔥</span>
+                            <span v-else-if="m.status === 'upcoming'" class="m-emoji upcoming">🕗</span>
+                            <span v-else-if="m.status === 'missed'" class="m-emoji missed">✕</span>
+                            <span v-else-if="m.status === 'active'" class="m-emoji fire">🕗</span>
+                            <span v-else class="m-emoji">📋</span>
+                          </div>
+                          <div class="m-info">
+                            <div class="m-title">{{ m.task?.note || 'ภารกิจ' }}</div>
+                            <div class="m-meta">{{ m.event?.title }}</div>
+                          </div>
+                          <div class="m-badge" :class="m.status">
+                            {{ 
+                              m.status === 'approved' ? 'ส่งแล้ว' : 
+                              m.status === 'pending' ? 'รอตรวจสอบ' : 
+                              m.status === 'rejected' ? 'ปฏิเสธ' :
+                              m.status === 'missed' ? 'ไม่ส่ง' : 
+                              m.status === 'active' ? 'รอส่ง' : 'ยังไม่ถึง'
+                            }}
+                          </div>
+                        </div>
+                      </div>
+                      <div v-else class="empty-mini">
+                        <VenetianMask :size="24" class="text-slate-300" />
+                        <span>ไม่มีกิจกรรมในวันนี้</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Titles Tab -->
+              <div v-if="activeTab === 'titles'" class="tab-content titles-tab">
+                <div v-if="loadingTitles" class="loading-wrap">
+                  <Loader2 class="spin" :size="32" />
+                </div>
+                <div v-else class="titles-container-compact">
+                  <div class="titles-header-box">
+                    <div class="titles-stats-row">
+                      <div class="titles-count-info">
+                        <span class="count-label">ปลดล็อกฉายาแล้ว</span>
+                        <span class="count-value">{{ unlockedCount }} / {{ totalCount }}</span>
+                      </div>
+                      <div class="titles-progress-container">
+                        <div class="titles-progress-bar">
+                          <div class="titles-progress-fill" :style="{ width: unlockProgress + '%' }"></div>
+                        </div>
+                        <span class="progress-percent">{{ Math.round(unlockProgress) }}%</span>
+                      </div>
+                    </div>
+                    
+                    <div class="titles-search-wrap">
+                      <input 
+                        v-model="titleSearchQuery" 
+                        type="text" 
+                        placeholder="ค้นหาชื่อฉายา..." 
+                        class="title-search-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="titles-grid-compact">
+                    <div 
+                      v-for="title in filteredTitles" 
+                      :key="title.id" 
+                      class="title-box-compact"
+                      :class="{ 
+                        'is-locked': !title.is_unlocked, 
+                        'is-equipped': title.is_equipped,
+                        'rarity-common': title.rarity === 'common',
+                        'rarity-rare': title.rarity === 'rare',
+                        'rarity-secret': title.rarity === 'secret'
+                      }"
+                    >
+                      <div class="title-main-info">
+                        <UserTitle 
+                          :name="title.name" 
+                          :rarity="title.rarity" 
+                          :color="title.color"
+                          :isLocked="!title.is_unlocked"
+                          size="sm"
+                        />
+                        <p v-if="title.is_unlocked" class="t-desc-mini">{{ title.description }}</p>
+                        <p v-else-if="title.hint" class="t-hint-mini">
+                          <Lock :size="10" /> {{ title.hint }}
+                        </p>
+                      </div>
+
+                      <div class="title-action-wrap">
+                        <button 
+                          v-if="title.is_unlocked" 
+                          class="btn-mini-action"
+                          :class="{ 'equipped': title.is_equipped }"
+                          @click="equipTitle(user.id, title.is_equipped ? null : title.id)"
+                        >
+                          <Check v-if="title.is_equipped" :size="14" />
+                          {{ title.is_equipped ? 'ใช้อยู่' : 'ใช้งาน' }}
+                        </button>
+                        <button 
+                          v-else-if="title.unlock_type === 'open' || title.unlock_type === 'conditions'" 
+                          class="btn-mini-claim"
+                          @click="handleClaim(title)"
+                        >
+                          ปลดล็อก
+                        </button>
+                        <button 
+                          v-else-if="title.unlock_type === 'code'" 
+                          class="btn-mini-claim btn-mini-code"
+                          @click="handleClaim(title)"
+                        >
+                          <Lock :size="12" /> รหัส
+                        </button>
+                        <div v-else class="lock-icon-only">
+                          <Lock :size="16" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div v-if="filteredTitles.length === 0" class="empty-mini">
+                    <Award :size="32" class="opacity-20" />
+                    <p>ไม่พบฉายาที่คุณค้นหา</p>
+                  </div>
+                </div>
+              </div>
             </div>
            <div class="card-footer" v-if="editing && isMobileScreen">
               <button class="btn-outline w-full" @click="cancelEdit">ยกเลิก</button>
@@ -486,8 +767,9 @@ import {
   Camera, ChevronRight, MapPin, Pencil, LogOut, Award, HeartPulse, Activity, 
   LayoutDashboard, Loader2, User, Users, Calendar, Target, Mail, Phone, IdCard, 
   Scale, Ruler, Stethoscope, School, GraduationCap, Building2, Briefcase, VenetianMask,
-  Heart, ImageIcon, Droplets
+  Heart, ImageIcon, Droplets, Lock, LayoutGrid, Medal, Check, PanelLeft, PanelLeftClose, ChevronLeft, X, Clock
 } from 'lucide-vue-next'
+import Swal from 'sweetalert2'
 import { authStore } from '../store/auth'
 import { uiStore } from '../store/ui'
 import { logoutLiff } from '../lib/liff'
@@ -496,11 +778,84 @@ import CustomSelect from '../components/CustomSelect.vue'
 import { useTanitaProfile, useTanitaInsights } from '../composables/useTanitaProfile'
 import { useProfileForm } from '../composables/useProfileForm'
 import { useProfileEvents } from '../composables/useProfileEvents'
+import { useUserTitles } from '../composables/useUserTitles'
+import MissionCalendar from '../components/MissionCalendar.vue'
+import UserTitle from '../components/UserTitle.vue'
+import ProfileDashboard from '../components/ProfileDashboard.vue'
 const router = useRouter()
 const user = computed(() => authStore.user)
 const isMobileScreen = ref(true)
 const activeTab = ref(null)
+const isSidebarVisible = ref(true)
+const toggleSidebar = () => { isSidebarVisible.value = !isSidebarVisible.value }
+const selectedDate = ref(new Date())
 const { favoriteIds, fetchFavorites, toggleFavorite: syncToggleFavorite } = useFavorites()
+const { titles, loadingTitles, fetchAllTitles, equipTitle, claimTitle } = useUserTitles()
+const titleSearchQuery = ref('')
+const filteredTitles = computed(() => {
+  if (!titleSearchQuery.value) return titles.value
+  const q = titleSearchQuery.value.toLowerCase()
+  return titles.value.filter(t => t.name.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q))
+})
+const unlockedCount = computed(() => titles.value.filter(t => t.is_unlocked).length)
+const totalCount = computed(() => titles.value.length)
+const unlockProgress = computed(() => totalCount.value ? (unlockedCount.value / totalCount.value * 100) : 0)
+const handleClaim = async (title) => {
+  if (title.unlock_type === 'code') {
+    const { value: code } = await Swal.fire({
+      title: 'กรอกรหัสปลดล็อค',
+      input: 'text',
+      inputPlaceholder: 'กรอกรหัสเพื่อรับฉายานี้...',
+      showCancelButton: true,
+      confirmButtonText: 'ยืนยัน',
+      cancelButtonText: 'ยกเลิก',
+      confirmButtonColor: '#F05A23',
+      customClass: {
+        popup: 'premium-swal-popup',
+        confirmButton: 'premium-swal-confirm',
+        cancelButton: 'premium-swal-cancel'
+      }
+    })
+    
+    if (!code) return
+    
+    const res = await claimTitle(title.id, code)
+    if (res.success) {
+      Swal.fire({
+        icon: 'success',
+        title: 'ปลดล็อคสำเร็จ!',
+        text: `คุณได้รับฉายา "${title.name}" แล้ว`,
+        confirmButtonColor: '#F05A23'
+      })
+    } else {
+      Swal.fire({
+        icon: 'error',
+        title: 'รหัสไม่ถูกต้อง',
+        text: res.error || 'กรุณาตรวจสอบรหัสอีกครั้ง',
+        confirmButtonColor: '#F05A23'
+      })
+    }
+  } else {
+    // Open or Conditions
+    const res = await claimTitle(title.id)
+    if (res.success) {
+      Swal.fire({
+        icon: 'success',
+        title: 'สำเร็จ!',
+        text: `ปลดล็อคฉายา "${title.name}" เรียบร้อย`,
+        confirmButtonColor: '#F05A23'
+      })
+    } else {
+      Swal.fire({
+        icon: 'warning',
+        title: 'ยังไม่สามารถปลดล็อคได้',
+        text: res.error || 'คุณยังทำตามเงื่อนไขไม่ครบถ้วน',
+        confirmButtonColor: '#F05A23'
+      })
+    }
+  }
+}
+
 function toggleFavorite(e, id) {
   e.stopPropagation()
   syncToggleFavorite(id)
@@ -508,7 +863,7 @@ function toggleFavorite(e, id) {
 function checkScreen() {
   isMobileScreen.value = window.innerWidth < 768
   if (!isMobileScreen.value && !activeTab.value) {
-    activeTab.value = 'general'
+    activeTab.value = 'dashboard'
   }
 }
 // ── Composables Setup ──
@@ -537,8 +892,36 @@ const {
   registrations, userSubmissions, team, memberCount, teamProgress, teamGoal,
   isEventsLoaded, isTeamLoaded, eventsPerPage, eventsCurrentPage, eventsTotalPages,
   paginatedEvents, liveTotalPoints, fetchTeamData, fetchEventsData, getActivityStatus,
-  formatDate, formatDateRange, formatEventRemaining, getEventScore, hasGoal, formatGoalTarget
+  getMissionsForDate, formatDate, formatDateRange, formatEventRemaining, getEventScore, hasGoal, formatGoalTarget,
+  calendarDays, calMonthLabel, calYearLabel, prevMonth, nextMonth, currentStreak, last7DaysData, selectedEventId, missionStats
 } = useProfileEvents(user, activeTab)
+
+const maxBarValue = computed(() => {
+  if (!last7DaysData.value.length) return 100
+  return Math.max(...last7DaysData.value.map(d => d.value), 10)
+})
+
+const selectedDateMissions = computed(() => {
+  return getMissionsForDate(selectedDate.value)
+})
+
+const isCalDropdownOpen = ref(false)
+const calActivitySearch = ref('')
+const currentCalActivityTitle = computed(() => {
+  if (!selectedEventId.value) return 'แสดงภารกิจทั้งหมด'
+  const reg = registrations.value.find(r => r.event.id === selectedEventId.value)
+  return reg ? reg.event.title : 'แสดงภารกิจทั้งหมด'
+})
+const filteredCalActivities = computed(() => {
+  if (!calActivitySearch.value) return registrations.value
+  return registrations.value.filter(r => 
+    r.event.title.toLowerCase().includes(calActivitySearch.value.toLowerCase())
+  )
+})
+function handleSelectCalActivity(id) {
+  selectedEventId.value = id
+  isCalDropdownOpen.value = false
+}
 // ==========================
 // Real-time Sync
 // ==========================
@@ -554,17 +937,29 @@ function openTab(tabName) {
   if (isMobileScreen.value) document.body.style.overflow = 'hidden'
   if (tabName === 'tanita') fetchTanitaData()
   else if (tabName === 'team') fetchTeamData()
-  else if (tabName === 'events') fetchEventsData()
+  else if (tabName === 'events' || tabName === 'dashboard') fetchEventsData()
+  else if (tabName === 'titles') fetchAllTitles()
 }
 function closeTab() {
   if (isMobileScreen.value) {
     activeTab.value = null
     document.body.style.overflow = ''
+  } else {
+    activeTab.value = null
   }
   editing.value = false
 }
 const currentTabTitle = computed(() => {
-  const titles = { general: 'ข้อมูลของฉัน', contact: 'ข้อมูลติดต่อ', tanita: 'ข้อมูลองค์ประกอบร่างกาย', team: 'ทีมของฉัน', events: 'กิจกรรมที่สมัคร' }
+  const titles = { 
+    dashboard: 'สรุปผลกิจกรรม',
+    general: 'ข้อมูลของฉัน', 
+    contact: 'ข้อมูลติดต่อ', 
+    tanita: 'ข้อมูลองค์ประกอบร่างกาย', 
+    calendar: 'ปฏิทินภารกิจ',
+    team: 'ทีมของฉัน', 
+    events: 'กิจกรรมที่สมัคร',
+    titles: 'ฉายาของฉัน'
+  }
   return titles[activeTab.value] || ''
 })
 const currentTabSubtitle = computed(() => {
@@ -597,6 +992,30 @@ onUnmounted(() => {
   --text-sub: #757575;
   --border-light: #efefef;
 }
+.layout-container.sidebar-hidden {
+  /* Inherit max-width from .layout-container for consistency */
+}
+.layout-container.sidebar-hidden .content-area {
+  padding-left: 0;
+  max-width: 100%;
+}
+.icon-btn-toggle {
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+.icon-btn-toggle:hover {
+  background: #f1f5f9;
+  color: #F05A23;
+}
 .app-wrap {
   min-height: 100vh;
   width: 100%;
@@ -605,6 +1024,23 @@ onUnmounted(() => {
   font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
   color: var(--text-main, #333);
   overflow-x: hidden;
+}
+.layout-container {
+  display: flex;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  gap: 24px;
+}
+.layout-container.calendar-fullscreen {
+  /* Inherit max-width from .layout-container to remain consistent with other tabs */
+}
+.layout-container.calendar-fullscreen .content-area {
+  flex: 1;
+  max-width: 100%;
+}
+@media (max-width: 768px) {
+  .layout-container { padding: 0; gap: 0; }
 }
 .mobile-hero-section {
   background: linear-gradient(135deg, #FF6B00 0%, #FF8533 100%);
@@ -684,9 +1120,10 @@ onUnmounted(() => {
   box-shadow: none;
 }
 .m-blue { background: #1e88e5; color: #fff; border-color: transparent; }
+.m-purple-gradient { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); color: #fff; border-color: transparent; }
 .m-orange { background: #FF6B00; color: #fff; border-color: transparent; }
 .m-green { background: #43a047; color: #fff; border-color: transparent; }
-.m-purple { background: #8e24aa; color: #fff; border-color: transparent; }
+.m-pink { background: #FFB6C1; color: #fff; border-color: transparent; }
 .m-red { background: #e53935; color: #fff; border-color: transparent; }
 .m-slate { background: #546e7a; color: #fff; border-color: transparent; }
 .menu-icon { width: 22px; height: 22px; stroke-width: 2.5px; }
@@ -852,6 +1289,378 @@ onUnmounted(() => {
 .team-details { flex: 1; }
 .team-name { font-weight: 700; font-size: 1.05rem; margin-bottom: 4px; }
 .team-sub { font-size: 0.85rem; color: #757575; }
+
+/* Calendar Tab Layout */
+.calendar-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+@media (min-width: 1024px) {
+  .calendar-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}
+
+.calendar-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+@media (min-width: 1024px) {
+  .calendar-sidebar {
+    width: 280px;
+  }
+}
+
+.calendar-main {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Header Stats */
+.calendar-header-stats {
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.streak-cool-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  padding: 6px 16px;
+  border-radius: 99px;
+  box-shadow: 0 4px 15px rgba(244, 63, 94, 0.1);
+  border: 1px solid #fff5f5;
+  margin-right: 12px;
+}
+
+.streak-cool-header .streak-fire-wrap {
+  width: 32px;
+  height: 32px;
+}
+
+.streak-cool-header .fire-emoji {
+  font-size: 20px;
+}
+
+.streak-cool-header .fire-glow {
+  width: 24px;
+  height: 24px;
+}
+
+.streak-cool-header .streak-count {
+  font-size: 16px;
+}
+
+.streak-cool-header .streak-label {
+  font-size: 9px;
+}
+
+@media (max-width: 768px) {
+  .streak-cool-header {
+    padding: 4px 12px;
+    margin-right: 0;
+  }
+}
+
+.streak-cool {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #fff;
+  padding: 12px 24px;
+  border-radius: 99px;
+  box-shadow: 0 10px 25px rgba(244, 63, 94, 0.1);
+  border: 1px solid #fff5f5;
+  animation: float 3s ease-in-out infinite;
+}
+
+.streak-fire-wrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fire-emoji {
+  font-size: 32px;
+  position: relative;
+  z-index: 2;
+  animation: fire-vibe 0.5s ease-in-out infinite alternate;
+}
+
+.fire-glow {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  background: #f43f5e;
+  filter: blur(15px);
+  border-radius: 50%;
+  opacity: 0.6;
+  animation: pulse-glow 2s infinite;
+}
+
+.streak-count {
+  font-size: 24px;
+  font-weight: 900;
+  color: #1e293b;
+  line-height: 1;
+}
+
+.streak-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@keyframes fire-vibe {
+  from { transform: scale(1) rotate(-2deg); }
+  to { transform: scale(1.1) rotate(2deg); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.3); opacity: 0.7; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* Sidebar Filtering */
+.sidebar-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+  padding-left: 8px;
+}
+
+.activity-filter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.filter-item:hover {
+  background: #f8fafc;
+}
+
+.filter-item.active {
+  background: #fff;
+  border-color: #F05A23;
+  box-shadow: 0 4px 12px rgba(240, 90, 35, 0.08);
+}
+
+.filter-icon {
+  width: 32px;
+  height: 32px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+}
+
+.filter-item.active .filter-icon {
+  background: #fef0eb;
+  color: #F05A23;
+}
+
+.filter-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #cbd5e1;
+}
+
+.filter-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.filter-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.filter-item.active .filter-name {
+  color: #F05A23;
+}
+
+@media (max-width: 1023px) {
+  .activity-filter-list {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: none;
+  }
+  .activity-filter-list::-webkit-scrollbar { display: none; }
+  .filter-item {
+    min-width: 140px;
+    background: #f8fafc;
+  }
+}
+
+.m-status-icon-new {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #f8fafc;
+  border-radius: 10px;
+}
+
+.m-emoji {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.m-status-icon-new .fire { color: #f97316; }
+.m-status-icon-new .upcoming { color: #64748b; }
+.m-status-icon-new .missed { color: #ef4444; }
+
+/* Day Missions */
+.mission-list { display: flex; flex-direction: column; gap: 12px; }
+.calendar-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 12px;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.legend-icon {
+  font-size: 16px;
+  font-weight: 800;
+}
+.legend-icon.missed { color: #ef4444; }
+.legend-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+}
+.mission-item { display: flex; align-items: center; gap: 16px; padding: 14px; background: #f8fafc; border-radius: 12px; border: 1px solid #edf2f7; }
+.m-status-icon { color: #94a3b8; display: flex; align-items: center; justify-content: center; width: 8px; height: 16px; margin-left: 0px; margin-right: 0px; }
+.m-info { flex: 1; }
+.m-title { font-size: 1rem; font-weight: 700; color: #1e293b; }
+.m-meta { font-size: 0.85rem; color: #64748b; }
+.m-badge { font-size: 0.75rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; }
+.m-badge.approved { background: #dcfce7; color: #166534; }
+.m-badge.pending { background: #fef3c7; color: #92400e; }
+.m-badge.rejected { background: #fee2e2; color: #991b1b; }
+.m-badge.missed { background: #fee2e2; color: #ef4444; }
+.m-badge.upcoming { background: #f8fafc; color: #94a3b8; border: 1px solid #e2e8f0; }
+.m-badge.active { background: #fef3c7; color: #92400e; }
+
+/* Titles Tab */
+.titles-container-compact { display: flex; flex-direction: column; gap: 20px; }
+.titles-header-box { background: #fff; padding: 20px; border-radius: 16px; border: 1.5px solid #edf2f7; display: flex; flex-direction: column; gap: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
+.titles-stats-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.titles-count-info { display: flex; flex-direction: column; }
+.count-label { font-size: 0.75rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.count-value { font-size: 1.25rem; font-weight: 800; color: #1e293b; }
+.titles-progress-container { flex: 1; display: flex; align-items: center; gap: 12px; max-width: 300px; }
+.titles-progress-bar { flex: 1; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+.titles-progress-fill { height: 100%; background: linear-gradient(90deg, #F05A23 0%, #FF8533 100%); border-radius: 4px; transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.progress-percent { font-size: 0.85rem; font-weight: 700; color: #F05A23; min-width: 40px; text-align: right; }
+.titles-search-wrap { width: 100%; }
+.title-search-input { width: 100%; padding: 10px 16px; border-radius: 12px; border: 1.5px solid #f1f5f9; background: #f8fafc; font-size: 0.9rem; transition: all 0.2s; }
+.title-search-input:focus { border-color: #F05A23; background: #fff; outline: none; box-shadow: 0 0 0 4px rgba(240, 90, 35, 0.1); }
+.titles-grid-compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .titles-grid-compact { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+}
+.title-box-compact {
+  background: #fff; border: 1px solid #edf2f7; border-radius: 12px; padding: 12px;
+  display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden;
+}
+.title-box-compact:hover { transform: translateY(-2px); border-color: #cbd5e1; box-shadow: 0 6px 12px rgba(0,0,0,0.05); }
+.title-box-compact.is-equipped { background: #fffaf5; border-color: #F05A23; box-shadow: 0 4px 12px rgba(240, 90, 35, 0.1); }
+.title-box-compact.is-locked { background: #f8fafc; border-color: #e2e8f0; }
+.t-desc-mini { font-size: 0.85rem; color: #64748b; margin: 4px 0 0; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; }
+.t-hint-mini { font-size: 0.8rem; color: #94a3b8; margin: 4px 0 0; display: flex; align-items: center; gap: 4px; font-style: italic; }
+.title-action-wrap { display: flex; gap: 4px; }
+.btn-mini-action {
+  flex: 1; padding: 6px; border-radius: 8px; border: 1px solid #F05A23; background: #fff;
+  color: #F05A23; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+.btn-mini-action:hover { background: #fff5f2; }
+.btn-mini-action.equipped { background: #F05A23; color: #fff; border-color: #F05A23; }
+.btn-mini-claim {
+  flex: 1; padding: 6px; border-radius: 8px; border: none;
+  background: linear-gradient(135deg, #F05A23 0%, #FF8533 100%);
+  color: #fff; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.15s;
+}
+.btn-mini-claim:hover { opacity: 0.9; transform: scale(1.02); }
+.btn-mini-code { background: linear-gradient(135deg, #1e293b 0%, #334155 100%); display: flex; align-items: center; justify-content: center; gap: 4px; }
+.lock-icon-only { width: 100%; display: flex; justify-content: center; color: #cbd5e1; padding: 4px; }
+
+/* Empty States */
+.empty-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px;
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 1px dashed #e2e8f0;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+.section-title-sm { font-size: 1rem; font-weight: 700; color: #334155; }
+.m-yellow { background: #f59e0b; color: #fff; border-color: transparent; }
 .ev-list { display: flex; flex-direction: column; gap: 12px; }
 .ev-card { display: flex; gap: 16px; padding: 12px; background: #fff; border-radius: 14px; border: 1px solid #f0f0f0; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.07); }
 .ev-poster { width: 64px; height: 64px; border-radius: 8px; overflow: hidden; background: #eee; flex-shrink: 0; }
@@ -876,12 +1685,12 @@ onUnmounted(() => {
 .av-large img { width: 100%; height: 100%; object-fit: cover; }
 .mobile-split .av-large { width: 100px; height: 100px; }
 @media (min-width: 768px) {
-  .app-wrap.is-desktop { padding: 24px; }
+  .app-wrap.is-desktop { padding: 40px 24px; }
   .layout-container {
-    max-width: 1200px;
+    max-width: 1440px;
     margin: 0 auto;
     display: flex;
-    gap: 24px;
+    gap: 32px;
     align-items: flex-start;
   }
   .nav-sidebar {
@@ -897,8 +1706,8 @@ onUnmounted(() => {
     margin-bottom: 20px;
   }
   .pc-avatar {
-    width: 48px;
-    height: 48px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background: #f0f0f0;
     overflow: hidden;
@@ -929,17 +1738,11 @@ onUnmounted(() => {
     transition: background 0.2s;
   }
   .menu-item:hover { background: transparent; }
-  .menu-item.active { background: transparent; }
-  .menu-item.active .menu-label { font-weight: 700; color: #1a1a1a; }
-  .menu-item.active .menu-icon-wrap { transform: scale(1.05); box-shadow: none; }
-  .menu-item.active.mi-general .menu-label { color: #0284c7; }
-  .menu-item.active.mi-contact .menu-label { color: #ea580c; }
-  .menu-item.active.mi-tanita .menu-label { color: #16a34a; }
-  .menu-item.active.mi-team .menu-label { color: #9333ea; }
-  .menu-item.active.mi-events .menu-label { color: #dc2626; }
+  .menu-item.active .menu-label { font-weight: 700; color: #F05A23; }
+  .menu-item.active .menu-icon-wrap { border-color: #F05A23; transform: scale(1.05); }
   .menu-icon-wrap { width: 34px; height: 34px; border-radius: 10px; border: 1.5px solid #eaeaea; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
   .menu-icon { width: 17px; height: 17px; }
-  .menu-label { font-size: 0.95rem; text-align: left; color: #555; font-weight: 500; transition: color 0.2s; }
+  .menu-label { font-size: 1rem; text-align: left; color: #334155; font-weight: 500; transition: color 0.2s; }
   .pc-only { display: flex; }
   .logout-item { margin-top: 24px; border-top: 1px solid #efefef; padding-top: 24px; border-radius: 0; }
   .logout-item:hover { background: transparent; }
@@ -954,11 +1757,11 @@ onUnmounted(() => {
     background: #fff;
     border-radius: 12px;
     box-shadow: 0 10px 40px rgba(0,0,0,0.08);
-    padding: 32px;
+    padding: 64px;
   }
   .card-header { padding: 0 0 20px 0; align-items: flex-start; }
-  .card-title { font-size: 1.25rem; }
-  .card-subtitle { font-size: 0.85rem; color: #757575; margin-top: 4px; }
+  .card-title { font-size: 1.5rem; font-weight: 800; color: #1e293b; }
+  .card-subtitle { font-size: 0.95rem; color: #64748b; margin-top: 6px; }
   .card-body { padding: 20px 0 0 0; overflow-y: visible; }
   .profile-split-layout { display: flex; flex-direction: column; gap: 40px; align-items: center; }
   .profile-form-area { width: 100%; max-width: 500px; border-right: none; }
@@ -1005,8 +1808,8 @@ onUnmounted(() => {
 }
 @media (min-width: 1024px) {
   .profile-split-layout { flex-direction: row; align-items: flex-start; justify-content: space-between; }
-  .profile-form-area { flex: 1; padding-right: 40px; border-right: 1px solid #efefef; max-width: none; order: 1; }
-  .profile-avatar-area { width: 220px; flex-shrink: 0; order: 2; padding-bottom: 0; }
+  .profile-form-area { flex: 1; padding-right: 40px; border-right: 1px solid #efefef; max-width: 600px; order: 1; }
+  .profile-avatar-area { width: 280px; flex-shrink: 0; order: 2; padding-bottom: 0; }
 }
 .fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
@@ -1230,4 +2033,62 @@ onUnmounted(() => {
 .is-list { display: flex; flex-direction: column; gap: 12px; }
 .is-title { font-size: 1.1rem; font-weight: 700; color: #0f172a; margin: 0; }
 .is-item { font-size: 1rem; color: #334155; }
+/* Mission Stats Summary */
+.stats-grid-simple { display: flex; flex-direction: column; gap: 12px; }
+.stat-row { background: #fff; border-radius: 12px; padding: 16px; border: 1px solid #f0f0f0; box-shadow: 0 4px 12px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; transition: transform 0.2s; }
+.stat-row:hover { transform: translateY(-2px); border-color: #e2e8f0; }
+.stat-t-name { font-weight: 700; color: #1e293b; font-size: 0.95rem; }
+.stat-e-name { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+.stat-metrics { display: flex; gap: 16px; text-align: right; }
+.metric { display: flex; flex-direction: column; gap: 2px; }
+.m-label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; }
+.m-val { font-size: 0.9rem; font-weight: 800; color: #334155; }
+.m-val.success { color: #16a34a; }
+.m-val.danger { color: #dc2626; }
+@media (max-width: 640px) {
+  .stat-row { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .stat-metrics { width: 100%; justify-content: space-between; }
+}
+
+
+
+/* Calendar Dropdown & Layout V2 */
+.cal-dropdown-backdrop { position: fixed; inset: 0; z-index: 100; cursor: default; }
+.calendar-layout-v2 { display: flex; flex-direction: column; gap: 0; position: relative; }
+.calendar-main-v2 { flex: 1; min-width: 0; width: 100%; max-width: 1200px; margin: 0 auto; }
+.cal-filter-wrap { position: relative; z-index: 110; max-width: 440px; margin: 0 auto; }
+.cal-dropdown-trigger { width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px 16px; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 14px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+.cal-dropdown-trigger:hover { border-color: #F05A23; box-shadow: 0 6px 16px rgba(240,90,35,0.08); }
+.cal-trigger-thumb { width: 24px; height: 24px; border-radius: 6px; overflow: hidden; flex-shrink: 0; border: 1px solid #eee; }
+.cal-trigger-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.cal-trigger-text { text-align: center; font-weight: 700; color: #1e293b; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-activity-dropdown { position: absolute; top: calc(100% + 8px); left: 0; width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 20px 50px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; z-index: 120; overflow: hidden; }
+.cal-dropdown-search { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; color: #94a3b8; }
+.cal-dropdown-search input { flex: 1; border: none; outline: none; font-size: 0.95rem; font-family: inherit; color: #1e293b; }
+.cal-dropdown-list { max-height: 380px; overflow-y: auto; padding: 8px; }
+.cal-dropdown-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; cursor: pointer; transition: all 0.2s; margin-bottom: 2px; }
+.cal-dropdown-item:hover { background: #f8fafc; }
+.cal-dropdown-item.active { background: #fef0eb; }
+.item-icon-box { width: 36px; height: 36px; background: #f1f5f9; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b; }
+.cal-dropdown-item.active .item-icon-box { background: #F05A23; color: #fff; }
+.item-thumb-box { width: 36px; height: 36px; border-radius: 8px; overflow: hidden; border: 1px solid #eee; flex-shrink: 0; }
+.item-thumb-box img { width: 100%; height: 100%; object-fit: cover; }
+.item-info { flex: 1; min-width: 0; }
+.item-name { font-weight: 600; font-size: 0.95rem; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-dropdown-item.active .item-name { color: #F05A23; }
+.item-sub { font-size: 0.78rem; color: #64748b; margin-top: 1px; }
+.dropdown-fade-enter-active, .dropdown-fade-leave-active { transition: opacity 0.2s, transform 0.2s; }
+.dropdown-fade-enter-from, .dropdown-fade-leave-to { opacity: 0; transform: translateY(-10px); }
+
+/* Responsive Expansion */
+.sidebar-hidden .calendar-main-v2, .calendar-fullscreen .calendar-main-v2 {
+  max-width: 100%;
+}
+.sidebar-hidden .calendar-tab, .calendar-fullscreen .calendar-tab {
+  padding-left: 20px;
+  padding-right: 20px;
+}
+.calendar-tab { font-family: 'Sarabun', sans-serif !important; }
+.cal-trigger-text, .item-name, .item-sub, .m-label, .m-val, .stat-t-name { font-family: 'Sarabun', sans-serif !important; }
 </style>
+

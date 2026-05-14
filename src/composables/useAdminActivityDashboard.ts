@@ -1135,6 +1135,65 @@ export function useAdminActivityDashboard(
       : cols;
   });
 
+  const currentMonthDates = computed(() => {
+    const dates: any[] = [];
+    const year = selectedYear.value;
+    const month = selectedMonth.value;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const rawStart =
+      eventInfo.value?.is_continuous_event && eventInfo.value?.created_at
+        ? eventInfo.value.created_at
+        : eventInfo.value?.start_date ||
+          eventInfo.value?.created_at ||
+          new Date().toISOString();
+    const startYMD =
+      typeof rawStart === "string"
+        ? rawStart.substring(0, 10)
+        : getYMD(new Date(rawStart));
+
+    const rawEnd = eventInfo.value?.is_continuous_event
+      ? "9999-99-99"
+      : eventInfo.value?.end_date || "9999-99-99";
+    const endYMD =
+      typeof rawEnd === "string"
+        ? rawEnd.substring(0, 10)
+        : getYMD(new Date(rawEnd));
+
+    for (let i = 1; i <= daysInMonth; i++) {
+      const d = new Date(year, month, i);
+      const dStr = getYMD(d);
+      if (dStr < startYMD || dStr > endYMD) continue;
+      dates.push({ date: d, dStr });
+    }
+    return dates;
+  });
+
+  const visibleTasks = computed(() => {
+    if (selectedTaskIds.value.length === 0) return eventTasks.value;
+    return eventTasks.value.filter((t) => selectedTaskIds.value.includes(t.id));
+  });
+
+  const isTaskExpectedOnDate = (taskId: number, dStr: string) => {
+    const task = eventTasks.value.find((t) => t.id === taskId);
+    if (!task) return false;
+    const date = new Date(dStr);
+    const dayOfWeek = date.getDay();
+    const tDateStr = task.task_date ? task.task_date.split("T")[0] : null;
+    if (tDateStr) return tDateStr === dStr;
+    let allowed = task.allowed_days;
+    if (typeof allowed === "string") {
+      try {
+        allowed = JSON.parse(allowed);
+      } catch {
+        allowed = null;
+      }
+    }
+    return (
+      Array.isArray(allowed) && allowed.some((day) => Number(day) === dayOfWeek)
+    );
+  };
+
   const userTrackingSheet = computed(() => {
     let list = filteredRegistrants.value;
     const todayStr = getYMD(new Date());
@@ -1937,6 +1996,9 @@ export function useAdminActivityDashboard(
     goToMonth,
     goToToday,
     currentMonthColumns,
+    currentMonthDates,
+    visibleTasks,
+    isTaskExpectedOnDate,
     userTrackingSheet,
     trackingMonthOptions,
     participationExpected,
