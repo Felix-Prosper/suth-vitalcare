@@ -263,6 +263,14 @@ export function useProfileForm(user: any, tanitaRef: any) {
       const params = new URLSearchParams({ type: "profile", name: username });
       const formData = new FormData();
       formData.append("image", file);
+      console.log("[upload:profile:start]", {
+        username,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        endpoint: `/api/upload?${params}`,
+        userId: user.value.id,
+      });
       const uploadRes = await fetch(`/api/upload?${params}`, {
         method: "POST",
         headers: { "x-user-id": String(user.value.id) },
@@ -270,9 +278,15 @@ export function useProfileForm(user: any, tanitaRef: any) {
       });
       if (!uploadRes.ok) {
         const err = await uploadRes.json().catch(() => ({}));
+        console.error("[upload:profile:failed]", {
+          status: uploadRes.status,
+          statusText: uploadRes.statusText,
+          error: err,
+        });
         throw new Error(err.error || `Upload failed (${uploadRes.status})`);
       }
       const { url } = await uploadRes.json();
+      console.log("[upload:profile:success]", { url });
       // Save the returned URL to the user profile in the DB
       const res = await fetch(`/api/users/${user.value.id}/profile`, {
         method: "PATCH",
@@ -288,9 +302,16 @@ export function useProfileForm(user: any, tanitaRef: any) {
         if (form.value) form.value.picture_url = updatedUser.picture_url;
       } else {
         const errJson = await res.json();
+        console.error("[upload:profile:db-update-failed]", {
+          status: res.status,
+          statusText: res.statusText,
+          error: errJson,
+          uploadedUrl: url,
+        });
         throw new Error(errJson.error || "Database update failed");
       }
     } catch (err) {
+      console.error("[upload:profile:error]", err);
       showError("ไม่สามารถอัปโหลดรูปโปรไฟล์ได้ กรุณาลองใหม่อีกครั้ง");
     } finally {
       isUploading.value = false;

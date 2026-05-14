@@ -781,6 +781,13 @@ router.patch("/:id/profile", async (req, res) => {
     }
 
     const updates = req.body;
+    if ("picture_url" in updates) {
+      console.log("[profile:update-picture:start]", {
+        targetUserId: id,
+        requesterId,
+        picture_url: updates.picture_url,
+      });
+    }
 
     // Whitelist safe fields for users
     const allowedFields = [
@@ -806,6 +813,14 @@ router.patch("/:id/profile", async (req, res) => {
     const setClause = updateKeys.map(k => `${k} = ?`).join(', ');
 
     const [result]: any = await pool.query(`UPDATE users SET ${setClause} WHERE id = ?`, [...updateValues, id]);
+    if ("picture_url" in filteredUpdates) {
+      console.log("[profile:update-picture:db-result]", {
+        targetUserId: id,
+        affectedRows: result?.affectedRows,
+        changedRows: result?.changedRows,
+        picture_url: filteredUpdates.picture_url,
+      });
+    }
 
     const [rows]: any = await pool.query('SELECT * FROM users WHERE id = ?', [id]);
 
@@ -822,7 +837,11 @@ router.patch("/:id/profile", async (req, res) => {
 
     res.json(decryptFields(rows[0], USER_ENCRYPTED_FIELDS) || {});
   } catch (error: any) {
-    console.error('[PATCH PROFILE] Error:', error.message);
+    console.error('[PATCH PROFILE] Error:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+    });
     res.status(500).json({ error: "Internal Server Error" });
   }
 });

@@ -655,6 +655,15 @@ export function useMissions() {
             const params = new URLSearchParams({ type: 'submissions', name: taskLabel })
             const formData = new FormData()
             formData.append('image', file)
+            console.log('[upload:mission:start]', {
+                taskLabel,
+                taskId: activeTask.value?.id,
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size,
+                endpoint: `/api/upload?${params}`,
+                userId: authStore.user?.id ?? '',
+            })
 
             const uploadRes = await fetch(`/api/upload?${params}`, {
                 method: 'POST',
@@ -663,9 +672,15 @@ export function useMissions() {
             })
             if (!uploadRes.ok) {
                 const err = await uploadRes.json().catch(() => ({}))
+                console.error('[upload:mission:failed]', {
+                    status: uploadRes.status,
+                    statusText: uploadRes.statusText,
+                    error: err,
+                })
                 throw new Error(err.error || `Upload failed (${uploadRes.status})`)
             }
             const { url } = await uploadRes.json()
+            console.log('[upload:mission:success]', { url })
             uploadedImageUrl.value = url
 
             // Auto-trigger AI analysis after upload

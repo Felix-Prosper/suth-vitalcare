@@ -864,6 +864,15 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
     const formData = new FormData();
     formData.append("image", file);
     const params = new URLSearchParams({ type: "activity", name: label });
+    console.log("[upload:activity:start]", {
+      type,
+      label,
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: file.size,
+      endpoint: `/api/upload?${params}`,
+      userId: authStore.user?.id,
+    });
     const res = await fetch(`/api/upload?${params}`, {
       method: "POST",
       headers: { "x-user-id": String(authStore.user?.id) },
@@ -871,9 +880,15 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
+      console.error("[upload:activity:failed]", {
+        status: res.status,
+        statusText: res.statusText,
+        error: err,
+      });
       throw new Error(err.error || `Upload failed (${res.status})`);
     }
     const data = await res.json();
+    console.log("[upload:activity:success]", data);
     return data.url as string;
   };
   const uploadSectionFile = async (file: File, index: number) => {
@@ -882,6 +897,7 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       const url = await uploadToLocal(file, "section");
       form.value.sections[index].image = url;
     } catch (error: any) {
+      console.error("[upload:activity-section:error]", error);
       uiStore.toast("error", "อัปโหลดรูปภาพล้มเหลว", error.message);
     } finally {
       uploading.value = false;
@@ -893,6 +909,7 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       const url = await uploadToLocal(file, "activity");
       form.value.poster = url;
     } catch (error: any) {
+      console.error("[upload:activity-poster:error]", error);
       uiStore.toast("error", "อัปโหลดรูปภาพล้มเหลว", error.message);
     } finally {
       uploading.value = false;

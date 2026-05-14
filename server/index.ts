@@ -46,19 +46,83 @@ import fs from "fs";
 // Store uploads under public/uploads for static serving in deployment
 const uploadDir = path.join(__dirname, "../public/uploads");
 const tempDir = path.join(uploadDir, "temp");
+const uploadLogDir = path.join(process.cwd(), "logs", "upload");
 if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+if (!fs.existsSync(uploadLogDir)) fs.mkdirSync(uploadLogDir, { recursive: true });
 // Ensure sub-folders exist
 ["activity", "profile", "banners", "submissions"].forEach((sub) =>
   fs.mkdirSync(path.join(uploadDir, sub), { recursive: true }),
 );
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, tempDir),
-  filename: (_req, _file, cb) =>
-    cb(null, `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`),
+console.log("[upload:init]", {
+  cwd: process.cwd(),
+  dirname: __dirname,
+  uploadDir,
+  tempDir,
+  uploadLogDir,
+  uploadDirExists: fs.existsSync(uploadDir),
+  tempDirExists: fs.existsSync(tempDir),
+  uploadLogDirExists: fs.existsSync(uploadLogDir),
 });
+
+function getBangkokDateString(date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+async function appendDailyUploadError(event: string, payload: Record<string, any>) {
+  try {
+    await fs.promises.mkdir(uploadLogDir, { recursive: true });
+    const now = new Date();
+    const logPath = path.join(uploadLogDir, `${getBangkokDateString(now)}.log`);
+    const line =
+      JSON.stringify({
+        ts: now.toISOString(),
+        event,
+        ...payload,
+      }) + "\n";
+    await fs.promises.appendFile(logPath, line, "utf8");
+  } catch (logError: any) {
+    console.error("[upload:daily-log-error]", logError?.message || logError);
+  }
+}
+
+function getImageExtension(mimetype = "") {
+  if (mimetype === "image/jpeg" || mimetype === "image/jpg") return "jpg";
+  if (mimetype === "image/png") return "png";
+  if (mimetype === "image/webp") return "webp";
+  if (mimetype === "image/gif") return "gif";
+  return "bin";
+}
+
+async function withTimeout<T>(promise: Promise<T>, ms: number, label: string) {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+fs.promises
+  .access(uploadDir, fs.constants.W_OK)
+  .then(() => console.log("[upload:init] uploadDir is writable"))
+  .catch((error: any) => {
+    console.error("[upload:init] uploadDir is NOT writable:", error.message);
+    appendDailyUploadError("uploadDir-not-writable", {
+      message: error.message,
+      uploadDir,
+    });
+  });
+
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB raw upload limit
 });
 
@@ -236,25 +300,78 @@ async function startServer() {
   // POST /api/upload?type=activity&name=ชื่อกิจกรรม
   // POST /api/upload?type=profile&name=username
   // Returns: { url: "/uploads/activity/ชื่อ-20260505.png" }
-  app.post("/api/upload", upload.single("image"), async (req, res) => {
+  app.post(
+    "/api/upload",
+    (req, res, next) => {
+      console.log("[upload:start]", {
+        method: req.method,
+        url: req.originalUrl,
+        contentType: req.headers["content-type"],
+        contentLength: req.headers["content-length"],
+        userId: req.headers["x-user-id"],
+        query: req.query,
+      });
+
+      upload.single("image")(req, res, (error: any) => {
+        if (!error) return next();
+
+        console.error("[upload:multer-error]", {
+          message: error.message,
+          code: error.code,
+          field: error.field,
+          storageErrors: error.storageErrors,
+        });
+        appendDailyUploadError("multer-error", {
+          message: error.message,
+          code: error.code,
+          field: error.field,
+          storageErrors: error.storageErrors,
+          url: req.originalUrl,
+          contentType: req.headers["content-type"],
+          contentLength: req.headers["content-length"],
+          userId: req.headers["x-user-id"],
+          query: req.query,
+        });
+
+        return res.status(400).json({
+          error:
+            error.code === "LIMIT_FILE_SIZE"
+              ? "Image is larger than 10MB"
+              : error.message || "Upload failed before processing",
+        });
+      });
+    },
+    async (req, res) => {
     const file = (req as any).file;
-    if (!file) return res.status(400).json({ error: "No image provided" });
+    if (!file) {
+      console.warn("[upload:no-file]", {
+        bodyKeys: Object.keys(req.body || {}),
+        query: req.query,
+        contentType: req.headers["content-type"],
+      });
+      appendDailyUploadError("no-file", {
+        bodyKeys: Object.keys(req.body || {}),
+        query: req.query,
+        contentType: req.headers["content-type"],
+        contentLength: req.headers["content-length"],
+        userId: req.headers["x-user-id"],
+      });
+      return res.status(400).json({ error: "No image provided" });
+    }
 
     try {
-      const sharp = (await import("sharp")).default;
-
       // Determine sub-folder and filename from query params
       const uploadType = String(req.query.type || "activity"); // "activity" | "profile" | "banners" | "submissions"
       const rawName = String(req.query.name || "image");
 
       // Sanitize: keep Thai letters, remove illegal filename chars, collapse spaces
-      const dateStr = new Date().toISOString().slice(0, 10); // e.g. 2026-05-05
+      const dateStr = getBangkokDateString(); // e.g. 2026-05-05
       const uniqueSuffix = Math.random().toString(36).substring(2, 8);
       const safeName = rawName
         .replace(/[\\/:*?"<>|]/g, "") // remove illegal filename chars
         .replace(/\s+/g, "-") // spaces → dash
         .slice(0, 60); // max 60 chars before date
-      const filename = `${safeName}-${dateStr}-${uniqueSuffix}.png`;
+      const filenameBase = `${safeName || "image"}-${dateStr}-${uniqueSuffix}`;
 
       // Map uploadType → subfolder (default to "activity" for unknown types)
       const VALID_FOLDERS = [
@@ -266,32 +383,96 @@ async function startServer() {
       const subFolder = VALID_FOLDERS.includes(uploadType as any)
         ? uploadType
         : "activity";
-      const destPath = path.join(uploadDir, subFolder, filename);
-
-      // Compress: max 1280px, optimized PNG output
-      const compressedBuffer = await sharp(file.path)
-        .resize(1280, 1280, { fit: "inside", withoutEnlargement: true })
-        .png({ compressionLevel: 9, adaptiveFiltering: true })
-        .toBuffer();
-
-      const meta = await sharp(compressedBuffer).metadata();
-      console.log(
-        `[upload] ${subFolder}/${filename} | ${meta.width}x${meta.height}px | ${(compressedBuffer.length / 1024).toFixed(0)} KB`,
-      );
-
-      // Delete temp file first (avoid Windows EBUSY)
-      fs.unlink(file.path, (e) => {
-        if (e) console.warn("[upload] temp cleanup:", e.message);
+      console.log("[upload:file-received]", {
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        size: file.size,
+        storage: "memory",
+        bufferBytes: file.buffer?.length,
+        uploadType,
+        subFolder,
+        filenameBase,
       });
 
-      // Write compressed file to destination
-      await fs.promises.writeFile(destPath, compressedBuffer);
+      let outputBuffer = file.buffer;
+      let outputExt = getImageExtension(file.mimetype);
+
+      try {
+        const sharp = (await import("sharp")).default;
+        console.log("[upload:sharp-start]", {
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+        });
+
+        const sharpPromise = sharp(file.buffer)
+          .resize(1280, 1280, { fit: "inside", withoutEnlargement: true })
+          .png({ compressionLevel: 9, adaptiveFiltering: true })
+          .toBuffer();
+
+        outputBuffer = await withTimeout(sharpPromise, 15_000, "sharp image processing");
+        outputExt = "png";
+        const meta = await sharp(outputBuffer).metadata();
+        console.log(
+          `[upload] ${subFolder}/${filenameBase}.${outputExt} | ${meta.width}x${meta.height}px | ${(outputBuffer.length / 1024).toFixed(0)} KB`,
+        );
+      } catch (sharpError: any) {
+        console.error("[upload:sharp-fallback]", {
+          message: sharpError?.message,
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+        });
+        appendDailyUploadError("sharp-fallback-original-file", {
+          message: sharpError?.message,
+          originalname: file.originalname,
+          mimetype: file.mimetype,
+          size: file.size,
+          uploadType,
+          subFolder,
+        });
+      }
+
+      const filename = `${filenameBase}.${outputExt}`;
+      const destPath = path.join(uploadDir, subFolder, filename);
+      await fs.promises.mkdir(path.dirname(destPath), { recursive: true });
+
+      // Write processed file, or original file if sharp failed/timed out.
+      await fs.promises.writeFile(destPath, outputBuffer);
+      const writtenStat = await fs.promises.stat(destPath);
 
       // Return a root-relative URL so Vite dev server & Express serve it correctly
+      console.log("[upload:success]", {
+        url: `/uploads/${subFolder}/${filename}`,
+        destPath,
+        bytesWritten: writtenStat.size,
+        fileExists: fs.existsSync(destPath),
+      });
       res.json({ url: `/uploads/${subFolder}/${filename}` });
     } catch (error: any) {
-      fs.unlink(file.path, () => {});
-      console.error("[upload] Error:", error);
+      console.error("[upload:error]", {
+        message: error?.message,
+        code: error?.code,
+        stack: error?.stack,
+        file: {
+          originalname: file?.originalname,
+          mimetype: file?.mimetype,
+          size: file?.size,
+        },
+        uploadDir,
+      });
+      appendDailyUploadError("processing-error", {
+        message: error?.message,
+        code: error?.code,
+        stack: error?.stack,
+        file: {
+          originalname: file?.originalname,
+          mimetype: file?.mimetype,
+          size: file?.size,
+        },
+        query: req.query,
+        uploadDir,
+      });
       res.status(500).json({ error: "Failed to process image" });
     }
   });
@@ -357,8 +538,15 @@ async function startServer() {
     }
   });
 
-  // Keep static access for any legacy files that weren't migrated
-  app.use("/uploads", express.static(uploadDir));
+  // Uploaded media is stored outside dist; IIS must proxy /uploads/* here.
+  app.use(
+    "/uploads",
+    express.static(uploadDir, {
+      fallthrough: false,
+      immutable: true,
+      maxAge: "30d",
+    }),
+  );
 
   // --- END TEMPORARY MIGRATION ---
 

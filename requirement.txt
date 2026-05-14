@@ -1,8 +1,0 @@
-
-Cloudflare:https://dash.cloudflare.com/a37f135dc1842c03ed3edcc3d0036fe5/turnstile
-MySQL:อยู่ในไฟล์Zipชื่อDB.sql
-LineOA:https://manager.line.biz/account/@016lzcdv/richmenu 
-Vitalcarebotadd:@016lzcdv
-API TYPHOON:https://playground.opentyphoon.ai/settings/api-key 
-#ผมใช้APIKeyจากหน้านี้โมเดลชื่อว่าtyphoon-v2.5-30b-a3b-instruct
-typhoon-ocrTyphoon OCR 1.5 (2B)

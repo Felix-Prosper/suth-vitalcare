@@ -1,5 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue";
+import fs from "fs";
 import path from "path";
 import { defineConfig, loadEnv } from "vite";
 import { visualizer } from "rollup-plugin-visualizer";
@@ -14,6 +15,16 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       tailwindcss(),
+      {
+        name: "copy-iis-web-config",
+        closeBundle() {
+          const source = path.resolve(__dirname, "web.config");
+          const target = path.resolve(__dirname, "dist", "web.config");
+          if (fs.existsSync(source) && fs.existsSync(path.dirname(target))) {
+            fs.copyFileSync(source, target);
+          }
+        },
+      },
       // ใช้ visualizer เฉพาะตอน production
       mode === "production" &&
         (visualizer({
@@ -59,7 +70,7 @@ export default defineConfig(({ mode }) => {
       minify: "terser",
       terserOptions: {
         compress: {
-          drop_console: true,
+          drop_console: false,
           drop_debugger: true,
         },
       },

@@ -576,6 +576,13 @@ const confirmCrop = async () => {
             });
             const formData = new FormData();
             formData.append("image", blob, "banner.png");
+            console.log("[upload:banner:start]", {
+                titleHint,
+                blobType: blob.type,
+                blobSize: blob.size,
+                endpoint: `/api/upload?${params}`,
+                userId: authStore.user?.id,
+            });
             const res = await fetch(`/api/upload?${params}`, {
                 method: "POST",
                 headers: { "x-user-id": String(authStore.user?.id) },
@@ -583,11 +590,18 @@ const confirmCrop = async () => {
             });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
+                console.error("[upload:banner:failed]", {
+                    status: res.status,
+                    statusText: res.statusText,
+                    error: err,
+                });
                 throw new Error(err.error || `Upload failed (${res.status})`);
             }
             const { url } = await res.json();
+            console.log("[upload:banner:success]", { url });
             form.value.image_url = url;
         } catch (error: any) {
+            console.error("[upload:banner:error]", error);
             uiStore.toast("error", "อัปโหลดรูปล้มเหลว", error.message);
         } finally {
             uploading.value = false;
