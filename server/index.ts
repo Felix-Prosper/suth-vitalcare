@@ -573,6 +573,29 @@ async function startServer() {
       await fs.promises.writeFile(destPath, outputBuffer);
       const writtenStat = await fs.promises.stat(destPath);
 
+      // --- AUTOMATED FILE CLEANUP ---
+      // Delete the old file if oldUrl is provided and points to our uploads directory
+      const oldUrl = req.query.oldUrl ? String(req.query.oldUrl) : null;
+      if (oldUrl && oldUrl.startsWith('/uploads/')) {
+        try {
+          // Reconstruct path to prevent directory traversal
+          const relativeOldPath = oldUrl.substring('/uploads/'.length); // e.g., "profile/user-123.png"
+          // We split and join to ensure it's normalized and safely within the uploadDir
+          const oldFilePath = path.join(uploadDir, ...relativeOldPath.split('/').filter(Boolean));
+          
+          // Verify it exists and is indeed a file within the uploadDir
+          if (oldFilePath.startsWith(uploadDir) && fs.existsSync(oldFilePath)) {
+            await fs.promises.unlink(oldFilePath);
+            console.log("[upload:cleanup:success]", { deletedUrl: oldUrl });
+          }
+        } catch (cleanupError: any) {
+          console.warn("[upload:cleanup:failed]", { 
+            oldUrl, 
+            error: cleanupError.message 
+          });
+        }
+      }
+
       // Return a root-relative URL so Vite dev server & Express serve it correctly
       console.log("[upload:success]", {
         url: `/uploads/${subFolder}/${filename}`,
@@ -606,6 +629,30 @@ async function startServer() {
         uploadDir,
       });
       res.status(500).json({ error: "Failed to process image" });
+    }
+  });
+
+  // DELETE /api/upload — specifically to clean up intermediate uploads if form is cancelled
+  app.delete("/api/upload", async (req, res) => {
+    try {
+      const { oldUrl } = req.body;
+      if (!oldUrl || !oldUrl.startsWith('/uploads/')) {
+        return res.status(400).json({ error: "Invalid url" });
+      }
+      
+      const relativeOldPath = oldUrl.substring('/uploads/'.length);
+      const oldFilePath = path.join(uploadDir, ...relativeOldPath.split('/').filter(Boolean));
+      
+      if (oldFilePath.startsWith(uploadDir) && fs.existsSync(oldFilePath)) {
+        await fs.promises.unlink(oldFilePath);
+        console.log("[upload:cleanup:cancelled]", { deletedUrl: oldUrl });
+        return res.json({ success: true, message: "Cleaned up cancelled upload" });
+      }
+      
+      res.json({ success: true, message: "File not found or already deleted" });
+    } catch (err: any) {
+      console.warn("[upload:cleanup:cancelled:failed]", { error: err.message });
+      res.status(500).json({ error: "Cleanup failed" });
     }
   });
 

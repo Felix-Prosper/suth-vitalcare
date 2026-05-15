@@ -18,6 +18,7 @@ import {
   ShieldCheck,
   AlertTriangle,
   Image as ImageIcon,
+  FileText,
 } from "lucide-vue-next";
 
 /* ==========================================
@@ -327,11 +328,6 @@ export function useAdminOverview() {
   const deep = ref<DeepInsights | null>(null);
   const growthMode = ref<"cum" | "new">("new");
 
-  // --- Growth Chart Filters ---
-  const growthFilterType = ref<"weekly" | "monthly" | "custom">("monthly");
-  const growthStartDate = ref("");
-  const growthEndDate = ref("");
-
   // --- Tanita State ---
   const tanitaInsights = ref<TanitaInsightUser[]>([]);
   const loadingTanita = ref(false);
@@ -465,16 +461,12 @@ export function useAdminOverview() {
      COMPUTED PROPERTIES
   ========================================== */
 
+  // --- ดึง 5 อันดับกิจกรรมที่มีจำนวนการส่งภารกิจสูงสุด ---
   const topSubmittedActivities = computed(() => {
-    return (data.value.activityBreakdown || [])
-      .map((a) => ({
-        id: a.id,
-        title: a.title,
-        participant_count: a.participant_count,
-        total_submissions: a.total_submissions,
-      }))
+    const activities = data.value.activityBreakdown || [];
+    return [...activities]
       .filter((a) => a.total_submissions > 0)
-      .sort((a, b) => b.total_submissions - a.total_submissions)
+      .sort((a, b) => (b.total_submissions || 0) - (a.total_submissions || 0))
       .slice(0, 5);
   });
 
@@ -535,7 +527,6 @@ export function useAdminOverview() {
     return { morning, afternoon, evening, night };
   });
 
-  // สรุปสถิติการทำตามเป้าหมายสำเร็จ
   const goalAchievementStats = computed(() => {
     const activities = data.value.activityBreakdown || [];
 
@@ -1071,7 +1062,7 @@ export function useAdminOverview() {
       });
       if (res.ok) teamViewerData.value = await res.json();
     } catch {
-      // intentionally silent (no console output in browser)
+      // intentionally silent
     } finally {
       loadingTeamViewer.value = false;
     }
@@ -1125,7 +1116,7 @@ export function useAdminOverview() {
       moveTargetTeamId.value = null;
       await fetchAllParticipants();
     } catch {
-      // intentionally silent (no console output in browser)
+      // intentionally silent
     } finally {
       savingTeamMove.value = false;
     }
@@ -1158,39 +1149,50 @@ export function useAdminOverview() {
   async function fetchStats(isBackground = false) {
     if (!isBackground) loading.value = true;
     try {
-      let realBannerCount = 0;
-
-      const [resSummary, resDeep, resBanners] = await Promise.all([
+      const [resSummary, resDeep] = await Promise.all([
         fetch("/api/stats/summary", {
           headers: { "x-user-id": String(authStore.user?.id || "") },
         }),
         fetch("/api/stats/deep-insights", {
           headers: { "x-user-id": String(authStore.user?.id || "") },
         }),
-        fetch("/api/banners", {
-          headers: { "x-user-id": String(authStore.user?.id || "") },
-        }).catch(() => null),
         fetchAllParticipants(),
         fetchInactiveStreak(),
       ]);
 
-      if (resBanners && resBanners.ok) {
-        const bannersData = await resBanners.json();
-        realBannerCount = Array.isArray(bannersData) ? bannersData.length : 0;
-      }
-
       if (resSummary.ok) {
         const json = await resSummary.json();
+        
+        const finishedCount = (json.activityBreakdown || []).filter((a: any) => {
+          if (a.is_continuous_event) return false;
+          if (!a.end_date) return false;
+          return new Date(a.end_date) < new Date();
+        }).length;
+
+        const draftCount = (json.activityBreakdown || []).filter((a: any) => {
+          return (a.status || "").toLowerCase() === "draft";
+        }).length;
+
         data.value = {
           ...json,
           stats: (json.stats || [])
             .filter((s: any) => s.label !== "คำขอรออนุมัติ")
-            .map((s: any) => ({
-              label: s.label,
-              value: s.value,
-              icon: s.icon || "Activity",
-              badge: s.badge || "+5.2%",
-            })),
+            .map((s: any) => {
+              if (s.label === "จำนวนทีม") {
+                return {
+                  label: "กิจกรรมที่สิ้นสุด",
+                  value: finishedCount,
+                  icon: "CheckCircle2",
+                  badge: "สรุปผล"
+                };
+              }
+              return {
+                label: s.label,
+                value: s.value,
+                icon: s.icon || "Activity",
+                badge: s.badge || "+5.2%",
+              };
+            }),
           userGrowth: (json.userGrowth || []).map(
             (g: any, _i: number, arr: any[]) => {
               const cum = arr
@@ -1202,15 +1204,15 @@ export function useAdminOverview() {
         };
 
         data.value.stats.push({
-          label: "จำนวนแบนเนอร์",
-          value: realBannerCount,
-          icon: "Image",
-          badge: "อัปเดต",
+          label: "กิจกรรมฉบับร่าง",
+          value: draftCount,
+          icon: "FileText",
+          badge: "สถานะ",
         });
       }
       if (resDeep.ok) deep.value = await resDeep.json();
     } catch {
-      // intentionally silent (no console output in browser)
+      // intentionally silent
     } finally {
       loading.value = false;
       await nextTick();
@@ -1269,7 +1271,7 @@ export function useAdminOverview() {
         }));
       }
     } catch {
-      // intentionally silent (no console output in browser)
+      // intentionally silent
     } finally {
       loadingAllParticipants.value = false;
     }
@@ -1291,7 +1293,7 @@ export function useAdminOverview() {
         }
       }
     } catch {
-      // intentionally silent (no console output in browser)
+      // intentionally silent
     } finally {
       loadingActivityOverview.value = false;
     }
@@ -1306,7 +1308,7 @@ export function useAdminOverview() {
       });
       if (res.ok) tanitaInsights.value = await res.json();
     } catch {
-      // intentionally silent (no console output in browser)
+      // intentionally silent
     } finally {
       loadingTanita.value = false;
     }
@@ -1351,7 +1353,7 @@ export function useAdminOverview() {
         }
       })
       .catch(() => {
-        // intentionally silent (no console output in browser)
+        // intentionally silent
       })
       .finally(() => {
         profileLoading.value = false;
@@ -1380,7 +1382,7 @@ export function useAdminOverview() {
       );
       if (res.ok) inactiveStreak.value = await res.json();
     } catch {
-      // intentionally silent (no console output in browser)
+      // intentionally silent
     } finally {
       loadingInactiveStreak.value = false;
     }
@@ -1394,7 +1396,7 @@ export function useAdminOverview() {
       });
       if (res.ok) allHealthAssessments.value = await res.json();
     } catch {
-      // intentionally silent (no console output in browser)
+      // intentionally silent
     } finally {
       loadingHealthAssessments.value = false;
     }
@@ -1442,7 +1444,7 @@ export function useAdminOverview() {
         );
       }
     } catch {
-      // intentionally silent (no console output in browser)
+      // intentionally silent
     } finally {
       savingComment.value = false;
     }
@@ -1472,7 +1474,7 @@ export function useAdminOverview() {
         participants.value = allParticipants.value.slice(0, 2);
       }
     } catch {
-      // intentionally silent (no console output in browser)
+      // intentionally silent
     } finally {
       loadingParticipants.value = false;
     }
@@ -1616,7 +1618,7 @@ export function useAdminOverview() {
               border: { display: false },
               ticks: { font: { size: 11 } },
               afterFit: function (scaleInstance: any) {
-                scaleInstance.width = 160; // กำหนดความกว้างแกน Y ให้คงที่
+                scaleInstance.width = 160; 
               },
             },
           },
@@ -1704,10 +1706,10 @@ export function useAdminOverview() {
               font: { size: 11 },
               padding: 10,
               precision: 0,
-              maxRotation: 0, // บังคับไม่ให้ตัวเลขหมุน
+              maxRotation: 0, 
               minRotation: 0,
-              autoSkip: true, // ข้ามตัวเลขที่วางไม่พอโดยอัตโนมัติ
-              maxTicksLimit: 8, // จำกัดจำนวน tick สูงสุด
+              autoSkip: true, 
+              maxTicksLimit: 8, 
             },
           },
           y: {
@@ -1715,7 +1717,6 @@ export function useAdminOverview() {
             grid: { display: false },
             border: { display: false },
             ticks: { font: { size: 11 } },
-            // เพิ่มจุดที่ 1: กำหนดความกว้างของแกน Y เพื่อบังคับให้เท่ากับกราฟล่าง
             afterFit: function (scaleInstance: any) {
               scaleInstance.width = 160;
             },
@@ -1791,7 +1792,7 @@ export function useAdminOverview() {
         labels: labels,
         datasets: [
           {
-            label: "จำนวน (คน)",
+            label: "จำนวน", // เอาคำว่า (คน) ออก
             data: data,
             backgroundColor: bgColors,
             borderRadius: 6,
@@ -1827,7 +1828,12 @@ export function useAdminOverview() {
             grid: { color: "#f1f5f9", borderDash: [4, 4] },
             border: { display: false },
             beginAtZero: true,
-            ticks: { font: { size: 11 }, padding: 10 },
+            ticks: { 
+              font: { size: 11 }, 
+              padding: 10,
+              precision: 0, // บังคับไม่ให้แสดงทศนิยม
+              stepSize: 1   // เพิ่มสเกลขึ้นทีละ 1
+            },
           },
         },
       },
@@ -2188,17 +2194,16 @@ export function useAdminOverview() {
             ticks: {
               padding: 10,
               precision: 0,
-              maxRotation: 0, // บังคับไม่ให้ตัวเลขหมุน
+              maxRotation: 0, 
               minRotation: 0,
-              autoSkip: true, // ข้ามตัวเลขที่วางไม่พอโดยอัตโนมัติ
-              maxTicksLimit: 8, // จำกัดจำนวน tick สูงสุด
+              autoSkip: true, 
+              maxTicksLimit: 8, 
             },
           },
           y: {
             grid: { display: false },
             border: { display: false },
             ticks: { font: { size: 11 } },
-            // เพิ่มจุดที่ 2: กำหนดความกว้างของแกน Y ให้เท่ากับกราฟด้านบนเป๊ะ
             afterFit: function (scaleInstance: any) {
               scaleInstance.width = 160;
             },
@@ -2606,6 +2611,8 @@ export function useAdminOverview() {
         return AlertTriangle;
       case "Image":
         return ImageIcon;
+      case "FileText":
+        return FileText;
       default:
         return Activity;
     }
@@ -2685,9 +2692,7 @@ export function useAdminOverview() {
     showTeamsListModal,
     teamsListSearch,
     roleDistributionData,
-    growthFilterType,
-    growthStartDate,
-    growthEndDate,
+    topSubmittedActivities, // <--- ใช้ตัวนี้แทนในการแสดงผล
 
     // Computed
     totalUsersCount,
@@ -2709,7 +2714,6 @@ export function useAdminOverview() {
     ongoingActivities,
     submissionTimeStats,
     goalAchievementStats,
-    topSubmittedActivities,
 
     // Methods
     openStatsModal,

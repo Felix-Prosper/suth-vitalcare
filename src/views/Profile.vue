@@ -1079,15 +1079,14 @@ onUnmounted(() => {
 .menu-items-container.horizontal-scroll {
   display: flex;
   flex-direction: row;
-  flex-wrap: nowrap; /* 🌟 ป้องกันไอคอนตกบรรทัด 🌟 */
+  flex-wrap: nowrap;
   gap: 20px;
   padding: 8px 20px 16px;
   overflow-x: auto;
-  width: auto;
-  min-width: 100%;
+  width: 100%;
+  max-width: 100vw;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  /* 🌟 บังคับให้เนื้อหาขยายออกไปเพื่อให้เลื่อนได้บนจอเล็ก 🌟 */
 }
 .menu-items-container.horizontal-scroll::-webkit-scrollbar { display: none; }
 .menu-title { padding: 0 20px; }

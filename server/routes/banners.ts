@@ -182,6 +182,34 @@ async function updateHandler(req: any, res: any) {
     if (keys.length === 0)
       return res.status(400).json({ error: "No valid updates provided" });
 
+    // Handle physical file deletion if image_url is changing
+    if ("image_url" in filteredUpdates) {
+      const [rows]: any = await pool.query(
+        "SELECT image_url FROM banners WHERE id = ?",
+        [id],
+      );
+      if (rows.length > 0) {
+        const oldImageUrl = rows[0].image_url;
+        if (
+          oldImageUrl &&
+          oldImageUrl !== filteredUpdates.image_url &&
+          oldImageUrl.startsWith("/uploads/")
+        ) {
+          try {
+            const relativeOldPath = oldImageUrl.substring('/uploads/'.length);
+            const filePath = path.join(process.cwd(), "public", "uploads", ...relativeOldPath.split('/').filter(Boolean));
+            console.log(`[banner update] Deleting old file: ${filePath}`);
+            if (fs.existsSync(filePath)) {
+              await fs.promises.unlink(filePath);
+              console.log(`[banner update] Deleted old file successfully.`);
+            }
+          } catch (err: any) {
+            console.warn(`[banner update] Failed to delete old file: ${oldImageUrl}`, err.message);
+          }
+        }
+      }
+    }
+
     const fields = keys.map((k) => `${k} = ?`).join(", ");
     const values = [...Object.values(filteredUpdates), id];
 
@@ -221,15 +249,17 @@ router.delete("/:id", async (req, res) => {
     if (rows.length > 0) {
       const imageUrl = rows[0].image_url;
       if (imageUrl && imageUrl.startsWith('/uploads/')) {
-        const filePath = path.join(process.cwd(), 'public', imageUrl);
         try {
+          const relativeOldPath = imageUrl.substring('/uploads/'.length);
+          const filePath = path.join(process.cwd(), "public", "uploads", ...relativeOldPath.split('/').filter(Boolean));
+          console.log(`[banner delete] Deleting physical file: ${filePath}`);
           if (fs.existsSync(filePath)) {
             await fs.promises.unlink(filePath);
-            console.log(`[banner] Deleted physical file: ${filePath}`);
+            console.log(`[banner delete] Deleted physical file successfully.`);
           }
         } catch (err: any) {
           console.warn(
-            `[banner] Failed to delete physical file: ${imageUrl}`,
+            `[banner delete] Failed to delete physical file: ${imageUrl}`,
             err.message,
           );
         }

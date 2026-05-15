@@ -122,6 +122,7 @@ const resetFormState = () => {
         position: "activity",
         is_active: true,
     };
+    originalImageUrl.value = "";
     isEditing.value = false;
 };
 
@@ -129,6 +130,7 @@ const showCropper = ref(false);
 const cropperTarget = ref<"banner">("banner");
 const cropperRawFile = ref<File | null>(null);
 const cropperImgUrl = ref("");
+const originalImageUrl = ref(""); // Track DB image to avoid deleting it before Save
 const cropperEl = ref<HTMLImageElement | null>(null);
 let cropperInstance: Cropper | null = null;
 
@@ -574,6 +576,9 @@ const confirmCrop = async () => {
                 type: "banners",
                 name: titleHint,
             });
+            if (form.value.image_url && form.value.image_url !== originalImageUrl.value) {
+                params.append("oldUrl", form.value.image_url);
+            }
             const formData = new FormData();
             formData.append("image", blob, "banner.png");
             console.log("[upload:banner:start]", {
@@ -637,6 +642,7 @@ const saveBanner = async () => {
         });
         if (response.ok) {
             showSuccess("บันทึกข้อมูลเรียบร้อย");
+            originalImageUrl.value = form.value.image_url || "";
             resetForm();
             fetchBanners();
         } else {
@@ -655,6 +661,7 @@ const openCreateForm = () => {
 
 const editBanner = (banner: any) => {
     form.value = { ...banner };
+    originalImageUrl.value = banner.image_url || "";
     isEditing.value = true;
     showForm.value = true;
     activeMenuId.value = null;
@@ -739,7 +746,24 @@ const deleteBanner = async (id: number) => {
     }
 };
 
-const resetForm = () => {
+const resetForm = async () => {
+    // 🧹 Cleanup orphaned file if user uploaded a new image but then cancelled
+    if (form.value.image_url && form.value.image_url !== originalImageUrl.value && form.value.image_url.startsWith('/uploads/')) {
+        try {
+            await fetch(`/api/upload`, {
+                method: "DELETE",
+                headers: {
+                    "Content-Type": "application/json",
+                    "x-user-id": String(authStore.user?.id || ''),
+                },
+                body: JSON.stringify({ oldUrl: form.value.image_url }),
+            });
+            console.log("[cancel] Deleted intermediate upload:", form.value.image_url);
+        } catch (e) {
+            console.error("Failed to delete intermediate upload:", e);
+        }
+    }
+
     if (route.query.sub) {
         router.back();
     } else {

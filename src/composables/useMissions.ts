@@ -613,6 +613,7 @@ export function useMissions() {
                             : profile.pending_bot_result
 
                         uploadedImageUrl.value = botData.publicUrl || ''
+                        originalUploadedImageUrl.value = botData.publicUrl || ''
                         if (botData.type === 'RUNNING') {
                             if (metricMode.value === 'steps') valSteps.value = String(botData.distance || '')
                             else valNum.value = String(botData.distance || '')
@@ -653,6 +654,9 @@ export function useMissions() {
             // Upload to local server storage → /uploads/submissions/taskName-date.webp
             const taskLabel = activeTask.value?.note?.trim() || activeTask.value?.type || 'mission'
             const params = new URLSearchParams({ type: 'submissions', name: taskLabel })
+            if (uploadedImageUrl.value && uploadedImageUrl.value !== originalUploadedImageUrl.value) {
+                params.append('oldUrl', uploadedImageUrl.value)
+            }
             const formData = new FormData()
             formData.append('image', file)
             console.log('[upload:mission:start]', {
