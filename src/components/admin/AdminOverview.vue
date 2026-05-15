@@ -31,10 +31,7 @@ const {
   submissionTimeStats,
   goalAchievementStats,
   roleDistributionData,
-  topSubmittedActivities, // <--- รับค่ามาจาก useAdminOverview
-  growthFilterType,
-  growthStartDate,
-  growthEndDate
+  topSubmittedActivities // <--- รับค่ามาจาก useAdminOverview
 } = useAdminOverview();
 
 defineEmits(['change-tab']);
@@ -170,36 +167,9 @@ const bmiRiskExtremes = computed(() => {
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6">
         <div class="lg:col-span-2 bg-white rounded-3xl soft-shadow p-5 sm:p-6 flex flex-col h-[420px]">
-          <div class="mb-4 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-            <div>
-              <h2 class="text-lg font-bold text-slate-900">การเติบโตของผู้ใช้งาน</h2>
-              <p class="text-xs font-medium text-slate-400 mt-0.5">ผู้ใช้งานสะสมบนแพลตฟอร์ม</p>
-            </div>
-            
-            <div class="flex flex-wrap items-center gap-2 text-sm font-sarabun">
-              <select 
-                v-model="growthFilterType" 
-                class="border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 outline-none text-slate-600 font-medium"
-              >
-                <option value="weekly">รายสัปดาห์</option>
-                <option value="monthly">รายเดือน</option>
-                <option value="custom">กำหนดเอง</option>
-              </select>
-
-              <div v-if="growthFilterType === 'custom'" class="flex items-center gap-2">
-                <input 
-                  type="date" 
-                  v-model="growthStartDate" 
-                  class="border border-slate-200 rounded-lg px-2 py-1.5 outline-none text-slate-600 font-medium"
-                />
-                <span class="text-slate-400">-</span>
-                <input 
-                  type="date" 
-                  v-model="growthEndDate" 
-                  class="border border-slate-200 rounded-lg px-2 py-1.5 outline-none text-slate-600 font-medium"
-                />
-              </div>
-            </div>
+          <div class="mb-4">
+            <h2 class="text-lg font-bold text-slate-900">การเติบโตของผู้ใช้งาน</h2>
+            <p class="text-xs font-medium text-slate-400 mt-0.5">ผู้ใช้งานสะสมบนแพลตฟอร์ม</p>
           </div>
           <div ref="chartGrowthScrollRef" class="flex-1 w-full relative overflow-x-auto overflow-y-hidden custom-scrollbar-x">
             <div class="h-full" :style="{ minWidth: Math.max((data.userGrowth?.length || 0) * 70, 700) + 'px' }">
@@ -427,7 +397,9 @@ const bmiRiskExtremes = computed(() => {
                 </div>
                 <div class="min-w-0 flex-1">
                   <p class="text-sm font-bold text-slate-800 truncate">{{ u.fname_th }} {{ u.lname_th }}</p>
-                  <p class="text-[10px] font-semibold text-slate-400 mt-0.5">ต้องได้รับการดูแลเพิ่มเติม</p>
+                  <span :class="['text-[10px] px-2 py-0.5 rounded-md font-bold', u.bmi_category === 'อ้วนมาก' ? 'bg-rose-100 text-rose-700' : 'bg-orange-100 text-orange-700']">
+                    {{ u.bmi_category }}
+                  </span>
                 </div>
                 <div class="text-right">
                   <p class="text-xs font-black text-slate-600">{{ u.bmi }}</p>

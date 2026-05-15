@@ -106,7 +106,7 @@ const weeks = computed(() => {
   position: relative;
   padding: 15px 10px;
   background: #df7b70;
-  box-shadow: inset -7px 0 0 0 #c95143;
+  box-shadow: inset -4px 0 0 0 #c95143;
   border-radius: 16px 16px 0 0;
   color: #fff;
   font-weight: 700;

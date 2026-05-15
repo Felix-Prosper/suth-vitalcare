@@ -1,4 +1,6 @@
 import express from "express";
+import fs from "fs";
+import path from "path";
 import { pool } from "../mysql.js";
 import {
   decrypt,
@@ -1221,7 +1223,7 @@ router.patch("/:id", requireAdmin, async (req, res) => {
   try {
     await connection.beginTransaction();
     const [eventRows]: any = await connection.query(
-      "SELECT created_by, team_id FROM events WHERE id = ?",
+      "SELECT * FROM events WHERE id = ?",
       [req.params.id],
     );
     const [userRows]: any = await connection.query(
@@ -1247,6 +1249,49 @@ router.patch("/:id", requireAdmin, async (req, res) => {
       await connection.rollback();
       return res.status(403).json({ error: "คุณไม่มีสิทธิ์แก้ไขกิจกรรมนี้" });
     }
+
+    // --- Cleanup orphaned physical files (poster & sections) ---
+    if (req.body.poster !== undefined) {
+      const oldPoster = eventRows[0]?.poster;
+      if (oldPoster && oldPoster !== req.body.poster && oldPoster.startsWith("/uploads/")) {
+        try {
+          const relativeOldPath = oldPoster.substring('/uploads/'.length);
+          const filePath = path.join(process.cwd(), "public", "uploads", ...relativeOldPath.split('/').filter(Boolean));
+          console.log("[PATCH CLEANUP] Deleting poster:", filePath);
+          if (fs.existsSync(filePath)) {
+            await fs.promises.unlink(filePath);
+            console.log("[PATCH CLEANUP] Poster deleted.");
+          }
+        } catch (err: any) {
+          console.error("[PATCH CLEANUP] Poster delete failed:", err.message);
+        }
+      }
+    }
+    if (req.body.detail !== undefined) {
+      try {
+        const oldDetail = JSON.parse(eventRows[0]?.detail || "[]");
+        const newDetailStr = typeof req.body.detail === 'string' ? req.body.detail : JSON.stringify(req.body.detail);
+        const newDetail = JSON.parse(newDetailStr || "[]");
+        
+        const oldImages = oldDetail.map((s:any)=>s.image).filter((u:any) => u && u.startsWith('/uploads/'));
+        const newImages = newDetail.map((s:any)=>s.image).filter((u:any) => u && u.startsWith('/uploads/'));
+        
+        const imagesToDelete = oldImages.filter((img:string) => !newImages.includes(img));
+        for (const img of imagesToDelete) {
+           try {
+             const relativeOldPath = img.substring('/uploads/'.length);
+             const filePath = path.join(process.cwd(), "public", "uploads", ...relativeOldPath.split('/').filter(Boolean));
+             if (fs.existsSync(filePath)) {
+               await fs.promises.unlink(filePath);
+               console.log("[PATCH CLEANUP] Detail image deleted:", filePath);
+             }
+           } catch (err: any) {
+             console.error("[PATCH CLEANUP] Detail image delete failed:", err.message);
+           }
+        }
+      } catch (e) {}
+    }
+    // -----------------------------------------------------------
 
     const updates: string[] = [];
     const values: any[] = [];
@@ -1400,23 +1445,36 @@ router.patch("/:id", requireAdmin, async (req, res) => {
       [req.params.id],
     );
 
-    // Log the action
-    await logAudit({
-      userId: userId as string,
-      action: "edit_activity",
-      targetType: "activity",
-      targetId: req.params.id,
-      description: `แก้ไขกิจกรรม: ${finalRows[0].title}`,
-      metadata: { updates: Object.keys(req.body) },
-    });
+    // Log the action (wrapped so audit failure never kills the response)
+    try {
+      if (finalRows[0]) {
+        await logAudit({
+          userId: userId as string,
+          action: "edit_activity",
+          targetType: "activity",
+          targetId: req.params.id,
+          description: `แก้ไขกิจกรรม: ${finalRows[0].title}`,
+          metadata: { updates: Object.keys(req.body) },
+        });
+      }
+    } catch (auditErr) {
+      console.error("[activity:patch:audit:error]", auditErr);
+    }
 
     // ✅ Emit realtime event
-    getIO().emit(EVENTS.ACTIVITY_UPDATED, finalRows[0]);
+    if (finalRows[0]) getIO().emit(EVENTS.ACTIVITY_UPDATED, finalRows[0]);
 
-    res.json(finalRows[0]);
+    res.json(finalRows[0] || {});
   } catch (error: any) {
     await connection.rollback();
-    res.status(400).json({ error: "Bad Request" });
+    console.error("[activity:patch:error]", {
+      id: req.params.id,
+      message: error?.message,
+      code: error?.code,
+      sql: error?.sql,
+      stack: error?.stack?.split('\n').slice(0, 6),
+    });
+    res.status(400).json({ error: error?.message || "Bad Request" });
   } finally {
     connection.release();
   }
@@ -1454,7 +1512,7 @@ router.delete("/:id", async (req, res) => {
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   try {
     const [eventRows]: any = await pool.query(
-      "SELECT created_by, team_id FROM events WHERE id = ?",
+      "SELECT * FROM events WHERE id = ?",
       [req.params.id],
     );
     const [userRows]: any = await pool.query(
@@ -1479,6 +1537,31 @@ router.delete("/:id", async (req, res) => {
     if (!isAdmin && !isOwner && !isTeamHost) {
       return res.status(403).json({ error: "No permission" });
     }
+    // 1. Cleanup physical files before deleting from DB
+    if (eventRows[0]) {
+      try {
+        const { poster, detail } = eventRows[0];
+        // Delete poster
+        if (poster && poster.startsWith('/uploads/')) {
+          const relativeOldPath = poster.substring('/uploads/'.length);
+          const filePath = path.join(process.cwd(), "public", "uploads", ...relativeOldPath.split('/').filter(Boolean));
+          if (fs.existsSync(filePath)) await fs.promises.unlink(filePath);
+        }
+        // Delete detail images
+        if (detail) {
+          const parsedDetail = typeof detail === 'string' ? JSON.parse(detail || "[]") : detail;
+          const images = parsedDetail.map((s:any)=>s.image).filter((u:any) => u && u.startsWith('/uploads/'));
+          for (const img of images) {
+            const relativeOldPath = img.substring('/uploads/'.length);
+            const filePath = path.join(process.cwd(), "public", "uploads", ...relativeOldPath.split('/').filter(Boolean));
+            if (fs.existsSync(filePath)) await fs.promises.unlink(filePath);
+          }
+        }
+      } catch (err: any) {
+        console.error("[activity delete] Failed to cleanup physical files:", err.message);
+      }
+    }
+
     await pool.query("DELETE FROM events WHERE id = ?", [req.params.id]);
 
     // Log the action

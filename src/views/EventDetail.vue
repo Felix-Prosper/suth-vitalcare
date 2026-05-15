@@ -75,7 +75,6 @@
                 <span class="text-slate-600 flex-1">{{ currentUserRoleLabel || 'บุคคลทั่วไป' }}</span>
               </div>
             </div>
-            <!-- No permission error block -->
             <div v-if="!isRegistered && !hasPermissionToJoin" class="alert-box error mb-6 p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm">
               <div class="flex items-start gap-3">
                 <AlertCircleIcon :size="20" class="mt-0.5 flex-shrink-0" />
@@ -179,7 +178,6 @@
                   {{ certStatus === "issued" ? "ดาวน์โหลด" : isEligible ? "กดรับเลย" : "ล็อค" }}
                 </button>
               </div>
-              <!-- Detailed Criteria Checklist -->
               <div v-if="isRegistered && certStatus !== 'issued' && certCriteria" class="w-full mt-3 pt-3 border-t border-slate-100 space-y-2">
                 <div v-if="certCriteria.preTest && assessmentConfig.pre_test?.enabled" class="flex items-center justify-between text-xs">
                   <div class="flex items-center gap-2">
@@ -492,7 +490,6 @@
                   <span class="text-slate-600 flex-1">{{ currentUserRoleLabel || 'บุคคลทั่วไป' }}</span>
                 </div>
               </div>
-              <!-- No permission error block -->
               <div v-if="!isRegistered && !hasPermissionToJoin" class="alert-box error mb-4 p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm">
                 <div class="flex items-start gap-3">
                   <AlertCircleIcon :size="20" class="mt-0.5 flex-shrink-0" />
@@ -509,7 +506,18 @@
                 </div>
               </div>
               <template v-if="!isRegistered">
-                <button class="btn-massive primary-orange w-full force-white-text" style="color: #ffffff !important;" @click="joinActivity" :disabled="joining || slotFull || !hasPermissionToJoin">
+                <div class="pdpa-consent mb-4">
+                  <label class="pdpa-row">
+                    <input type="checkbox" id="acceptDisclosure" v-model="acceptDataDisclosure" />
+                    <span class="pdpa-checkbox-wrap">
+                      <span class="pdpa-custom-box" :class="{ checked: acceptDataDisclosure }">
+                        <svg v-if="acceptDataDisclosure" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      </span>
+                    </span>
+                    <span class="pdpa-label-text">ยอมรับเงื่อนไขและยินยอมให้แสดงผลข้อมูลส่วนบุคคลในกิจกรรม</span>
+                  </label>
+                </div>
+                <button class="btn-massive primary-orange w-full force-white-text" :class="{ 'btn-disabled': !acceptDataDisclosure }" style="color: #ffffff !important;" @click="joinActivity" :disabled="joining || slotFull || !hasPermissionToJoin || !acceptDataDisclosure">
                   <LoaderIcon v-if="joining" class="spin" />
                   <span v-else-if="slotFull" style="color: #ffffff !important;">ที่นั่งเต็มแล้ว</span>
                   <span v-else-if="!hasPermissionToJoin" style="color: #ffffff !important;"><LockIcon :size="18" class="mr-2 inline" style="color: #ffffff !important;" /> ไม่มีสิทธิ์เข้าร่วม</span>
@@ -526,9 +534,20 @@
           </div>
       </div>
     </main>
-    <div class="mobile-bar mobile-only-flex">
+    <div class="mobile-bar mobile-only-flex flex-col gap-2 p-4 h-auto bg-white border-t border-slate-100">
       <template v-if="!isRegistered">
-        <button class="mob-btn-primary force-white-text" style="color: #ffffff !important;" :disabled="slotFull || joining || !hasPermissionToJoin" @click="joinActivity">
+        <div class="pdpa-consent w-full">
+          <label class="pdpa-row">
+            <input type="checkbox" id="acceptDisclosureMob" v-model="acceptDataDisclosure" />
+            <span class="pdpa-checkbox-wrap">
+              <span class="pdpa-custom-box" :class="{ checked: acceptDataDisclosure }">
+                <svg v-if="acceptDataDisclosure" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+            </span>
+            <span class="pdpa-label-text">ยอมรับเงื่อนไขและยินยอมให้แสดงผลข้อมูลในกิจกรรม</span>
+          </label>
+        </div>
+        <button class="mob-btn-primary force-white-text w-full" :class="{ 'btn-disabled': !acceptDataDisclosure }" style="color: #ffffff !important;" :disabled="slotFull || joining || !hasPermissionToJoin || !acceptDataDisclosure" @click="joinActivity">
           <LoaderIcon v-if="joining" class="spin" :size="18" />
           <span v-else-if="!hasPermissionToJoin" style="color: #ffffff !important;">ไม่มีสิทธิ์เข้าร่วม</span>
           <span v-else-if="slotFull" style="color: #ffffff !important;">กิจกรรมเต็มแล้ว</span>
@@ -677,6 +696,7 @@ const {
   tanitaRecords,
   showTanitaModal,
   loadingTanita,
+  acceptDataDisclosure,
   goalViewTab,
   goalLoading,
   goalData,
@@ -869,11 +889,19 @@ html, body {
 .hero-blur-overlay {
   position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 0%, rgba(255,255,255,1) 100%);
 }
+
+/* =====================================
+   🎯 Container matching Profile's layout-container 
+===================================== */
 .main-content {
-  position: relative; z-index: 10; max-width: 1200px;
-  margin: 0 auto 100px; padding: 40px 24px 0;
+  position: relative; 
+  z-index: 10; 
+  max-width: 1200px;
+  margin: 0 auto 100px; 
+  padding: 40px 24px 0;
   width: 100%;
 }
+
 .title-with-back {
   display: flex;
   align-items: center;
@@ -909,11 +937,21 @@ html, body {
 .content-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 420px; 
-  gap: 40px;
+  gap: 24px; /* เริ่มต้นด้วย 24px สำหรับหน้าจอขนาดกลางลงมา */
   align-items: stretch;
   width: 100%;
   min-width: 0;
 }
+
+@media (min-width: 768px) {
+  .main-content {
+    max-width: 1440px; /* ขยายความกว้างสูงสุดให้เท่ากับ Profile */
+  }
+  .content-grid {
+    gap: 32px; /* ใช้ช่องว่าง 32px แบบ Profile บนหน้าจอใหญ่ */
+  }
+}
+
 .left-column { width: 100%; max-width: 100%; }
 .right-column {
   position: -webkit-sticky;
@@ -944,6 +982,7 @@ html, body {
   grid-column: span 2;
 }
 @media (max-width: 768px) {
+  .main-content { padding: 24px 16px 100px; }
   .widgets-container {
     grid-template-columns: 1fr;
   }
@@ -999,14 +1038,13 @@ html, body {
 }
 @media (max-width: 640px) {
   .event-title-hero { font-size: 1.6rem; }
-  .main-content { margin-top: 0; padding: 24px 12px 0; }
   .mobile-details-block { padding: 16px !important; max-width: 100%; }
   .gt-col.col-progress { width: 80px !important; }
   .gt-col.col-status { width: 50px !important; }
   .gt-col.col-rank { width: 24px !important; }
 }
 @media (max-width: 375px) {
-  .main-content { padding: 20px 8px 0; }
+  .main-content { padding: 20px 16px 100px; }
   .mobile-details-block { padding: 12px !important; }
   .event-title-hero { font-size: 1.4rem; }
   .rc-header { flex-direction: column; align-items: flex-start !important; gap: 4px !important; }
@@ -1014,19 +1052,21 @@ html, body {
 }
 .mobile-bar {
   position: fixed;
-  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+  bottom: 0;
   left: 0;
   width: 100%;
-  padding: 0 20px;
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0px));
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   z-index: 201;
-  border-top: none;
-  box-shadow: none;
-  pointer-events: none;
+  border-top: 1px solid #e2e8f0;
+  box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.05);
+  pointer-events: auto;
   display: none;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 .mob-btn-primary { 
   pointer-events: auto;
@@ -1101,5 +1141,80 @@ html, body {
 @keyframes spinAnim { to { transform: rotate(360deg); } }
 .spin, .spin-lg { animation: spinAnim 0.7s linear infinite; }
 .force-white-text, .force-white-text * { color: #ffffff !important; }
-/* --- ฟอร์มสไตล์ Signup --- */
+
+/* PDPA Consent Block from Login.vue */
+.pdpa-consent {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 1rem;
+}
+.pdpa-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 4px;
+  position: relative;
+}
+.pdpa-checkbox-wrap {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+.pdpa-row input[type="checkbox"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+.pdpa-custom-box {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #cbd5e1;
+  border-radius: 5px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+  z-index: 1;
+}
+.pdpa-custom-box.checked {
+  background: #F05A23;
+  border-color: #F05A23;
+}
+.pdpa-row:hover .pdpa-custom-box:not(.checked) {
+  border-color: #F05A23;
+  background: #fff5f2;
+}
+.pdpa-label-text {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-weight: 500;
+}
+.btn-disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  filter: grayscale(0.5);
+}
 </style>

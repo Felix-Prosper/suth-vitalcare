@@ -130,6 +130,7 @@ export function useEventDetail() {
   const tanitaRecords = ref<any[]>([]);
   const showTanitaModal = ref(false);
   const loadingTanita = ref(false);
+  const acceptDataDisclosure = ref(false);
   // ==========================
   // Goal / Leaderboard State
   // ==========================
@@ -492,7 +493,10 @@ export function useEventDetail() {
   );
   // Fetch Core Event
   const fetchEvent = async (silent = false) => {
-    if (!silent) loading.value = true;
+    if (!silent) {
+      loading.value = true;
+      acceptDataDisclosure.value = false;
+    }
     loadError.value = false;
     try {
       const id = route.params.id;
@@ -799,7 +803,7 @@ export function useEventDetail() {
   };
   // Join / Leave Actions
   const joinActivity = async () => {
-    if (joining.value || slotFull.value) return;
+    if (joining.value || slotFull.value || (!isRegistered.value && !acceptDataDisclosure.value)) return;
     joining.value = true;
     if (!authStore.user?.id) {
       joining.value = false;
@@ -880,7 +884,7 @@ export function useEventDetail() {
       isRegistered.value = true;
       event.value.registration_count = (event.value.registration_count || 0) + 1;
       if (event.value.filled !== undefined) event.value.filled = (event.value.filled || 0) + 1;
-      showToast(data.message || "เข้าร่วมกิจกรรมสำเร็จ!", "success");
+      showToast("เข้าร่วมกิจกรรมสำเร็จ!", "success");
       if (event.value.certificate_config?.enabled) checkCertEligibility();
       checkAndShowPopups();
     } catch (e: any) {
@@ -1449,6 +1453,9 @@ export function useEventDetail() {
     },
     { deep: true }
   );
+  watch(activityId, () => {
+    fetchEvent();
+  });
   onMounted(() => {
     fetchEvent();
     window.addEventListener("scroll", handleScroll);
@@ -1488,6 +1495,7 @@ export function useEventDetail() {
     tanitaRecords,
     showTanitaModal,
     loadingTanita,
+    acceptDataDisclosure,
     showGoalModal,
     goalViewTab,
     goalLoading,
