@@ -303,14 +303,20 @@ const formatTimeOnly = (dateString) => {
 /* Grid สำหรับ Summary Cards */
 .dashboard-summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+@media (min-width: 768px) {
+  .dashboard-summary-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+  }
 }
 
 /* Card สไตล์ Glassmorphism เรียบหรู */
 .summary-card {
-  padding: 24px;
-  border-radius: 20px;
+  padding: 16px;
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -319,10 +325,16 @@ const formatTimeOnly = (dateString) => {
   box-shadow: 0 4px 15px rgba(0,0,0,0.02);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+@media (min-width: 1024px) {
+  .summary-card {
+    padding: 20px;
+    border-radius: 20px;
+  }
+}
 
 .summary-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
 }
 
 .summary-card.blue { border-bottom: 4px solid #3b82f6; }
@@ -331,13 +343,13 @@ const formatTimeOnly = (dateString) => {
 .summary-card.purple { border-bottom: 4px solid #8b5cf6; }
 
 .card-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .summary-card.blue .card-icon { background: #eff6ff; color: #3b82f6; }
@@ -346,24 +358,30 @@ const formatTimeOnly = (dateString) => {
 .summary-card.purple .card-icon { background: #f5f3ff; color: #8b5cf6; }
 
 .card-label {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #64748b;
   font-weight: 700;
   margin-bottom: 4px;
 }
 
 .card-value {
-  font-size: 2.25rem;
+  font-size: 1.55rem;
   font-weight: 900;
   color: #0f172a;
   line-height: 1.1;
+  word-break: break-word;
+}
+@media (min-width: 1024px) {
+  .card-value {
+    font-size: 1.9rem;
+  }
 }
 
 .card-value small {
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #94a3b8;
-  margin-left: 4px;
+  margin-left: 2px;
 }
 
 /* Card หลักสำหรับคอนเทนต์ */
