@@ -232,7 +232,7 @@ router.get("/user/:userId", async (req, res) => {
       `
         SELECT s.*, t.id as t_id, t.event_id, t.task_date, t.type as t_type, t.note as t_note,
                t.points, t.allowed_days, t.is_active, t.metric_type, t.metric_unit,
-               t.goal_type, t.goal_value, t.submission_type
+               t.goal_type, t.goal_value, t.submission_type, t.use_ocr
         FROM submissions s
         LEFT JOIN tasks t ON s.task_id = t.id
         WHERE s.user_id = ?
@@ -256,6 +256,7 @@ router.get("/user/:userId", async (req, res) => {
             goal_type: r.goal_type,
             goal_value: r.goal_value,
             submission_type: r.submission_type,
+            use_ocr: r.use_ocr === 1 || r.use_ocr === true,
           }
         : null;
 

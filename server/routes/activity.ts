@@ -1042,10 +1042,11 @@ router.post("/", requireAdmin, async (req, res) => {
     if (tasks && Array.isArray(tasks) && tasks.length > 0) {
       const qValues: any[] = [];
       const placeholders = tasks
-        .map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+        .map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
         .join(", ");
 
       tasks.forEach((task: any) => {
+        console.log("[activity:post] Processing task:", JSON.stringify(task));
         const ad = task.allowed_days || [0, 1, 2, 3, 4, 5, 6];
         qValues.push(
           newEventId,
@@ -1059,11 +1060,12 @@ router.post("/", requireAdmin, async (req, res) => {
           task.is_active !== false,
           JSON.stringify(ad),
           task.type || "exercise",
+          [true, 1, "true", "1"].includes(task.use_ocr) ? 1 : 0,
         );
       });
 
       await connection.query(
-        `INSERT INTO tasks (event_id, note, metric_type, metric_unit, goal_type, goal_value, points, submission_type, is_active, allowed_days, type) VALUES ${placeholders}`,
+        `INSERT INTO tasks (event_id, note, metric_type, metric_unit, goal_type, goal_value, points, submission_type, is_active, allowed_days, type, use_ocr) VALUES ${placeholders}`,
         qValues,
       );
     }
@@ -1409,6 +1411,7 @@ router.patch("/:id", requireAdmin, async (req, res) => {
 
       // 3. Update or Insert tasks
       for (const task of tasks) {
+        console.log("[activity:patch] Processing task:", JSON.stringify(task));
         const ad = task.allowed_days || [0, 1, 2, 3, 4, 5, 6];
         const taskData = [
           task.title || task.note,
@@ -1421,18 +1424,19 @@ router.patch("/:id", requireAdmin, async (req, res) => {
           task.is_active !== false ? 1 : 0,
           JSON.stringify(ad),
           task.type || "exercise",
+          [true, 1, "true", "1"].includes(task.use_ocr) ? 1 : 0,
         ];
 
         if (task.id && existingIds.includes(Number(task.id))) {
           // Update existing task
           await connection.query(
-            `UPDATE tasks SET note = ?, metric_type = ?, metric_unit = ?, goal_type = ?, goal_value = ?, points = ?, submission_type = ?, is_active = ?, allowed_days = ?, type = ? WHERE id = ?`,
+            `UPDATE tasks SET note = ?, metric_type = ?, metric_unit = ?, goal_type = ?, goal_value = ?, points = ?, submission_type = ?, is_active = ?, allowed_days = ?, type = ?, use_ocr = ? WHERE id = ?`,
             [...taskData, task.id],
           );
         } else {
           // Insert new task
           await connection.query(
-            `INSERT INTO tasks (event_id, note, metric_type, metric_unit, goal_type, goal_value, points, submission_type, is_active, allowed_days, type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO tasks (event_id, note, metric_type, metric_unit, goal_type, goal_value, points, submission_type, is_active, allowed_days, type, use_ocr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [req.params.id, ...taskData],
           );
         }

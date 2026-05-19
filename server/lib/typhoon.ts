@@ -107,9 +107,9 @@ export async function callTyphoonVisionAction(
   };
 
   return withRetry(async () => {
-    // Hard 25-second timeout per OCR call — ensures we always reply within LINE's 60s window
+    // Hard 60-second timeout per OCR call (increased for long images)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 25000);
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     try {
       const response = await fetch(url, {

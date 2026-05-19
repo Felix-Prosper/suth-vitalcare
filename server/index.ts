@@ -656,6 +656,39 @@ async function startServer() {
     }
   });
 
+  // POST /api/upload-cleanup — สำหรับ navigator.sendBeacon (เมื่อ user ปิด/refresh หน้า)
+  // sendBeacon ส่งเป็น POST เสมอ (ไม่สามารถใช้ DELETE ได้)
+  // sendBeacon จะส่ง Content-Type: text/plain → ต้องใช้ express.text() ก่อน
+  app.post("/api/upload-cleanup", express.text({ type: '*/*' }), async (req, res) => {
+    try {
+      // parse body (อาจเป็น string หรือ object ขึ้นอยู่กับ middleware ที่รับ)
+      let oldUrl: string | undefined;
+      if (typeof req.body === 'object' && req.body?.oldUrl) {
+        oldUrl = req.body.oldUrl;
+      } else if (typeof req.body === 'string') {
+        try { oldUrl = JSON.parse(req.body)?.oldUrl; } catch {}
+      }
+
+      if (!oldUrl || !oldUrl.startsWith('/uploads/submissions/')) {
+        // จำกัดเฉพาะ /uploads/submissions/ เพื่อความปลอดภัย
+        return res.status(204).send(); // No Content (sendBeacon ignores response)
+      }
+
+      const relativeOldPath = oldUrl.substring('/uploads/'.length);
+      const oldFilePath = path.join(uploadDir, ...relativeOldPath.split('/').filter(Boolean));
+
+      if (oldFilePath.startsWith(uploadDir) && fs.existsSync(oldFilePath)) {
+        await fs.promises.unlink(oldFilePath);
+        console.log("[upload:cleanup:beacon]", { deletedUrl: oldUrl });
+      }
+
+      res.status(204).send(); // sendBeacon ไม่อ่าน response body
+    } catch (err: any) {
+      console.warn("[upload:cleanup:beacon:failed]", { error: err.message });
+      res.status(204).send(); // ส่ง 204 เสมอ (sendBeacon ignores errors)
+    }
+  });
+
   // Serve images from users.pending_bot_result for LINE preview
   app.get("/api/bot/image-preview/:userId", async (req, res) => {
     const { userId } = req.params;
@@ -680,6 +713,10 @@ async function startServer() {
         res.setHeader("Content-Type", mime);
         res.setHeader("Cache-Control", "no-cache");
         return res.send(data);
+      } else if (b64 && b64.startsWith("/uploads/")) {
+        // Serve the file directly from disk
+        const filePath = path.join(__dirname, "../public", b64);
+        return res.sendFile(filePath);
       }
       res.status(400).send("Invalid image data format");
     } catch (err: any) {
@@ -881,6 +918,57 @@ async function startServer() {
       res.sendFile(path.join(__dirname, "../dist/index.html")),
     );
   }
+
+  // --- Automated Orphan Cleanup Job ---
+  // Runs every 1 hour to clean up files older than 2 hours that are not in the database
+  setInterval(async () => {
+    try {
+      const submissionsDir = path.join(uploadDir, 'submissions');
+      if (!fs.existsSync(submissionsDir)) return;
+
+      const files = await fs.promises.readdir(submissionsDir);
+      if (files.length <= 1) return;
+
+      const { pool } = await import("./mysql.js");
+      const [rows]: any = await pool.query("SELECT img_url FROM submissions WHERE img_url IS NOT NULL");
+      const dbUrls = new Set(rows.map((r: any) => r.img_url));
+
+      const now = Date.now();
+      const TWO_HOURS = 2 * 60 * 60 * 1000; // ไฟล์เก่ากว่า 2 ชั่วโมง
+      let deletedCount = 0;
+
+      for (const file of files) {
+        if (file.startsWith('.gitkeep')) continue;
+        const filePath = path.join(submissionsDir, file);
+        
+        let stats;
+        try {
+          stats = await fs.promises.stat(filePath);
+        } catch (e: any) {
+          if (e.code === 'ENOENT') continue; // File was already deleted
+          throw e;
+        }
+        
+        if (now - stats.mtimeMs > TWO_HOURS) {
+          const url = `/uploads/submissions/${file}`;
+          if (!dbUrls.has(url)) {
+            try {
+              await fs.promises.unlink(filePath);
+              deletedCount++;
+            } catch (e: any) {
+              if (e.code !== 'ENOENT') console.error(`[cleanup:orphan] Failed to delete ${file}:`, e);
+            }
+          }
+        }
+      }
+      
+      if (deletedCount > 0) {
+        console.log(`[cleanup:orphan] Automatically deleted ${deletedCount} orphaned files.`);
+      }
+    } catch (err) {
+      console.error("[cleanup:orphan] Error running cleanup job:", err);
+    }
+  }, 60 * 60 * 1000); // ทำงานทุก 1 ชั่วโมง
 
   server.listen(Number(PORT), "0.0.0.0", () => {
     console.log(`Server running on http://localhost:${PORT}`);

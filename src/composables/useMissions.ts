@@ -1,5 +1,5 @@
 // D:\Banana\src\composables\useMissions.ts
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { authStore } from '../store/auth'
 import { uiStore } from '../store/ui'
@@ -120,7 +120,13 @@ export function useMissions() {
     const valS = ref('')
 
     const isSubmitting = ref(false)
-    const uploadedImageUrl = ref('')
+    const uploadedImageUrl = ref('') // URL ที่แสดง preview (อาจเป็น temp upload ที่ยังไม่ submit)
+    const originalUploadedImageUrl = ref('') // URL ที่บันทึกใน DB จริงๆ (ใช้เป็น target สำหรับลบ)
+    const imageTimestamp = ref(Date.now())
+
+    watch(uploadedImageUrl, () => {
+        imageTimestamp.value = Date.now()
+    })
     const editingSubmissionId = ref<number | null>(null)
     const submissionDate = ref('')
     const isUploading = ref(false)
@@ -148,6 +154,8 @@ export function useMissions() {
     const isEditingMode = ref(false)
     const showDetailModal = ref(false)
     const textResponse = ref('')
+    const oldSubmissionValue = ref<string>('')
+    const hasAIResult = ref(false) // flag: AI เพิ่งกรอกค่าใหม่ → ห้าม sync ค่าเก่าจาก DB ทับ
 
     const selectedTaskPerEvent = ref<Record<string, number>>({})
 
@@ -167,6 +175,29 @@ export function useMissions() {
     watch(swrProfile, (nv) => {
         if (nv) authStore.setUser(nv)
     })
+    // 💾 บันทึกรูปล่าสุดลง localStorage เผื่อเบราว์เซอร์มือถือ reload ตอนพับจอ
+    watch([uploadedImageUrl, activeTask], () => {
+        if (!activeTask.value) return
+        const key = `vitalcare_pending_img_${activeTask.value.id}`
+        const currentTempUrl = uploadedImageUrl.value
+        const dbUrl = originalUploadedImageUrl.value
+        if (currentTempUrl && currentTempUrl !== dbUrl) {
+            localStorage.setItem(key, currentTempUrl)
+        } else if (!currentTempUrl || currentTempUrl === dbUrl) {
+            localStorage.removeItem(key)
+        }
+    })
+
+    // จัดการกรณีรูปล้มเหลวในการโหลด (เช่น โดน Server Cron ลบไปแล้ว)
+    const handleImageError = () => {
+        if (uploadedImageUrl.value) {
+            console.warn('[image-preview] Image not found (possibly deleted by cron). Clearing temp state.')
+            uploadedImageUrl.value = ''
+            if (activeTask.value) {
+                localStorage.removeItem(`vitalcare_pending_img_${activeTask.value.id}`)
+            }
+        }
+    }
 
     onMounted(() => {
         window.addEventListener('resize', () => windowWidth.value = window.innerWidth)
@@ -200,20 +231,26 @@ export function useMissions() {
             const statusChanged = currentSub && sub.id === currentSub.id && sub.status !== currentSub.status
             const newSubmissionArrived = !editingSubmissionId.value && sub.id
 
+            // ✅ ถ้า AI เพิ่งกรอกค่าใหม่ → ห้าม sync ค่าเก่าจาก DB ทับ
+            if (hasAIResult.value && !statusChanged) return
+
             if ((newSubmissionArrived || statusChanged) && !isEditingMode.value) {
                 editingSubmissionId.value = sub.id
                 uploadedImageUrl.value = sub.img_url || ''
+                originalUploadedImageUrl.value = sub.img_url || '' // ✅ sync รูปใน DB
                 textResponse.value = (sub as any).text_response || ''
                 submissionDate.value = sub.created_at || ''
-                
                 if (metricMode.value === 'time') {
                     valH.value = Math.floor(sub.value / 3600).toString()
                     valM.value = Math.floor((sub.value % 3600) / 60).toString()
                     valS.value = Math.floor(sub.value % 60).toString()
+                    oldSubmissionValue.value = `${valH.value}h ${valM.value}m ${valS.value}s`
                 } else if (metricMode.value === 'steps') {
                     valSteps.value = sub.value.toString()
+                    oldSubmissionValue.value = sub.value.toString()
                 } else {
                     valNum.value = sub.value.toString()
+                    oldSubmissionValue.value = sub.value.toString()
                 }
                 
                 // If it was just approved, stop editing mode
@@ -226,6 +263,7 @@ export function useMissions() {
             if (editingSubmissionId.value && !isEditingMode.value) {
                 editingSubmissionId.value = null
                 uploadedImageUrl.value = ''
+                originalUploadedImageUrl.value = '' // ✅ reset เมื่อ submission ถูกลบ
                 textResponse.value = ''
                 isEditingMode.value = isToday(date) && isTaskAllowedOnDate(task, date)
             }
@@ -269,6 +307,13 @@ export function useMissions() {
             }
         })
         return res
+    })
+
+    const isOcrEnabled = computed(() => {
+        if (!activeTask.value) return false
+        return activeTask.value.use_ocr !== false && 
+               activeTask.value.use_ocr !== 0 && 
+               activeTask.value.use_ocr !== '0'
     })
 
     // ✅ Watch for task updates (Realtime Sync)
@@ -515,9 +560,47 @@ export function useMissions() {
     const closeDetailModal = () => {
         showDetailModal.value = false
         activeTask.value = null
+        hasAIResult.value = false
+        oldSubmissionValue.value = ''
+    }
+
+    // ✅ ยกเลิกการแก้ไข: restore ค่าเดิมจาก DB กลับเข้า input และ clear AI flag
+    function cancelEditing() {
+        hasAIResult.value = false
+        isEditingMode.value = false
+
+        // Restore ค่าจาก oldSubmissionValue กลับ input
+        // (oldSubmissionValue ถูก set ตอน handleInstanceSelect จาก sub.value)
+        const sub = userSubmissions.value.find(s => s.id === editingSubmissionId.value)
+        if (sub) {
+            if (metricMode.value === 'time') {
+                valH.value = Math.floor(sub.value / 3600).toString()
+                valM.value = Math.floor((sub.value % 3600) / 60).toString()
+                valS.value = Math.floor(sub.value % 60).toString()
+            } else if (metricMode.value === 'steps') {
+                valSteps.value = sub.value.toString()
+            } else {
+                valNum.value = sub.value.toString()
+            }
+            uploadedImageUrl.value = sub.img_url || ''
+        }
     }
 
     function handleInstanceSelect(item: any) {
+        const isSameTask = activeTask.value?.id === item.task.id
+
+        // ถ้า AI เพิ่งกรอกค่าใหม่สำเร็จ และยังอยู่ที่ task เดิม → ห้าม reset ค่า input
+        if (isSameTask && hasAIResult.value) {
+            // อัปเดต task reference เฉยๆ แต่ไม่รีเซ็ตค่า
+            activeTask.value = item.task
+            if (isMobile.value) showMobileDetail.value = true
+            return
+        }
+
+        // Task เปลี่ยน → clear AI result flag
+        hasAIResult.value = false
+        oldSubmissionValue.value = ''
+
         activeTask.value = item.task
         selectedDate.value = item.date
 
@@ -536,6 +619,7 @@ export function useMissions() {
 
         valNum.value = valSteps.value = valH.value = valM.value = valS.value = ''
         uploadedImageUrl.value = ''
+        originalUploadedImageUrl.value = '' // Reset ทุกครั้งที่เปิด task ใหม่
         textResponse.value = ''
         editingSubmissionId.value = null
         submissionDate.value = ''
@@ -549,20 +633,40 @@ export function useMissions() {
                 s.status !== 'rejected'
         })
 
+        // ดึงรูปล่าสุดจาก localStorage เผื่อผู้ใช้พับจอแล้วกลับมา
+        const pendingImgKey = `vitalcare_pending_img_${item.task.id}`
+        const pendingImg = localStorage.getItem(pendingImgKey)
+
         if (sub) {
             editingSubmissionId.value = sub.id
-            uploadedImageUrl.value = sub.img_url || ''
+            originalUploadedImageUrl.value = sub.img_url || '' // ✅ บันทึก URL ที่อยู่ใน DB จริงๆ
+            // ถ้ารูป pending มี ให้ใช้รูป pending (แปลว่า user กำลัง edit รูปอยู่แต่พับจอ)
+            uploadedImageUrl.value = pendingImg || sub.img_url || ''
+            if (pendingImg && pendingImg !== sub.img_url) {
+                isEditingMode.value = true // เปิดโหมด edit อัตโนมัติถ้ามีรูปค้าง
+            } else {
+                isEditingMode.value = false
+            }
+
             textResponse.value = (sub as any).text_response || ''
             submissionDate.value = sub.created_at || ''
             if (metricMode.value === 'time') {
                 valH.value = Math.floor(sub.value / 3600).toString()
                 valM.value = Math.floor((sub.value % 3600) / 60).toString()
                 valS.value = Math.floor(sub.value % 60).toString()
-            } else if (metricMode.value === 'steps') valSteps.value = sub.value.toString()
-            else valNum.value = sub.value.toString()
-            isEditingMode.value = false
+                oldSubmissionValue.value = `${valH.value}h ${valM.value}m ${valS.value}s`
+            } else if (metricMode.value === 'steps') {
+                valSteps.value = sub.value.toString()
+                oldSubmissionValue.value = sub.value.toString()
+            } else {
+                valNum.value = sub.value.toString()
+                oldSubmissionValue.value = sub.value.toString()
+            }
         } else {
             isEditingMode.value = isToday(item.date) && isTaskAllowedOnDate(item.task, item.date)
+            if (pendingImg) {
+                uploadedImageUrl.value = pendingImg
+            }
         }
         if (isMobile.value) showMobileDetail.value = true
     }
@@ -641,22 +745,41 @@ export function useMissions() {
     }
 
     // --- File & Submission Logic ---
+    // ✅ Pattern มาตรฐาน: แยก "รูปใน DB" (originalUploadedImageUrl) กับ "รูป preview ชั่วคราว" (uploadedImageUrl)
+    // - originalUploadedImageUrl = URL ที่บันทึกใน DB จริงๆ → ลบเมื่อ submit สำเร็จ (หรือเมื่ออัปโหลดรูปครั้งแรกของ session นี้)
+    // - uploadedImageUrl = URL ที่แสดงบน UI → อาจเป็น temp upload ที่ยังไม่ submit
+    // - ถ้า user เปลี่ยนรูปซ้ำก่อน submit: ลบรูป temp ก่อนหน้า (uploadedImageUrl) ไม่ใช่รูปใน DB
     async function handleFileUpload(event: Event) {
         const target = event.target as HTMLInputElement
         if (!target.files?.length) return
         const file = target.files[0]
 
-        // Start AI UX immediately to show loading overlay
-        startAIUX()
+        // Start AI UX immediately to show loading overlay (only if OCR is enabled)
+        if (isOcrEnabled.value) {
+            startAIUX()
+            if (isEditingMode.value) {
+                // Clear old values so they don't get stuck if AI fails
+                valNum.value = valSteps.value = valH.value = valM.value = valS.value = ''
+            }
+        }
 
         isUploading.value = true
+        
         try {
-            // Upload to local server storage → /uploads/submissions/taskName-date.webp
             const taskLabel = activeTask.value?.note?.trim() || activeTask.value?.type || 'mission'
             const params = new URLSearchParams({ type: 'submissions', name: taskLabel })
-            if (uploadedImageUrl.value && uploadedImageUrl.value !== originalUploadedImageUrl.value) {
+
+            // ✅ Logic การลบรูปเก่า:
+            // - ถ้า uploadedImageUrl != originalUploadedImageUrl → user เคยอัปโหลด temp ไว้แล้ว → ลบ temp นั้น
+            // - ถ้า uploadedImageUrl == originalUploadedImageUrl (รูป DB) → ไม่ลบตอนนี้ (จะลบหลัง submit สำเร็จ)
+            //   เพราะรูป DB ยังต้องแสดงผลจนกว่าจะ submit ใหม่สำเร็จ
+            const hasTempUpload = uploadedImageUrl.value && uploadedImageUrl.value !== originalUploadedImageUrl.value
+            if (hasTempUpload) {
+                // ลบ temp upload ก่อนหน้า (user เปลี่ยนรูปโดยไม่ได้ submit)
                 params.append('oldUrl', uploadedImageUrl.value)
+                console.log('[upload:cleanup-temp]', { tempUrl: uploadedImageUrl.value })
             }
+
             const formData = new FormData()
             formData.append('image', file)
             console.log('[upload:mission:start]', {
@@ -667,6 +790,8 @@ export function useMissions() {
                 fileSize: file.size,
                 endpoint: `/api/upload?${params}`,
                 userId: authStore.user?.id ?? '',
+                originalUrl: originalUploadedImageUrl.value,
+                currentTempUrl: hasTempUpload ? uploadedImageUrl.value : null,
             })
 
             const uploadRes = await fetch(`/api/upload?${params}`, {
@@ -685,10 +810,11 @@ export function useMissions() {
             }
             const { url } = await uploadRes.json()
             console.log('[upload:mission:success]', { url })
+            // ✅ อัปเดต preview URL แต่ originalUploadedImageUrl ยังคงเป็นรูปใน DB จนกว่าจะ submit สำเร็จ
             uploadedImageUrl.value = url
 
-            // Auto-trigger AI analysis after upload
-            if (metricMode.value !== 'photo_only') {
+            // Auto-trigger AI analysis after upload (skip if OCR is disabled)
+            if (metricMode.value !== 'photo_only' && isOcrEnabled.value) {
                 await handleAIAnalysis(true)
             } else {
                 stopAIUX(true)
@@ -823,6 +949,31 @@ export function useMissions() {
                 })
             })
             if (res.ok) {
+                // ✅ Submit สำเร็จ: ถึงเวลาลบรูปเก่าใน DB (originalUploadedImageUrl)
+                // ทำหลัง submit สำเร็จ เพื่อให้มั่นใจว่ารูปใหม่บันทึกใน DB แล้ว
+                const dbImageToDelete = originalUploadedImageUrl.value
+                const newImageUrl = uploadedImageUrl.value
+                if (
+                    dbImageToDelete &&
+                    dbImageToDelete !== newImageUrl &&
+                    dbImageToDelete.startsWith('/uploads/')
+                ) {
+                    fetch('/api/upload', {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json', 'x-user-id': String(authStore.user?.id ?? '') },
+                        body: JSON.stringify({ oldUrl: dbImageToDelete })
+                    }).then(() => {
+                        console.log('[upload:cleanup-db-old:success]', { deletedUrl: dbImageToDelete })
+                    }).catch((err) => {
+                        console.warn('[upload:cleanup-db-old:failed]', { err })
+                    })
+                }
+                originalUploadedImageUrl.value = newImageUrl
+                
+                if (activeTask.value) {
+                    localStorage.removeItem(`vitalcare_pending_img_${activeTask.value.id}`)
+                }
+
                 mutateActs(); mutateSubs(); mutateProfile()
                 swal.fire({
                     icon: 'success',
@@ -836,6 +987,8 @@ export function useMissions() {
                     iconColor: '#10b981'
                 })
                 isEditingMode.value = false
+                hasAIResult.value = false
+                oldSubmissionValue.value = ''
                 showDetailModal.value = false
                 activeTask.value = null
             } else {
@@ -945,6 +1098,9 @@ export function useMissions() {
                         valNum.value = String(data.value || '')
                     }
 
+                    // ✅ ตั้ง flag กันค่า AI หายเมื่อ user ไป tab อื่นแล้วกลับมา
+                    hasAIResult.value = true
+
                     swal.fire({
                         icon: 'success',
                         title: 'AI วิเคราะห์ข้อมูลสำเร็จ',
@@ -1045,6 +1201,7 @@ export function useMissions() {
         valS,
         isSubmitting,
         uploadedImageUrl,
+        handleImageError,
         editingSubmissionId,
         submissionDate,
         isUploading,
@@ -1062,6 +1219,7 @@ export function useMissions() {
         isEditingMode,
         showDetailModal,
         textResponse,
+        oldSubmissionValue,
         selectedTaskPerEvent,
         formatDateDDMMYYYY,
         formatThai,
@@ -1084,6 +1242,7 @@ export function useMissions() {
         filteredTableData,
         handleManage,
         closeDetailModal,
+        cancelEditing,
         tasksForSelectedDateAndEvent,
         onTaskDropdownChange,
         handleInstanceSelect,
@@ -1104,6 +1263,8 @@ export function useMissions() {
         prevMonth,
         nextMonth,
         openSummary,
-        isToday
+        isToday,
+        isOcrEnabled,
+        imageTimestamp
     }
 }

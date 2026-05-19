@@ -181,18 +181,18 @@ router.post("/analyze-mission", aiLimiter, async (req, res) => {
     const brainPrompt = `You are a precise health and fitness data extractor. You MUST follow all rules strictly.
 
 TARGET TASK: "${taskTitle}"
-TARGET UNIT: "${metricUnit}" ← You MUST return a value in this unit. Convert if needed.
+TARGET UNIT: "${metricUnit || 'STANDARD METRIC (km, minutes, kcal, steps)'}" ← You MUST return a value in this unit. Convert if the image uses Imperial (e.g., miles to km).
 
 ════════════════════════════════════════
 MANDATORY EXTRACTION MAPPING (Based on Target Unit):
 ════════════════════════════════════════
 You must extract ONLY the value that corresponds to the TARGET UNIT:
-- If TARGET UNIT is "km", "กิโลเมตร", "mi", "m":
+- If TARGET UNIT is "km", "กิโลเมตร", "m", or "STANDARD METRIC":
   LOOK FOR DISTANCE (ระยะทาง). DO NOT extract calories or duration. (e.g., 3.02)
 - If TARGET UNIT is "นาที", "ชั่วโมง", "min", "hour":
-  LOOK FOR DURATION/TIME (เวลา, ระยะเวลา). DO NOT extract distance or calories. (e.g., 38:52 -> convert to minutes)
+  LOOK FOR DURATION/TIME (เวลา, ระยะเวลา). DO NOT extract distance or calories.
 - If TARGET UNIT is "kcal", "แคลอรี", "cal", "แคลอรี่":
-  LOOK FOR CALORIES BURNED (พลังงาน). DO NOT extract distance or time. (e.g., 208)
+  LOOK FOR CALORIES BURNED (พลังงาน). DO NOT extract distance or time.
 - If TARGET UNIT is "ก้าว", "steps":
   LOOK FOR STEP COUNT (จำนวนก้าว).
 
@@ -211,7 +211,9 @@ EXTRACTION RULES (follow in order):
 ════════════════════════════════════════
 
 1. DISTANCE tasks:
-   - Extract the distance shown. Convert if needed: 1 mi = 1.60934 km | 1 m = 0.001 km | swim meters ÷ 1000 = km.
+   - Extract the distance shown. 
+   - CONVERT IMPERIAL TO METRIC: If the image shows miles (mi) and the target unit is km (or STANDARD METRIC), you MUST convert it to km (1 mi = 1.60934 km).
+   - Convert meters to km (1 m = 0.001 km).
 
 2. SLEEP tasks:
    - First, check if a total duration like "Time Asleep", "TIME ASLEEP", "Sleep", or "เวลาที่นอนหลับ" is explicitly provided (e.g. "7 hr 38 min").

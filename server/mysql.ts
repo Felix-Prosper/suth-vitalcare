@@ -203,6 +203,12 @@ async function checkAndAlterDB() {
         );
       }
       
+      if (!(await columnExists(conn, "tasks", "use_ocr"))) {
+        console.log("Adding use_ocr to tasks...");
+        await conn.query(
+          "ALTER TABLE tasks ADD COLUMN use_ocr TINYINT(1) DEFAULT 0 AFTER submission_type;",
+        );
+      }
 
     } catch (colErr) {
       console.error("Column migration partial failure:", colErr);

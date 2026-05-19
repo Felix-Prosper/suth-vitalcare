@@ -758,7 +758,10 @@ function buildConfirmationFlex(
       return String(v);
     };
 
-    if (distanceTypes.includes(result.type)) {
+    if (result.type === "PHOTO_PROOF") {
+      rows.push({ name: "ประเภทการส่ง", value: "รูปภาพหลักฐานภารกิจ" });
+      rows.push({ name: "สถานะการส่ง", value: "พร้อมบันทึก (ไม่ต้องตรวจ OCR)" });
+    } else if (distanceTypes.includes(result.type)) {
       const dist = safeNum(result.value) ?? safeNum(result.distance);
       if (dist !== null)
         rows.push({ name: "ระยะทาง", value: `${dist.toFixed(2)} km` });
@@ -810,6 +813,7 @@ function buildConfirmationFlex(
       CALORIES: "แคลอรี่",
       WORKOUT: "การออกกำลังกาย",
       FOOD: "บันทึกอาหาร",
+      PHOTO_PROOF: "รูปภาพหลักฐานภารกิจ",
     };
 
     bodyContents = [
@@ -1325,8 +1329,25 @@ async function handleEvent(event: any) {
         .png({ compressionLevel: 9, adaptiveFiltering: true })
         .toBuffer();
 
-      const b64 = `data:image/png;base64,${optimizedBuf.toString("base64")}`;
-      const publicUrl = b64; // We use base64 directly in logic
+      const getBangkokDateString = () => {
+        return new Intl.DateTimeFormat("en-CA", {
+          timeZone: "Asia/Bangkok",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).format(new Date());
+      };
+      
+      const dateStr = getBangkokDateString();
+      const uniqueSuffix = Math.random().toString(36).substring(2, 8);
+      const filename = `bot-${userId}-${dateStr}-${uniqueSuffix}.png`;
+      const uploadDir = path.join(__dirname, "../../public/uploads/submissions");
+      
+      await fs.mkdir(uploadDir, { recursive: true });
+      const destPath = path.join(uploadDir, filename);
+      await fs.writeFile(destPath, optimizedBuf);
+      
+      const publicUrl = `/uploads/submissions/${filename}`;
 
       const apiBase = process.env.VITE_API_URL || "";
       const tunnelUrl = process.env.TUNNEL_URL || "http://localhost:3000";
@@ -1338,273 +1359,285 @@ async function handleEvent(event: any) {
       const fullUrl = `${host}/api/bot/image-preview/${userId}?t=${Date.now()}`;
       console.log("DEBUG: Final URL for LINE Hero (DB-served):", fullUrl);
 
-      // ─── STEP 2: ดึงหน่วยของ task ─────────────────────────────────────────────
+      // ─── STEP 2: ดึงหน่วยและคุณสมบัติ OCR ของ task ─────────────────────────────────────────────
       let targetUnit = "km";
+      let useOcr = true;
       if (lastBotTaskId) {
         const [taskInfo]: any = await pool.query(
-          "SELECT metric_unit FROM tasks WHERE id = ?",
+          "SELECT metric_unit, use_ocr FROM tasks WHERE id = ?",
           [lastBotTaskId],
         );
-        if (taskInfo.length > 0 && taskInfo[0].metric_unit)
-          targetUnit = taskInfo[0].metric_unit.toLowerCase();
+        if (taskInfo.length > 0) {
+          if (taskInfo[0].metric_unit) targetUnit = taskInfo[0].metric_unit.toLowerCase();
+          useOcr = taskInfo[0].use_ocr === 1 || taskInfo[0].use_ocr === true || taskInfo[0].use_ocr === null;
+        }
       }
 
       // ─── STEP 3: เรียก /api/ai เหมือน frontend ────────────────────────────────
       const internalBase = `http://localhost:${process.env.PORT || 3000}/api`;
       let result: any = { type: "NOT_FOUND" };
 
-      try {
-        const ax = (await import("axios")).default;
+      if (lastBotTaskId && !useOcr) {
+        console.log(`[BOT] Task ${lastBotTaskId} has use_ocr = false. Bypassing AI OCR analysis.`);
+        result = {
+          type: "PHOTO_PROOF",
+          value: 1,
+          publicUrl,
+        };
+      } else {
+        try {
+          const ax = (await import("axios")).default;
 
-        // ดึง task metadata เพิ่มเติม
-        let taskTitle = "";
-        let metricType = "";
-        if (lastBotTaskId) {
-          const [taskExtra]: any = await pool.query(
-            "SELECT note, type FROM tasks WHERE id = ?",
-            [lastBotTaskId],
-          );
-          if (taskExtra.length > 0) {
-            taskTitle = taskExtra[0].note || taskExtra[0].type || "";
-            metricType = taskExtra[0].type || "";
+          // ดึง task metadata เพิ่มเติม
+          let taskTitle = "";
+          let metricType = "";
+          if (lastBotTaskId) {
+            const [taskExtra]: any = await pool.query(
+              "SELECT note, type FROM tasks WHERE id = ?",
+              [lastBotTaskId],
+            );
+            if (taskExtra.length > 0) {
+              taskTitle = taskExtra[0].note || taskExtra[0].type || "";
+              metricType = taskExtra[0].type || "";
+            }
           }
-        }
 
-        const isTanitaTask =
-          lastBotTaskId === 0 ||
-          (lastBotTaskId > 0 && (
-            targetUnit === "kg" ||
-            metricType?.toLowerCase().includes("tanita") ||
-            metricType?.toLowerCase().includes("weight")
-          ));
+          const isTanitaTask =
+            lastBotTaskId === 0 ||
+            (lastBotTaskId > 0 && (
+              targetUnit === "kg" ||
+              metricType?.toLowerCase().includes("tanita") ||
+              metricType?.toLowerCase().includes("weight")
+            ));
 
-        if (isTanitaTask) {
-          // Path A: analyze-tanita
-          try {
-            const tRes = await ax.post(`${internalBase}/ai/analyze-tanita`, {
+          if (isTanitaTask) {
+            // Path A: analyze-tanita
+            try {
+              const tRes = await ax.post(`${internalBase}/ai/analyze-tanita`, {
+                imageUrl: publicUrl,
+                userId,
+              });
+              if (tRes.data?.weight) {
+                console.log(`[BOT] Tanita analysis OK:`, tRes.data);
+                const td = tRes.data;
+                result = {
+                  type: "TANITA",
+                  value: parseFloat(td.weight) || 0,
+                  weight: td.weight,
+                  fat_pc: td.fat_pc,
+                  fat_mass: td.fat_mass,
+                  ffm: td.ffm,
+                  muscle_mass: td.muscle_mass,
+                  tbw_mass: td.tbw_mass,
+                  tbw_pc: td.tbw_pc,
+                  bone_mass: td.bone_mass,
+                  bmr_kcal: td.bmr_kcal,
+                  bmr_kj: td.bmr_kj,
+                  metabolic_age: td.metabolic_age,
+                  visceral_fat: td.visceral_fat,
+                  bmi: td.bmi,
+                  ideal_weight: td.ideal_weight,
+                  obesity_degree: td.obesity_degree,
+                  physique_rating: td.physique_rating,
+                  body_type: td.body_type,
+                  age: td.age,
+                  height: td.height,
+                  gender: td.gender,
+                  publicUrl,
+                };
+              }
+            } catch (tanitaErr: any) {
+              console.warn(`[BOT] analyze-tanita failed:`, tanitaErr.message);
+
+              // ถ้าเป็นโหมดบันทึกร่างกายโดยเฉพาะ (lastBotTaskId === 0) แล้วรูปผิด หรือ AI ขัดข้อง -> แจ้งเตือนด้วย Flex Message ทันที
+              if (lastBotTaskId === 0) {
+                const isInvalidImage = tanitaErr.response?.status === 422;
+
+                // อัปเดต DB ด้วยรูปนี้ก่อน เพื่อให้ปุ่ม 'แก้ไข' บนเว็บเห็นรูปที่พึ่งส่งมาล่าสุด
+                await pool.query(
+                  "UPDATE users SET pending_bot_result = ? WHERE id = ?",
+                  [JSON.stringify({ type: "TANITA", publicUrl }), userId],
+                );
+
+                const errMsg = isInvalidImage
+                  ? tanitaErr.response?.data?.error ||
+                    "รูปภาพที่ส่งมาไม่ใช่ใบวัดองค์ประกอบร่างกาย"
+                  : "เกิดข้อผิดพลาดในการวิเคราะห์ภาพจากระบบ AI หรือระบบประมวลผลไม่ทันเวลา (Timeout)\n\nระบบยังคงบันทึกรูปของคุณไว้ คุณสามารถกดปุ่มเพื่อกรอกข้อมูลด้วยตนเองผ่านเว็บไซต์ได้เลยครับ";
+
+                const headerText = isInvalidImage
+                  ? "ไม่พบข้อมูลสุขภาพในรูป"
+                  : "ระบบวิเคราะห์ภาพขัดข้อง";
+                const bodyCompUrl = `${host}/body-composition`;
+
+                return client.replyMessage({
+                  replyToken: event.replyToken,
+                  messages: [
+                    {
+                      type: "flex",
+                      altText: `${headerText} — กรอกข้อมูลที่เว็บไซต์`,
+                      contents: {
+                        type: "bubble",
+                        size: "mega",
+                        header: {
+                          type: "box",
+                          layout: "vertical",
+                          backgroundColor: "#FEF3C7",
+                          paddingAll: "16px",
+                          contents: [
+                            {
+                              type: "box",
+                              layout: "horizontal",
+                              contents: [
+                                { type: "text", text: "⚠️", size: "xl", flex: 0 },
+                                {
+                                  type: "text",
+                                  text: headerText,
+                                  weight: "bold",
+                                  size: "md",
+                                  color: "#92400E",
+                                  flex: 1,
+                                  margin: "sm",
+                                  wrap: true,
+                                },
+                              ],
+                            },
+                          ],
+                        },
+                        body: {
+                          type: "box",
+                          layout: "vertical",
+                          paddingAll: "16px",
+                          spacing: "md",
+                          contents: [
+                            {
+                              type: "text",
+                              text: errMsg,
+                              wrap: true,
+                              color: "#374151",
+                              size: "sm",
+                            },
+                          ],
+                        },
+                        footer: {
+                          type: "box",
+                          layout: "vertical",
+                          spacing: "sm",
+                          paddingAll: "12px",
+                          contents: [
+                            {
+                              type: "button",
+                              style: "primary",
+                              color: "#EA580C",
+                              action: {
+                                type: "uri",
+                                label: "📝 กรอกข้อมูลที่เว็บไซต์",
+                                uri: bodyCompUrl,
+                              },
+                            },
+                          ],
+                        },
+                      },
+                      quickReply: await getMainQuickReply(userId, isGroupChat),
+                    },
+                  ],
+                });
+              }
+
+              // ถ้าเป็น Mission (>0) แล้ว analyze-tanita พลาด ไม่ต้อง return
+              // ปล่อยให้ flow ไหลไปที่ analyze-mission ด้านล่างแทน
+              if (lastBotTaskId > 0) {
+                console.log(
+                  `[BOT] Tanita analysis skipped or failed for mission, falling back to mission analysis...`,
+                );
+              }
+            }
+          }
+
+          if (result.type === "NOT_FOUND" && lastBotTaskId) {
+            // Path B: analyze-mission
+            console.log(
+              `[BOT] Calling analyze-mission: title=${taskTitle}, unit=${targetUnit}`,
+            );
+            const mRes = await ax.post(`${internalBase}/ai/analyze-mission`, {
               imageUrl: publicUrl,
+              taskTitle,
+              metricUnit: targetUnit,
+              metricType,
               userId,
             });
-            if (tRes.data?.weight) {
-              console.log(`[BOT] Tanita analysis OK:`, tRes.data);
-              const td = tRes.data;
+            const md = mRes.data;
+            console.log(`[BOT] Mission analysis result:`, md);
+            if (md.isRelated && md.value && parseFloat(md.value) > 0) {
+              const val = parseFloat(md.value);
+              const dU = ["km", "m", "miles"];
+              const sU = ["steps", "ก้าว"];
+              const cU = ["kcal", "calories", "cal"];
+              const tU = ["min", "minute", "minutes", "นาที", "ชั่วโมง", "hour"];
+              let type = "RUNNING";
+              if (sU.includes(targetUnit)) type = "STEPS";
+              else if (cU.includes(targetUnit)) type = "CALORIES";
+              else if (tU.includes(targetUnit)) type = "WORKOUT";
               result = {
-                type: "TANITA",
-                value: parseFloat(td.weight) || 0,
-                weight: td.weight,
-                fat_pc: td.fat_pc,
-                fat_mass: td.fat_mass,
-                ffm: td.ffm,
-                muscle_mass: td.muscle_mass,
-                tbw_mass: td.tbw_mass,
-                tbw_pc: td.tbw_pc,
-                bone_mass: td.bone_mass,
-                bmr_kcal: td.bmr_kcal,
-                bmr_kj: td.bmr_kj,
-                metabolic_age: td.metabolic_age,
-                visceral_fat: td.visceral_fat,
-                bmi: td.bmi,
-                ideal_weight: td.ideal_weight,
-                obesity_degree: td.obesity_degree,
-                physique_rating: td.physique_rating,
-                body_type: td.body_type,
-                age: td.age,
-                height: td.height,
-                gender: td.gender,
+                type,
+                value: val,
+                distance: dU.includes(targetUnit) ? val : undefined,
+                steps: sU.includes(targetUnit) ? Math.round(val) : undefined,
+                calories: cU.includes(targetUnit) ? val : undefined,
+                duration: tU.includes(targetUnit) ? val : undefined,
+                note: md.reason || "",
                 publicUrl,
               };
             }
-          } catch (tanitaErr: any) {
-            console.warn(`[BOT] analyze-tanita failed:`, tanitaErr.message);
-
-            // ถ้าเป็นโหมดบันทึกร่างกายโดยเฉพาะ (lastBotTaskId === 0) แล้วรูปผิด หรือ AI ขัดข้อง -> แจ้งเตือนด้วย Flex Message ทันที
-            if (lastBotTaskId === 0) {
-              const isInvalidImage = tanitaErr.response?.status === 422;
-
-              // อัปเดต DB ด้วยรูปนี้ก่อน เพื่อให้ปุ่ม 'แก้ไข' บนเว็บเห็นรูปที่พึ่งส่งมาล่าสุด
-              await pool.query(
-                "UPDATE users SET pending_bot_result = ? WHERE id = ?",
-                [JSON.stringify({ type: "TANITA", publicUrl }), userId],
-              );
-
-              const errMsg = isInvalidImage
-                ? tanitaErr.response?.data?.error ||
-                  "รูปภาพที่ส่งมาไม่ใช่ใบวัดองค์ประกอบร่างกาย"
-                : "เกิดข้อผิดพลาดในการวิเคราะห์ภาพจากระบบ AI หรือระบบประมวลผลไม่ทันเวลา (Timeout)\n\nระบบยังคงบันทึกรูปของคุณไว้ คุณสามารถกดปุ่มเพื่อกรอกข้อมูลด้วยตนเองผ่านเว็บไซต์ได้เลยครับ";
-
-              const headerText = isInvalidImage
-                ? "ไม่พบข้อมูลสุขภาพในรูป"
-                : "ระบบวิเคราะห์ภาพขัดข้อง";
-              const bodyCompUrl = `${host}/body-composition`;
-
-              return client.replyMessage({
-                replyToken: event.replyToken,
-                messages: [
-                  {
-                    type: "flex",
-                    altText: `${headerText} — กรอกข้อมูลที่เว็บไซต์`,
-                    contents: {
-                      type: "bubble",
-                      size: "mega",
-                      header: {
-                        type: "box",
-                        layout: "vertical",
-                        backgroundColor: "#FEF3C7",
-                        paddingAll: "16px",
-                        contents: [
-                          {
-                            type: "box",
-                            layout: "horizontal",
-                            contents: [
-                              { type: "text", text: "⚠️", size: "xl", flex: 0 },
-                              {
-                                type: "text",
-                                text: headerText,
-                                weight: "bold",
-                                size: "md",
-                                color: "#92400E",
-                                flex: 1,
-                                margin: "sm",
-                                wrap: true,
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                      body: {
-                        type: "box",
-                        layout: "vertical",
-                        paddingAll: "16px",
-                        spacing: "md",
-                        contents: [
-                          {
-                            type: "text",
-                            text: errMsg,
-                            wrap: true,
-                            color: "#374151",
-                            size: "sm",
-                          },
-                        ],
-                      },
-                      footer: {
-                        type: "box",
-                        layout: "vertical",
-                        spacing: "sm",
-                        paddingAll: "12px",
-                        contents: [
-                          {
-                            type: "button",
-                            style: "primary",
-                            color: "#EA580C",
-                            action: {
-                              type: "uri",
-                              label: "📝 กรอกข้อมูลที่เว็บไซต์",
-                              uri: bodyCompUrl,
-                            },
-                          },
-                        ],
-                      },
-                    },
-                    quickReply: await getMainQuickReply(userId, isGroupChat),
-                  },
-                ],
-              });
-            }
-
-            // ถ้าเป็น Mission (>0) แล้ว analyze-tanita พลาด ไม่ต้อง return
-            // ปล่อยให้ flow ไหลไปที่ analyze-mission ด้านล่างแทน
-            if (lastBotTaskId > 0) {
-              console.log(
-                `[BOT] Tanita analysis skipped or failed for mission, falling back to mission analysis...`,
-              );
-            }
           }
-        }
+        } catch (aiErr: any) {
+          console.error("[BOT] AI API call failed:", aiErr.message);
 
-        if (result.type === "NOT_FOUND" && lastBotTaskId) {
-          // Path B: analyze-mission
-          console.log(
-            `[BOT] Calling analyze-mission: title=${taskTitle}, unit=${targetUnit}`,
-          );
-          const mRes = await ax.post(`${internalBase}/ai/analyze-mission`, {
-            imageUrl: publicUrl,
-            taskTitle,
-            metricUnit: targetUnit,
-            metricType,
-            userId,
-          });
-          const md = mRes.data;
-          console.log(`[BOT] Mission analysis result:`, md);
-          if (md.isRelated && md.value && parseFloat(md.value) > 0) {
-            const val = parseFloat(md.value);
-            const dU = ["km", "m", "miles"];
-            const sU = ["steps", "ก้าว"];
-            const cU = ["kcal", "calories", "cal"];
-            const tU = ["min", "minute", "minutes", "นาที", "ชั่วโมง", "hour"];
-            let type = "RUNNING";
-            if (sU.includes(targetUnit)) type = "STEPS";
-            else if (cU.includes(targetUnit)) type = "CALORIES";
-            else if (tU.includes(targetUnit)) type = "WORKOUT";
-            result = {
-              type,
-              value: val,
-              distance: dU.includes(targetUnit) ? val : undefined,
-              steps: sU.includes(targetUnit) ? Math.round(val) : undefined,
-              calories: cU.includes(targetUnit) ? val : undefined,
-              duration: tU.includes(targetUnit) ? val : undefined,
-              note: md.reason || "",
+          // ดักจับกรณี Rate Limit (AI ใช้งานไม่ได้ชั่วคราว)
+          const isRateLimit =
+            aiErr.response?.status === 429 ||
+            aiErr.message?.toLowerCase().includes("rate limit") ||
+            aiErr.response?.data?.error?.toLowerCase().includes("rate limit");
+
+          if (isRateLimit) {
+            // บันทึก URL รูปไว้เพื่อให้ไปแก้ไขเองได้ แม้ AI จะล่ม
+            const rateLimitResult = {
+              type: lastBotTaskId === 0 ? "TANITA" : "MISSION",
               publicUrl,
+              isRateLimited: true,
             };
+            await pool.query(
+              "UPDATE users SET pending_bot_result = ? WHERE id = ?",
+              [JSON.stringify(rateLimitResult), userId],
+            );
+
+            return client.replyMessage({
+              replyToken: event.replyToken,
+              messages: [
+                {
+                  type: "text",
+                  text: "ขออภัยครับ ขณะนี้ระบบ AI มีผู้ใช้งานเป็นจำนวนมากจนเกินขีดจำกัด (Rate Limit)\n\nบอทไม่สามารถวิเคราะห์รูปภาพให้ได้ในขณะนี้ แต่คุณยังสามารถดูรูปที่ส่งมา และกดปุ่ม 'แก้ไขค่า' เพื่อกรอกข้อมูลด้วยตนเองผ่านทางหน้าเว็บไซต์ได้ทันที ขออภัยในความไม่สะดวกด้วยครับ 🙏",
+                },
+                {
+                  type: "flex",
+                  altText: "ยืนยันข้อมูลการส่งผล (กรอกเอง)",
+                  contents: buildConfirmationFlex(
+                    { type: "NOT_FOUND", publicUrl },
+                    fullUrl,
+                    lastBotTaskId,
+                    userId,
+                  ),
+                  quickReply: getConfirmQuickReply(
+                    lastBotTaskId,
+                    lastBotTaskId === 0 ? { type: "TANITA" } : null,
+                    userId,
+                  ),
+                },
+              ],
+            });
           }
+
+          result = { type: "NOT_FOUND" };
         }
-      } catch (aiErr: any) {
-        console.error("[BOT] AI API call failed:", aiErr.message);
-
-        // ดักจับกรณี Rate Limit (AI ใช้งานไม่ได้ชั่วคราว)
-        const isRateLimit =
-          aiErr.response?.status === 429 ||
-          aiErr.message?.toLowerCase().includes("rate limit") ||
-          aiErr.response?.data?.error?.toLowerCase().includes("rate limit");
-
-        if (isRateLimit) {
-          // บันทึก URL รูปไว้เพื่อให้ไปแก้ไขเองได้ แม้ AI จะล่ม
-          const rateLimitResult = {
-            type: lastBotTaskId === 0 ? "TANITA" : "MISSION",
-            publicUrl,
-            isRateLimited: true,
-          };
-          await pool.query(
-            "UPDATE users SET pending_bot_result = ? WHERE id = ?",
-            [JSON.stringify(rateLimitResult), userId],
-          );
-
-          return client.replyMessage({
-            replyToken: event.replyToken,
-            messages: [
-              {
-                type: "text",
-                text: "ขออภัยครับ ขณะนี้ระบบ AI มีผู้ใช้งานเป็นจำนวนมากจนเกินขีดจำกัด (Rate Limit)\n\nบอทไม่สามารถวิเคราะห์รูปภาพให้ได้ในขณะนี้ แต่คุณยังสามารถดูรูปที่ส่งมา และกดปุ่ม 'แก้ไขค่า' เพื่อกรอกข้อมูลด้วยตนเองผ่านทางหน้าเว็บไซต์ได้ทันที ขออภัยในความไม่สะดวกด้วยครับ 🙏",
-              },
-              {
-                type: "flex",
-                altText: "ยืนยันข้อมูลการส่งผล (กรอกเอง)",
-                contents: buildConfirmationFlex(
-                  { type: "NOT_FOUND", publicUrl },
-                  fullUrl,
-                  lastBotTaskId,
-                  userId,
-                ),
-                quickReply: getConfirmQuickReply(
-                  lastBotTaskId,
-                  lastBotTaskId === 0 ? { type: "TANITA" } : null,
-                  userId,
-                ),
-              },
-            ],
-          });
-        }
-
-        result = { type: "NOT_FOUND" };
       }
 
       if (result.type === "INVALID" || result.type === "NOT_FOUND") {

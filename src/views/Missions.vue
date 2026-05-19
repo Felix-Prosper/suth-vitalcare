@@ -20,6 +20,8 @@ const {
   editingSubmissionId,
   isEditingMode,
   uploadedImageUrl,
+  handleImageError,
+  triggerFileInput,
   metricMode,
   valNum,
   valSteps,
@@ -38,6 +40,8 @@ const {
   analyzingProgress,
   currentLoadingMessage,
   handleAIAnalysis,
+  isOcrEnabled,
+  imageTimestamp,
   tasksForSelectedDateAndEvent,
   onTaskDropdownChange,
   handleManage,
@@ -45,6 +49,8 @@ const {
   userSubmissions,
   ALL_TASKS,
   textResponse,
+  oldSubmissionValue,
+  cancelEditing,
   isTaskAllowedOnDate
 } = useMissions()
 // ฟังก์ชันคำนวณแต้มแยกตามกิจกรรม
@@ -81,6 +87,11 @@ function updateUrlQuery(isPush = false) {
   else delete query.step
   if (selectedActivityId.value) query.activityId = selectedActivityId.value
   else delete query.activityId
+  if (currentStep.value === 3 && activeTask.value?.id) {
+    query.taskId = String(activeTask.value.id)
+  } else {
+    delete query.taskId
+  }
   if (step1Page.value > 1) query.page1 = String(step1Page.value)
   else delete query.page1
   if (step2Page.value > 1) query.page2 = String(step2Page.value)
@@ -119,8 +130,10 @@ watch(showDetailModal, (val) => {
     if (activeTask.value && !selectedActivity.value) {
       selectedActivity.value = activities.value.find((a: any) => a.title === activeTask.value?.evt) || null
     }
+    updateUrlQuery(true)
   } else if (!val && currentStep.value === 3) {
     currentStep.value = 2
+    updateUrlQuery(true)
   }
 })
 // Watch for URL changes to restore state
@@ -371,7 +384,7 @@ const getActivityStatus = (act: any) => {
                   </div>
                   <!-- แสดงรูปภาพถ้ามี -->
                   <div class="proof-image-box shadow-sm" v-if="uploadedImageUrl">
-                    <img :src="uploadedImageUrl" alt="หลักฐาน" />
+                    <img :src="uploadedImageUrl + '?t=' + imageTimestamp" alt="หลักฐาน" @error="handleImageError" />
                   </div>
                   <!-- แสดงข้อความที่ตอบถ้ามี -->
                   <div v-if="textResponse" class="recorded-data shadow-sm">
@@ -395,13 +408,16 @@ const getActivityStatus = (act: any) => {
                   <template v-if="activeTask?.submission_type === 'photo' || activeTask?.submission_type === 'both' || !activeTask?.submission_type || activeTask?.submission_type === 'manual'">
                     <div v-if="activeTask?.submission_type !== 'text'" class="upload-area shadow-sm" @click="() => (fileInput as any)?.click()">
                       <input type="file" ref="fileInput" class="hidden-input" accept="image/*" @change="handleFileUpload" />
-                      <img v-if="uploadedImageUrl" :src="uploadedImageUrl" class="uploaded-preview" />
+                      <img v-if="uploadedImageUrl" :src="uploadedImageUrl + '?t=' + imageTimestamp" class="uploaded-preview" @error="handleImageError" />
                       <div v-else class="upload-placeholder">
                         <div class="icon-circle shadow-sm"><UploadCloud class="w-8 h-8 text-orange-500" /></div>
                         <p><strong>แตะเพื่ออัปโหลดรูปหลักฐาน</strong></p>
                         <span>(รองรับไฟล์ JPG, PNG)</span>
                       </div>
-                      <div v-if="isUploading" class="upload-overlay"><span class="loader"></span></div>
+                      <div v-if="isUploading || isAnalyzing" class="upload-overlay">
+                        <span class="upload-loader"></span>
+                        <span>{{ isUploading ? 'กำลังอัปโหลด...' : 'AI กำลังวิเคราะห์รูปภาพ...' }}</span>
+                      </div>
                     </div>
                   </template>
                   <!-- === TEXT response area === -->
@@ -422,16 +438,19 @@ const getActivityStatus = (act: any) => {
                       <label class="input-label">
                         {{ metricMode === 'steps' ? 'ระบุจำนวนก้าว' : (metricMode === 'time' ? 'ระบุระยะเวลา' : 'ระบุผลลัพธ์ที่ทำได้') }}
                       </label>
+                      <div v-if="isEditingMode && oldSubmissionValue" class="text-sm text-gray-500 mb-2 mt-[-5px]">
+                        ค่าเดิมที่บันทึกไว้: <span class="font-semibold text-orange-600">{{ oldSubmissionValue }} <span v-if="metricMode === 'steps'">ก้าว</span><span v-else-if="metricMode !== 'time'">{{ activeTask?.metric_unit }}</span></span>
+                      </div>
                       <div v-if="metricMode === 'number' || metricMode === 'steps'" class="field-row">
-                        <div v-if="uploadedImageUrl" class="field-ai-wrapper" :class="{ 'opacity-50 pointer-events-none': isAnalyzing || isSubmitting }" title="ใช้ AI วิเคราะห์อีกครั้ง" @click="() => !isAnalyzing && !isSubmitting && handleAIAnalysis()">
+                        <div v-if="uploadedImageUrl && isOcrEnabled" class="field-ai-wrapper" :class="{ 'opacity-50 pointer-events-none': isAnalyzing || isSubmitting }" title="ใช้ AI วิเคราะห์อีกครั้ง" @click="() => !isAnalyzing && !isSubmitting && handleAIAnalysis()">
                           <Wand2 class="field-ai-icon" :class="{ 'ai-icon-spin': isAnalyzing }" />
                         </div>
                         <input v-if="metricMode === 'steps'" v-model="valSteps" type="number" placeholder="0" class="styled-input" />
-                        <input v-else v-model="valNum" type="number" placeholder="0" class="styled-input" />
+                        <input v-else v-model="valNum" type="number" step="any" placeholder="0" class="styled-input" />
                         <span class="field-unit">{{ metricMode === 'steps' ? 'ก้าว' : activeTask?.metric_unit }}</span>
                       </div>
                       <div v-if="metricMode === 'time'" class="time-inputs">
-                        <div v-if="uploadedImageUrl" class="field-ai-wrapper mr-2" :class="{ 'opacity-50 pointer-events-none': isAnalyzing || isSubmitting }" title="ใช้ AI วิเคราะห์อีกครั้ง" @click="() => !isAnalyzing && !isSubmitting && handleAIAnalysis()">
+                        <div v-if="uploadedImageUrl && isOcrEnabled" class="field-ai-wrapper mr-2" :class="{ 'opacity-50 pointer-events-none': isAnalyzing || isSubmitting }" title="ใช้ AI วิเคราะห์อีกครั้ง" @click="() => !isAnalyzing && !isSubmitting && handleAIAnalysis()">
                           <Wand2 class="field-ai-icon" :class="{ 'ai-icon-spin': isAnalyzing }" />
                         </div>
                         <div class="time-box"><input v-model="valH" type="number" placeholder="0" class="styled-input text-center" /><span>ชั่วโมง</span></div>
@@ -443,7 +462,7 @@ const getActivityStatus = (act: any) => {
                     </div>
                   </template>
                   <!-- === AI hint for photo-based types === -->
-                  <div v-if="isAnalyzing" class="ai-status-hint">
+                  <div v-if="isAnalyzing && isOcrEnabled" class="ai-status-hint">
                     <span>Typhoon AI กำลังช่วยคุณวิเคราะห์หลักฐาน...</span>
                   </div>
                   <div class="action-footer">
@@ -451,7 +470,7 @@ const getActivityStatus = (act: any) => {
                       <span v-if="isSubmitting" class="loader"></span>
                       <span v-else>{{ editingSubmissionId ? 'ยืนยันการแก้ไข' : 'ส่งผลงานภารกิจ' }}</span>
                     </button>
-                    <button v-if="editingSubmissionId" class="action-btn ghost-btn" @click="isEditingMode = false">
+                    <button v-if="editingSubmissionId" class="action-btn ghost-btn" @click="cancelEditing">
                       ยกเลิกการแก้ไข
                     </button>
                   </div>
@@ -757,8 +776,11 @@ const getActivityStatus = (act: any) => {
 .hidden-input { display: none; }
 .uploaded-preview { width: 100%; height: 100%; object-fit: contain; background: #000; }
 .upload-placeholder { text-align: center; color: var(--text-muted); }
-.icon-circle { width: 64px; height: 64px; min-width: 64px; min-height: 64px; flex-shrink: 0; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem; aspect-ratio: 1/1; }
+.upload-placeholder .icon-circle { width: 64px; height: 64px; background: var(--orange-50); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
 .upload-placeholder p { margin: 0; color: var(--text-main); font-size: 1.1rem;}
+.upload-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.9); display: flex; align-items: center; justify-content: center; flex-direction: column; z-index: 10; gap: 12px; }
+.upload-overlay span { font-weight: 600; color: var(--primary); }
+.upload-loader { width: 36px; height: 36px; border: 4px solid rgba(255, 106, 0, 0.2); border-bottom-color: var(--primary); border-radius: 50%; display: inline-block; animation: rotation 1s linear infinite; }
 /* ================= ช่องกรอกผลลัพธ์ (Minimalist Style) ================= */
 .input-group { 
   background: transparent !important; 
