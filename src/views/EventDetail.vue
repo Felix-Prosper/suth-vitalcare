@@ -93,11 +93,11 @@
             <div class="rc-info-list mb-6 space-y-2 text-sm border-b border-slate-100 pb-5">
               <div class="flex gap-2 min-w-0">
                 <span class="min-w-[100px] font-bold shrink-0">วันเริ่มกิจกรรม :</span>
-                <span class="flex-1 break-words min-w-0">{{ formatDateThai(event.start_date) }}</span>
+                <span class="flex-1 break-words min-w-0">{{ formatDateThai(event.start_date) || "จัดต่อเนื่อง" }}</span>
               </div>
               <div class="flex gap-2 min-w-0">
                 <span class="min-w-[100px] font-bold shrink-0">วันสิ้นสุดกิจกรรม :</span>
-                <span class="flex-1 break-words min-w-0">{{ formatDateThai(event.end_date || event.start_date) }}</span>
+                <span class="flex-1 break-words min-w-0">{{ formatDateThai(event.end_date || event.start_date) || "จัดต่อเนื่อง" }}</span>
               </div>
               <div class="flex gap-2 min-w-0">
                 <span class="min-w-[100px] font-bold shrink-0">เวลาจัดกิจกรรม :</span>
@@ -125,11 +125,11 @@
             <div class="rc-info-list space-y-2 text-sm min-w-0">
               <div class="flex gap-2 min-w-0">
                 <span class="min-w-[100px] font-bold shrink-0">เปิดรับสมัคร :</span>
-                <span class="flex-1 break-words min-w-0">{{ formatDateThai(event.registration_start_date || event.start_date) }}</span>
+                <span class="flex-1 break-words min-w-0">{{ formatDateThai(event.registration_start_date || event.start_date) || "เปิดรับสมัครต่อเนื่อง" }}</span>
               </div>
               <div class="flex gap-2 min-w-0">
                 <span class="min-w-[100px] font-bold shrink-0">ปิดรับสมัคร :</span>
-                <span class="flex-1 break-words min-w-0">{{ formatDateThai(event.registration_end_date || event.end_date || event.start_date) }}</span>
+                <span class="flex-1 break-words min-w-0">{{ formatDateThai(event.registration_end_date || event.end_date || event.start_date) || "เปิดรับสมัครต่อเนื่อง" }}</span>
               </div>
               <p class="text-xs text-slate-400 mt-2 flex items-start gap-1">
                 <AlertCircleIcon :size="12" class="mt-0.5 shrink-0" />
@@ -428,11 +428,11 @@
             <div class="rc-info-list mb-6 space-y-2 text-sm border-b border-slate-100 pb-5">
               <div class="flex gap-2">
                 <span class="min-w-[100px] font-bold shrink-0">วันเริ่มกิจกรรม :</span>
-                <span class="flex-1 break-words">{{ formatDateThai(event.start_date) }}</span>
+                <span class="flex-1 break-words">{{ formatDateThai(event.start_date) || "จัดต่อเนื่อง" }}</span>
               </div>
               <div class="flex gap-2">
                 <span class="min-w-[100px] font-bold shrink-0">วันสิ้นสุดกิจกรรม :</span>
-                <span class="flex-1 break-words">{{ formatDateThai(event.end_date || event.start_date) }}</span>
+                <span class="flex-1 break-words">{{ formatDateThai(event.end_date || event.start_date) || "จัดต่อเนื่อง" }}</span>
               </div>
               <div class="flex gap-2">
                 <span class="min-w-[100px] font-bold shrink-0">เวลาจัดกิจกรรม :</span>
@@ -460,11 +460,11 @@
             <div class="rc-info-list mb-6 space-y-2 text-sm">
               <div class="flex gap-2">
                 <span class="min-w-[100px] font-bold shrink-0">เปิดรับสมัคร :</span>
-                <span class="flex-1 break-words">{{ formatDateThai(event.registration_start_date || event.start_date) }}</span>
+                <span class="flex-1 break-words">{{ formatDateThai(event.registration_start_date || event.start_date) || "เปิดรับสมัครต่อเนื่อง" }}</span>
               </div>
               <div class="flex gap-2">
                 <span class="min-w-[100px] font-bold shrink-0">ปิดรับสมัคร :</span>
-                <span class="flex-1 break-words">{{ formatDateThai(event.registration_end_date || event.end_date || event.start_date) }}</span>
+                <span class="flex-1 break-words">{{ formatDateThai(event.registration_end_date || event.end_date || event.start_date) || "เปิดรับสมัครต่อเนื่อง" }}</span>
               </div>
               <p class="text-xs text-slate-400 mt-2 flex items-start gap-1">
                 <AlertCircleIcon :size="12" class="mt-0.5 shrink-0" />

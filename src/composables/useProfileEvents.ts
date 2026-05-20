@@ -54,6 +54,87 @@ export function useProfileEvents(user, activeTabRef) {
     calDate.value = new Date(calYear.value, calMonth.value + 1, 1)
   }
 
+  function getMissionsForDate(date) {
+    if (!date) return []
+    const d = date.getDate()
+    const month = date.getMonth()
+    const year = date.getFullYear()
+    const weekday = date.getDay() === 0 ? 7 : date.getDay()
+    const today = new Date()
+    today.setHours(0,0,0,0)
+
+    const activeRegs = registrations.value.filter(r => {
+      if (!r.event) return false
+      if (selectedEventId.value && Number(r.event.id) !== Number(selectedEventId.value)) return false
+      
+      const start = r.event.start_date ? new Date(r.event.start_date) : null
+      const end = r.event.end_date ? new Date(r.event.end_date) : null
+      const regCreated = r.created_at ? new Date(r.created_at) : null
+      
+      const isValid = (d) => d && !isNaN(d.getTime())
+      
+      if (isValid(start)) start.setHours(0,0,0,0)
+      if (isValid(end)) end.setHours(23,59,59,999)
+      if (isValid(regCreated)) regCreated.setHours(0,0,0,0)
+      
+      let effectiveStart = start
+      if (isValid(regCreated)) {
+        if (!isValid(effectiveStart) || regCreated > effectiveStart) {
+          effectiveStart = regCreated
+        }
+      }
+      
+      const isAfterStart = !isValid(effectiveStart) || date >= effectiveStart
+      const isBeforeEnd = !isValid(end) || date <= end
+      
+      return isAfterStart && isBeforeEnd
+    })
+
+    const results = []
+    activeRegs.forEach(r => {
+      let tasks = r.tasks || r.event?.tasks || []
+      if (typeof tasks === 'string') {
+        try { tasks = JSON.parse(tasks) } catch { tasks = [] }
+      }
+      if (!Array.isArray(tasks)) tasks = []
+
+      tasks.forEach(t => {
+        let allowed = []
+        try {
+          allowed = Array.isArray(t.allowed_days) ? t.allowed_days : JSON.parse(t.allowed_days || '[]')
+        } catch { return }
+
+        if (allowed.length === 0 || allowed.length === 7 || allowed.includes(weekday)) {
+          const subs = userSubmissions.value.filter(s => {
+            const sd = new Date(s.created_at)
+            return Number(s.task_id) === Number(t.id) && sd.getDate() === d && sd.getMonth() === month && sd.getFullYear() === year
+          })
+
+          const latestSub = subs.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
+          
+          let status = 'none'
+          if (latestSub) {
+            status = latestSub.status
+          } else if (date < today) {
+            status = 'missed'
+          } else {
+            const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear()
+            status = isToday ? 'active' : 'upcoming'
+          }
+
+          results.push({
+            id: `${r.id}_${t.id}`,
+            task: t,
+            event: r.event,
+            status,
+            submission: latestSub
+          })
+        }
+      })
+    })
+    return results
+  }
+
   const calendarDays = computed(() => {
     const year = calYear.value
     const month = calMonth.value
@@ -168,7 +249,8 @@ export function useProfileEvents(user, activeTabRef) {
         date,
         isCurrentMonth: true,
         isToday: isTodayDate,
-        status
+        status,
+        missions: getMissionsForDate(date)
       })
     }
     
@@ -309,88 +391,22 @@ export function useProfileEvents(user, activeTabRef) {
     }).reduce((sum, s) => sum + (s.tasks?.points || 0), 0)
   }
   function hasGoal(event) { return event.goal_config?.enabled && event.goal_config?.target_value }
-  function getMissionsForDate(date) {
-    if (!date) return []
-    const d = date.getDate()
-    const month = date.getMonth()
-    const year = date.getFullYear()
-    const weekday = date.getDay() === 0 ? 7 : date.getDay()
-    const today = new Date()
-    today.setHours(0,0,0,0)
 
-    const activeRegs = registrations.value.filter(r => {
-      if (!r.event) return false
-      if (selectedEventId.value && Number(r.event.id) !== Number(selectedEventId.value)) return false
-      
-      const start = r.event.start_date ? new Date(r.event.start_date) : null
-      const end = r.event.end_date ? new Date(r.event.end_date) : null
-      const regCreated = r.created_at ? new Date(r.created_at) : null
-      
-      const isValid = (d) => d && !isNaN(d.getTime())
-      
-      if (isValid(start)) start.setHours(0,0,0,0)
-      if (isValid(end)) end.setHours(23,59,59,999)
-      if (isValid(regCreated)) regCreated.setHours(0,0,0,0)
-      
-      let effectiveStart = start
-      if (isValid(regCreated)) {
-        if (!isValid(effectiveStart) || regCreated > effectiveStart) {
-          effectiveStart = regCreated
-        }
-      }
-      
-      const isAfterStart = !isValid(effectiveStart) || date >= effectiveStart
-      const isBeforeEnd = !isValid(end) || date <= end
-      
-      return isAfterStart && isBeforeEnd
-    })
-
-    const results = []
-    activeRegs.forEach(r => {
-      let tasks = r.tasks || r.event?.tasks || []
-      if (typeof tasks === 'string') {
-        try { tasks = JSON.parse(tasks) } catch { tasks = [] }
-      }
-      if (!Array.isArray(tasks)) tasks = []
-
-      tasks.forEach(t => {
-        let allowed = []
-        try {
-          allowed = Array.isArray(t.allowed_days) ? t.allowed_days : JSON.parse(t.allowed_days || '[]')
-        } catch { return }
-
-        if (allowed.length === 0 || allowed.length === 7 || allowed.includes(weekday)) {
-          const subs = userSubmissions.value.filter(s => {
-            const sd = new Date(s.created_at)
-            return Number(s.task_id) === Number(t.id) && sd.getDate() === d && sd.getMonth() === month && sd.getFullYear() === year
-          })
-
-          const latestSub = subs.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0]
-          
-          let status = 'none'
-          if (latestSub) {
-            status = latestSub.status
-          } else if (date < today) {
-            status = 'missed'
-          } else {
-            const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear()
-            status = isToday ? 'active' : 'upcoming'
-          }
-
-          results.push({
-            id: `${r.id}_${t.id}`,
-            task: t,
-            event: r.event,
-            status,
-            submission: latestSub
-          })
-        }
-      })
-    })
-    return results
-  }
   const missionStats = computed(() => {
     const stats = []
+
+    // ── Clamp counting to the month currently shown on the calendar ──
+    const viewYear  = calYear.value
+    const viewMonth = calMonth.value
+    const monthStart = new Date(viewYear, viewMonth, 1)
+    monthStart.setHours(0, 0, 0, 0)
+    const monthEnd = new Date(viewYear, viewMonth + 1, 0)
+    monthEnd.setHours(23, 59, 59, 999)
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const isValid = (d) => d && !isNaN(d.getTime())
+
     registrations.value.forEach(reg => {
       let tasks = reg.tasks || reg.event?.tasks || []
       if (typeof tasks === 'string') {
@@ -398,74 +414,80 @@ export function useProfileEvents(user, activeTabRef) {
       }
       if (!Array.isArray(tasks)) tasks = []
 
-      const start = reg.event.start_date ? new Date(reg.event.start_date) : null
-      const end = reg.event.end_date ? new Date(reg.event.end_date) : null
-      const regCreated = reg.created_at ? new Date(reg.created_at) : null
-      const today = new Date()
-      today.setHours(0,0,0,0)
+      const evStart    = reg.event.start_date ? new Date(reg.event.start_date) : null
+      const evEnd      = reg.event.end_date   ? new Date(reg.event.end_date)   : null
+      const regCreated = reg.created_at       ? new Date(reg.created_at)       : null
 
-      const isValid = (d) => d && !isNaN(d.getTime())
-      
-      let effectiveStart = start
+      if (isValid(evStart))    evStart.setHours(0, 0, 0, 0)
+      if (isValid(evEnd))      evEnd.setHours(23, 59, 59, 999)
+      if (isValid(regCreated)) regCreated.setHours(0, 0, 0, 0)
+
+      // effective start = later of event start or registration date
+      let effectiveStart = evStart
       if (isValid(regCreated)) {
         if (!isValid(effectiveStart) || regCreated > effectiveStart) {
           effectiveStart = regCreated
         }
       }
 
+      // Skip if event doesn't overlap the viewed month at all
+      if (isValid(evEnd)          && evEnd < monthStart)   return
+      if (isValid(effectiveStart) && effectiveStart > monthEnd) return
+
+      // Final window = intersection of [effectiveStart, evEnd] and [monthStart, monthEnd]
+      const rangeStart = new Date(isValid(effectiveStart) && effectiveStart > monthStart ? effectiveStart : monthStart)
+      const rangeEnd   = new Date(isValid(evEnd) && evEnd < monthEnd ? evEnd : monthEnd)
+      rangeStart.setHours(0, 0, 0, 0)
+      rangeEnd.setHours(0, 0, 0, 0)
+
       tasks.forEach(task => {
         let allowed = []
         try {
-          allowed = Array.isArray(task.allowed_days) ? task.allowed_days : JSON.parse(task.allowed_days || '[]')
+          allowed = Array.isArray(task.allowed_days)
+            ? task.allowed_days
+            : JSON.parse(task.allowed_days || '[]')
         } catch { allowed = [] }
 
         let expected = 0
         let completedDays = 0
         let missed = 0
 
-        if (isValid(effectiveStart) && isValid(end)) {
-          // 1. Calculate total expected for full duration
-          let curr = new Date(effectiveStart)
-          curr.setHours(0,0,0,0)
-          const eventEnd = new Date(end)
-          eventEnd.setHours(0,0,0,0)
-          
-          while (curr <= eventEnd) {
-            const wd = curr.getDay() === 0 ? 7 : curr.getDay()
-            if (allowed.length === 0 || allowed.length === 7 || allowed.includes(wd)) {
-              expected++
-            }
-            curr.setDate(curr.getDate() + 1)
-          }
+        // 1. Expected days within this month's window
+        let curr = new Date(rangeStart)
+        while (curr <= rangeEnd) {
+          const wd = curr.getDay() === 0 ? 7 : curr.getDay()
+          if (allowed.length === 0 || allowed.length === 7 || allowed.includes(wd)) expected++
+          curr.setDate(curr.getDate() + 1)
+        }
 
-          // 2. Count unique completed days with approved submissions
-          const taskSubs = userSubmissions.value.filter(s => Number(s.task_id) === Number(task.id) && s.status === 'approved')
-          const completedDates = new Set(taskSubs.map(s => {
-            const d = new Date(s.created_at)
-            return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
-          }))
-          completedDays = completedDates.size
+        // 2. Completed unique days (approved) within this month's window
+        const taskSubs = userSubmissions.value.filter(s => {
+          if (Number(s.task_id) !== Number(task.id) || s.status !== 'approved') return false
+          const sd = new Date(s.created_at)
+          sd.setHours(0, 0, 0, 0)
+          return sd >= rangeStart && sd <= rangeEnd
+        })
+        const completedDates = new Set(taskSubs.map(s => {
+          const d = new Date(s.created_at)
+          return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+        }))
+        completedDays = completedDates.size
 
-          // 3. Count missed days up to today
-          let checkDate = new Date(effectiveStart)
-          checkDate.setHours(0,0,0,0)
-          const limitDate = today < eventEnd ? today : eventEnd
-          
-          while (checkDate < limitDate) {
-            const wd = checkDate.getDay() === 0 ? 7 : checkDate.getDay()
-            if (allowed.length === 0 || allowed.length === 7 || allowed.includes(wd)) {
-              const dateKey = `${checkDate.getFullYear()}-${checkDate.getMonth()}-${checkDate.getDate()}`
-              if (!completedDates.has(dateKey)) {
-                missed++
-              }
-            }
-            checkDate.setDate(checkDate.getDate() + 1)
+        // 3. Missed days up to today (or rangeEnd, whichever is earlier)
+        const limitDate = today < rangeEnd ? today : rangeEnd
+        let checkDate = new Date(rangeStart)
+        while (checkDate < limitDate) {
+          const wd = checkDate.getDay() === 0 ? 7 : checkDate.getDay()
+          if (allowed.length === 0 || allowed.length === 7 || allowed.includes(wd)) {
+            const key = `${checkDate.getFullYear()}-${checkDate.getMonth()}-${checkDate.getDate()}`
+            if (!completedDates.has(key)) missed++
           }
+          checkDate.setDate(checkDate.getDate() + 1)
         }
 
         stats.push({
-          taskId: task.id,
-          taskName: task.note || 'ภารกิจ',
+          taskId:    task.id,
+          taskName:  task.note || 'ภารกิจ',
           eventName: reg.event.title,
           expected,
           completed: completedDays,

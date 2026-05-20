@@ -94,13 +94,12 @@
                     <div class="fire-glow"></div>
                   </div>
                   <div class="streak-info">
-                    <div class="streak-count">{{ currentStreak }}</div>
-                    <div class="streak-label">วันต่อเนื่อง</div>
+                    <div class="streak-count">{{ currentStreak }}×</div>
+                   
                   </div>
                 </div>
 
                 <button v-if="canEditTab && !editing" class="btn-text text-o" @click="startEdit">แก้ไข</button>
-                <button v-if="activeTab === 'tanita' && tanita" class="btn-text text-o" @click="openTanitaModal(true)">แก้ไข</button>
               </div>
             </div>
             <!-- Stats Preview Bar -->
@@ -234,129 +233,236 @@
                 </div>
               </div>
               <div v-if="activeTab === 'tanita'" class="tab-content">
-                <div v-if="tanita" class="tanita-wrap">
-                  <div class="tanita-header-row">
-                    <div class="tanita-date">อัปเดตล่าสุด: {{ formatDate(tanita.recorded_at) }}</div>
+                <div v-if="tanita" class="tanita-wrap-v2">
+                  <!-- Header top row with last update and CTA button -->
+                  <div class="tanita-top-bar">
+                    <span class="update-time text-[11px] text-gray-400 font-medium">อัปเดตล่าสุด: {{ formatDate(tanita.recorded_at) }}</span>
+                    <button class="btn-outline-tanita-v2" @click="openTanitaModal(true)">
+                      <Pencil :size="13" class="mr-1.5" />
+                      อัปเดตผลร่างกาย
+                    </button>
                   </div>
-                  <div class="ai-insights-dashboard">
-                    <div class="ins-intro">
-                      <div class="ins-title">วิเคราะห์สุขภาพเชิงลึก</div>
-                      <div class="ins-sub">สรุปผลวิเคราะห์ที่กำหนดพฤติกรรมของคุณโดยเฉพาะเพื่อให้คุณเข้าใจและปรับรูปร่างได้ตรงจุด</div>
-                    </div>
-                    <div class="ins-grid">
-                      <div class="ins-card bg-orange" v-if="insightSweetSpot">
-                        <div class="ins-head">
-                          <Activity class="ins-ico" :size="20"/> 
-                          {{ insightSweetSpot.title }}
-                        </div>
-                        <div class="ins-val">{{ insightSweetSpot.value }}</div>
-                        <div class="ins-desc"><strong>สิ่งที่คุณรู้เพิ่ม:</strong> {{ insightSweetSpot.desc }}</div>
-                        <div class="ins-action"><strong>ประโยชน์:</strong> {{ insightSweetSpot.action }}</div>
+
+                  <!-- 2-column responsive layout -->
+                  <div class="tanita-layout-grid">
+                    <!-- Left Column: Core Fitness Targets (Calories, Water, Protein) & Simulator -->
+                    <div class="tanita-dashboard-left flex flex-col gap-4">
+                      <div class="section-title-wrap">
+                        <Award :size="16" class="text-orange-500" />
+                        <h3 class="section-title">สรุปเป้าหมายการบริโภครายวัน</h3>
                       </div>
-                      <div class="ins-card bg-blue" v-if="insightProtein">
-                        <div class="ins-head">
-                          <HeartPulse class="ins-ico" :size="20"/>
-                          {{ insightProtein.title }}
-                        </div>
-                        <div class="ins-val">{{ insightProtein.value }}</div>
-                        <div class="ins-desc"><strong>สิ่งที่คุณรู้เพิ่ม:</strong> {{ insightProtein.desc }}</div>
-                        <div class="ins-action"><strong>ตัวเลขจริง:</strong> {{ insightProtein.action }}</div>
-                      </div>
-                      <div class="ins-card bg-purple" v-if="insightBodyType">
-                        <div class="ins-head">
-                          <Target class="ins-ico" :size="20"/>
-                          {{ insightBodyType.title }}
-                        </div>
-                        <div class="ins-val">{{ insightBodyType.value }}</div>
-                        <div class="ins-desc"><strong>สิ่งที่คุณรู้เพิ่ม:</strong> {{ insightBodyType.desc }}</div>
-                        <div class="ins-action"><strong>กลยุทธ์:</strong> {{ insightBodyType.action }}</div>
-                      </div>
-                      <div class="ins-card bg-red" v-if="insightVisceral">
-                        <div class="ins-head">
-                          <Stethoscope class="ins-ico" :size="20"/>
-                          {{ insightVisceral.title }}
-                        </div>
-                        <div class="ins-val" :class="{'text-red-600': insightVisceral.value.includes('เสี่ยง')}">{{ insightVisceral.value }}</div>
-                        <div class="ins-desc"><strong>สิ่งที่คุณรู้เพิ่ม:</strong> {{ insightVisceral.desc }}</div>
-                        <div class="ins-action"><strong>Action:</strong> {{ insightVisceral.action }}</div>
-                      </div>
-                      <div class="ins-card bg-teal" v-if="insightHydration">
-                        <div class="ins-head">
-                          <Droplets class="ins-ico" :size="20"/>
-                          {{ insightHydration.title }}
-                        </div>
-                        <div class="ins-val">{{ insightHydration.value }}</div>
-                        <div class="ins-desc"><strong>สิ่งที่คุณรู้เพิ่ม:</strong> {{ insightHydration.desc }}</div>
-                        <div class="ins-action"><strong>แนะนำ:</strong> {{ insightHydration.action }}</div>
-                      </div>
-                      <div class="ins-card bg-green" v-if="insightWeightGap">
-                        <div class="ins-head">
-                          <Scale class="ins-ico" :size="20"/>
-                          {{ insightWeightGap.title }}
-                        </div>
-                        <div class="ins-val">{{ insightWeightGap.value }}</div>
-                        <div class="ins-desc"><strong>สิ่งที่คุณรู้เพิ่ม:</strong> {{ insightWeightGap.desc }}</div>
-                        <div class="ins-action"><strong>แนวทาง:</strong> {{ insightWeightGap.action }}</div>
-                      </div>
-                    </div>
-                    <div class="ins-summary-card">
-                      <div class="is-title mb-6">สรุปเป้าหมายการจัดการรูปร่าง</div>
-                      <div class="is-list">
-                        <div class="is-item"><strong class="text-orange-600">เป้าหมายการกิน:</strong> {{ insightSweetSpot ? insightSweetSpot.value + ' / วัน' : '-' }}</div>
-                        <div class="is-item"><strong class="text-blue-600">เป้าหมายโปรตีน:</strong> {{ insightProtein ? insightProtein.value : '-' }}</div>
-                        <div class="is-item"><strong class="text-purple-600">เป้าหมายการออกกำลังกาย:</strong> 
-                          <span v-if="dashboardGoal === 'เพิ่มกล้ามเนื้อ'">เน้นสร้างกล้ามเนื้อ (Weight Training) 80% คาร์ดิโอ 20%</span>
-                          <span v-else-if="dashboardGoal === 'ลดน้ำหนัก'">เน้นคาร์ดิโอ (Cardio) 70% เวท 30% เพื่อเผาผลาญไขมัน</span>
-                          <span v-else>คาร์ดิโอ 50% เวท 50% เพื่อสุขภาพที่สมดุล</span>
-                        </div>
-                      </div>
-                      <div class="is-sim-controls mt-6 pt-4 border-t border-gray-100">
-                        <div class="is-sim-label text-[11px] text-gray-400 mb-2 font-medium">ลองจำลองเป้าหมายและกิจกรรม:</div>
-                        <div class="flex gap-3 flex-wrap">
-                          <div class="flex-1 min-width-[160px]">
-                            <CustomSelect 
-                              v-model="dashboardGoal" 
-                              :options="goalOptions" 
-                              label="เป้าหมาย"
-                              class="goal-mini-select"
-                            />
+                      
+                      <!-- Bento Grid for Core Fitness Targets -->
+                      <div class="bento-fitness-targets">
+                        <!-- Calories Target Card -->
+                        <div class="bento-card bento-calories" v-if="insightSweetSpot">
+                          <div class="bento-icon-bg">
+                            <Activity :size="18" class="text-orange-500" />
                           </div>
-                          <div class="flex-1 min-width-[160px]">
-                            <CustomSelect 
-                              v-model="dashboardActivity" 
-                              :options="activityOptions" 
-                              label="กิจกรรม"
-                              class="goal-mini-select"
-                            />
+                          <div class="bento-label">เป้าหมายแคลอรี่</div>
+                          <div class="bento-value text-orange-600">{{ insightSweetSpot.value }}</div>
+                          <div class="bento-sub">{{ insightSweetSpot.action }}</div>
+                        </div>
+
+                        <!-- Water Target Card -->
+                        <div class="bento-card bento-water">
+                          <div class="bento-icon-bg">
+                            <Droplets :size="18" class="text-blue-500" />
+                          </div>
+                          <div class="bento-label">เป้าหมายน้ำดื่ม</div>
+                          <div class="bento-value text-blue-600">{{ recommendedWater }}</div>
+                          <div class="bento-sub">ดื่มน้ำช่วยกระตุ้นการเผาผลาญและการไหลเวียนของโลหิต
+                            โดยการคำนวนตาม น้ำหนักตัว (กก.) x 30 (มล.) = ปริมาณน้ำที่ควรดื่ม (มิลลิลิตร)
+
                           </div>
                         </div>
-                      </div>
-                      <div class="reference-footer mt-4 pt-3 border-t border-gray-100 text-[10px] text-gray-400">
-                        <div>แหล่งอ้างอิงข้อมูลทางวิชาการ:</div>
-                        <ul class="list-disc ml-4 mt-1">
-                          <li>สูตรคำนวณ TDEE/BMR มาตรฐาน Mifflin-St Jeor และกรมอนามัย: <a href="https://www.ptpioneer.com/personal-training/tools/total-daily-energy-expenditure-calculator-tdee-calculator/#:~:text=as%20maintenance%20levels.-,How%20Is%20Total%20Daily%20Energy%20Expenditure%20Calculated?,%2D161%20(kcal%20/%20day)" target="_blank" class="underline hover:text-orange-500">PTPioneer</a></li>
-                          <li>เกณฑ์โปรตีนตามมาตรฐาน ACSM และ Thai RDA: <a href="https://www.ironman.com/news/protein-non-negotiable-macro#:~:text=The%20American%20College%20of%20Sports%20Medicine%20(ACSM),kg%20(0.55%2D0.64%20grams%20per%20pound)%20of%20body" target="_blank" class="underline hover:text-orange-500">Ironman.com</a></li>
-                          <li>เกณฑ์องค์ประกอบร่างกายและดัชนีมวลกาย: กรมอนามัย กระทรวงสาธารณสุข และมาตรฐาน ค่าองค์ประกอบของร่างกาย</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="bmi-zone mt-4">
-                    <img :src="bmiImage.src" :alt="bmiImage.label" class="bmi-img" />
-                    <div class="bmi-info-wrap">
-                      <div class="bmi-top-row">
-                        <div class="bmi-label" :style="{ color: bmiImage.color }">{{ bmiImage.label }}</div>
-                        <div class="bmi-val">BMI {{ profileBMI }}</div>
-                        <div class="bmi-ideal" v-if="idealWeight">
-                          เหมาะสม: <span class="text-o font-bold">{{ idealWeight }} kg</span>
+
+                        <!-- Protein Target Card -->
+                        <div class="bento-card bento-protein" v-if="insightProtein">
+                          <div class="bento-icon-bg">
+                            <HeartPulse :size="18" class="text-purple-500" />
+                          </div>
+                          <div class="bento-label">เป้าหมายโปรตีน</div>
+                          <div class="bento-value text-purple-600">{{ insightProtein.value }}</div>
+                          <div class="bento-sub">{{ insightProtein.action }}</div>
                         </div>
                       </div>
-                      <div class="bmi-badge" :style="bmiImage.badgeStyle">{{ bmiImage.badge }}</div>
-                      <div class="bmi-scale-container">
-                        <div class="bmi-scale-line"></div>
-                        <div class="bmi-marker" :style="{ left: (bmiImage.dotIndex * 25) + '%' }"></div>
+
+                      <!-- Simulator Controls Card -->
+                      <div class="simulator-card">
+                        <div class="sim-header">
+                          <Target :size="15" class="text-gray-500" />
+                          <span>จำลองเป้าหมายและกิจกรรม</span>
+                        </div>
+                        <p class="sim-desc text-[11px] text-gray-400 mb-3">คุณสามารถปรับเป้าหมายและระดับกิจกรรมจำลองเพื่อดูการเปลี่ยนแปลงของแคลอรี่และโปรตีนเป้าหมายด้านบนได้ทันที</p>
+                        <div class="sim-controls-grid">
+                          <CustomSelect 
+                            v-model="dashboardGoal" 
+                            :options="goalOptions" 
+                            label="เป้าหมายจำลอง"
+                            class="sim-select"
+                          />
+                          <CustomSelect 
+                            v-model="dashboardActivity" 
+                            :options="activityOptions" 
+                            label="ระดับกิจกรรมจำลอง"
+                            class="sim-select"
+                          />
+                        </div>
                       </div>
-                      <div class="bmi-desc-box" :style="bmiImage.descStyle">{{ bmiImage.desc }}</div>
+
+                      <!-- Scientific References Card to balance layout height -->
+                      <div class="references-card">
+                        <div class="ref-header flex items-center gap-2 mb-2">
+                          <BookOpen :size="15" class="text-orange-500" />
+                          <span class="ref-title text-[12px] font-bold text-slate-700 font-sans">สูตรคำนวณและแหล่งอ้างอิงทางวิทยาศาสตร์</span>
+                        </div>
+                        <div class="ref-grid grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div class="ref-item p-3 bg-slate-50 border border-slate-100 rounded-xl flex flex-col gap-1.5">
+                            <div class="flex items-center">
+                              <span class="ref-badge bg-orange-100 text-orange-700 font-bold text-[9px] px-2 py-0.5 rounded-full font-sans">สูตรคำนวณ TDEE & BMR</span>
+                            </div>
+                            <p class="ref-text text-[10px] text-slate-500 leading-relaxed font-medium font-sans">
+                              คำนวณตามสูตรสากล <strong>Mifflin-St Jeor</strong> ร่วมกับตัวคูณกิจกรรมประจำวัน เพื่อหาค่าความต้องการพลังงานจริงที่ยั่งยืน
+                            </p>
+                            <a href="https://www.ptpioneer.com/personal-training/tools/total-daily-energy-expenditure-calculator-tdee-calculator/#:~:text=as%20maintenance%20levels.-,How%20Is%20Total%20Daily%20Energy%20Expenditure%20Calculated?,%2D161%20(kcal%20/%20day)" target="_blank" class="ref-link text-[10px] text-orange-600 font-bold hover:underline mt-auto flex items-center gap-0.5 font-sans">🔗 อ้างอิงสูตรคำนวณ TDEE</a>
+                          </div>
+                          <div class="ref-item p-3 bg-slate-50 border border-slate-100 rounded-xl flex flex-col gap-1.5">
+                            <div class="flex items-center">
+                              <span class="ref-badge bg-blue-100 text-blue-700 font-bold text-[9px] px-2 py-0.5 rounded-full font-sans">เป้าหมายโปรตีนรายวัน</span>
+                            </div>
+                            <p class="ref-text text-[10px] text-slate-500 leading-relaxed font-medium font-sans">
+                              คำนวณสัดส่วนโปรตีนที่ <strong>1.2 - 2.0 กรัม/กก.</strong> อ้างอิงคำแนะนำทางวิทยาศาสตร์การกีฬาของสถาบัน <strong>ACSM</strong>
+                            </p>
+                            <a href="https://www.ironman.com/news/protein-non-negotiable-macro#:~:text=The%20American%20College%20of%20Sports%20Medicine%20(ACSM),kg%20(0.55%2D0.64%20grams%20per%20pound)%20of%20body" target="_blank" class="ref-link text-[10px] text-blue-600 font-bold hover:underline mt-auto flex items-center gap-0.5 font-sans">🔗 อ้างอิงเกณฑ์โปรตีน ACSM</a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Right Column: Detailed Body Metrics Grid & BMI Scale -->
+                    <div class="tanita-dashboard-right flex flex-col gap-4">
+                      <div class="section-title-wrap">
+                        <Scale :size="16" class="text-orange-500" />
+                        <h3 class="section-title">องค์ประกอบร่างกายอย่างละเอียด</h3>
+                      </div>
+
+                      <!-- Grid for Metrics -->
+                      <div class="metrics-grid">
+                        <!-- Weight -->
+                        <div class="metric-coach-card">
+                          <div class="m-card-header flex items-center justify-between">
+                            <span class="m-title-mini">น้ำหนักตัว</span>
+                            <span class="m-status-badge" :style="bmiImage.badgeStyle" v-if="profileBMI !== '–'">{{ bmiImage.badge }}</span>
+                          </div>
+                          <div class="m-val-mini mt-1">
+                            {{ latestWeight }} <span class="m-unit-mini">กก.</span>
+                          </div>
+                          <div class="m-coach-rec mt-2 text-[11px] text-gray-500 font-medium">
+                            💡 {{ weightRecommendation }}
+                          </div>
+                        </div>
+
+                        <!-- Fat Percent -->
+                        <div class="metric-coach-card">
+                          <div class="m-card-header flex items-center justify-between">
+                            <span class="m-title-mini font-semibold">เปอร์เซ็นต์ไขมัน</span>
+                            <span class="m-status-badge text-[10px]" :class="fatStatus" v-if="fatStatus">{{ fatStatus }}</span>
+                          </div>
+                          <div class="m-val-mini mt-1">
+                            {{ tanita.fat_pc || '–' }} <span class="m-unit-mini">%</span>
+                          </div>
+                          <div class="m-coach-rec mt-2 text-[11px] text-gray-500 font-medium">
+                            💡 {{ fatRecommendation }}
+                          </div>
+                        </div>
+
+                        <!-- Visceral Fat -->
+                        <div class="metric-coach-card">
+                          <div class="m-card-header flex items-center justify-between">
+                            <span class="m-title-mini">ไขมันช่องท้อง</span>
+                            <span class="m-status-badge text-[10px]" :class="tanita.visceral_fat >= 10 ? 'danger' : 'success'" v-if="tanita.visceral_fat">{{ tanita.visceral_fat >= 10 ? 'ควรลด' : 'ปกติ' }}</span>
+                          </div>
+                          <div class="m-val-mini mt-1">
+                            ระดับ {{ tanita.visceral_fat || '–' }}
+                          </div>
+                          <div class="m-coach-rec mt-2 text-[11px] text-gray-500 font-medium">
+                            💡 {{ visceralRecommendation }}
+                          </div>
+                        </div>
+
+                        <!-- Total Body Water -->
+                        <div class="metric-coach-card">
+                          <div class="m-card-header flex items-center justify-between">
+                            <span class="m-title-mini font-semibold">ระดับน้ำในร่างกาย</span>
+                            <span class="m-status-badge text-[10px]" :class="insightHydration?.value?.includes('ต่ำ') ? 'danger' : 'success'" v-if="insightHydration">{{ insightHydration.value.includes('ต่ำ') ? 'ควรดื่มเพิ่ม' : 'ปกติ' }}</span>
+                          </div>
+                          <div class="m-val-mini mt-1">
+                            {{ tanita.tbw_pc || '–' }} <span class="m-unit-mini">%</span>
+                          </div>
+                          <div class="m-coach-rec mt-2 text-[11px] text-gray-500 font-medium">
+                            💡 {{ waterRecommendation }}
+                          </div>
+                        </div>
+
+                        <!-- Muscle Mass -->
+                        <div class="metric-coach-card">
+                          <div class="m-card-header flex items-center justify-between">
+                            <span class="m-title-mini">มวลกล้ามเนื้อ</span>
+                            <span class="m-status-badge success text-[10px]">ปกติ</span>
+                          </div>
+                          <div class="m-val-mini mt-1">
+                            {{ tanita.muscle_mass || '–' }} <span class="m-unit-mini">กก.</span>
+                          </div>
+                          <div class="m-coach-rec mt-2 text-[11px] text-gray-500 font-medium">
+                            💡 ช่วยกระตุ้นระบบเผาผลาญ ควรออกกำลังกายแรงต้านเพื่อรักษามวลกล้ามเนื้อไว้
+                          </div>
+                        </div>
+
+                        <!-- Metabolic Age & BMR -->
+                        <div class="metric-coach-card">
+                          <div class="m-card-header flex items-center justify-between">
+                            <span class="m-title-mini">พลังงาน & อายุเซลล์</span>
+                          </div>
+                          <div class="m-val-mini mt-1 text-[13px] flex items-center gap-2 flex-wrap">
+                            <span>BMR: <strong class="text-slate-800">{{ tanita.bmr_kcal || '–' }}</strong> <small class="text-gray-400">kcal</small></span>
+                            <span class="text-gray-300">|</span>
+                            <span>อายุเซลล์: <strong class="text-slate-800">{{ tanita.metabolic_age || '–' }}</strong> <small class="text-gray-400">ปี</small></span>
+                          </div>
+                          <div class="m-coach-rec mt-2 text-[11px] text-gray-500 font-medium">
+                            💡 อายุเซลล์ควรเท่ากับหรือน้อยกว่าอายุจริง บ่งบอกสุขภาพการฟื้นฟูของเซลล์ที่ดี
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- BMI Visualizer -->
+                      <div class="bmi-compact-card">
+                        <div class="bmi-compact-header">
+                          <span class="bmi-compact-title">ดัชนีมวลกาย (BMI)</span>
+                          <div class="bmi-compact-value-row">
+                            <span class="bmi-compact-badge" :style="bmiImage.badgeStyle">{{ bmiImage.badge }}</span>
+                            <span class="bmi-compact-num">BMI {{ profileBMI }}</span>
+                          </div>
+                        </div>
+                        
+                        <div class="bmi-scale-container mt-3">
+                          <div class="bmi-scale-line"></div>
+                          <div class="bmi-marker" :style="{ left: (bmiImage.dotIndex * 25) + '%' }"></div>
+                          
+                          <!-- Numbers and Ranges Labeling for the scale -->
+                          <div class="bmi-scale-labels mt-2.5 flex justify-between text-[9px] text-gray-400 font-semibold px-0.5 relative">
+                            <span>ผอม (&lt;18.5)</span>
+                            <span>ปกติ (18.5)</span>
+                            <span>ท้วม (23.0)</span>
+                            <span>อ้วน1 (25.0)</span>
+                            <span>อ้วน2 (30.0+)</span>
+                          </div>
+                        </div>
+
+                        <div class="bmi-compact-desc mt-3" :style="bmiImage.descStyle">
+                          {{ bmiImage.desc }}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -480,22 +586,30 @@
                       :selectedDate="selectedDate"
                       @prevMonth="prevMonth"
                       @nextMonth="nextMonth"
-                      @selectDay="d => selectedDate = d.date"
+                      @selectDay="handleSelectDay"
                     />
 
-                    <!-- Icon Legend -->
+                    <!-- Color Tab Legend -->
                     <div class="calendar-legend mt-4">
                       <div class="legend-item">
-                        <span class="legend-icon fire">🔥</span>
-                        <span class="legend-text">ส่งภารกิจแล้ว</span>
+                        <div class="legend-color" style="background: #10b981;"></div>
+                        <span class="legend-text">ส่งแล้ว</span>
                       </div>
                       <div class="legend-item">
-                        <span class="legend-icon missed">✕</span>
+                        <div class="legend-color" style="background: #3b82f6;"></div>
+                        <span class="legend-text">รอส่งวันนี้</span>
+                      </div>
+                      <!-- <div class="legend-item">
+                        <div class="legend-color" style="background: #f59e0b;"></div>
+                        <span class="legend-text">รอตรวจ</span>
+                      </div> -->
+                      <div class="legend-item">
+                        <div class="legend-color" style="background: #ef4444;"></div>
                         <span class="legend-text">ขาดส่ง</span>
                       </div>
                       <div class="legend-item">
-                        <span class="legend-icon upcoming">🕗</span>
-                        <span class="legend-text">มีภารกิจในวันนั้น(ยังไม่ได้ทำ)</span>
+                        <div class="legend-color" style="background: #94a3b8;"></div>
+                        <span class="legend-text">ยังไม่ถึงกำหนด</span>
                       </div>
                     </div>
                     
@@ -526,38 +640,6 @@
                       </div>
                       <div v-else class="empty-mini">
                         <p>ยังไม่มีข้อมูลสรุปภารกิจ</p>
-                      </div>
-                    </div>
-
-                    <div class="day-missions mt-6">
-                      <div class="section-title-sm mb-4">ภารกิจวันที่ {{ formatDate(selectedDate) }}</div>
-                      <div v-if="selectedDateMissions.length" class="mission-list">
-                        <div v-for="m in selectedDateMissions" :key="m.id" class="mission-item">
-                          <div class="m-status-icon-new">
-                            <span v-if="m.status === 'approved' || m.status === 'pending'" class="m-emoji fire">🔥</span>
-                            <span v-else-if="m.status === 'upcoming'" class="m-emoji upcoming">🕗</span>
-                            <span v-else-if="m.status === 'missed'" class="m-emoji missed">✕</span>
-                            <span v-else-if="m.status === 'active'" class="m-emoji fire">🕗</span>
-                            <span v-else class="m-emoji">📋</span>
-                          </div>
-                          <div class="m-info">
-                            <div class="m-title">{{ m.task?.note || 'ภารกิจ' }}</div>
-                            <div class="m-meta">{{ m.event?.title }}</div>
-                          </div>
-                          <div class="m-badge" :class="m.status">
-                            {{ 
-                              m.status === 'approved' ? 'ส่งแล้ว' : 
-                              m.status === 'pending' ? 'รอตรวจสอบ' : 
-                              m.status === 'rejected' ? 'ปฏิเสธ' :
-                              m.status === 'missed' ? 'ไม่ส่ง' : 
-                              m.status === 'active' ? 'รอส่ง' : 'ยังไม่ถึง'
-                            }}
-                          </div>
-                        </div>
-                      </div>
-                      <div v-else class="empty-mini">
-                        <VenetianMask :size="24" class="text-slate-300" />
-                        <span>ไม่มีกิจกรรมในวันนี้</span>
                       </div>
                     </div>
                   </div>
@@ -758,6 +840,79 @@
         </div>
       </Transition>
     </Teleport>
+    <Teleport to="body">
+      <Transition name="modal-fade">
+        <div v-if="showMissionPopup" class="tn-overlay" @click.self="showMissionPopup = false">
+          <div class="tn-sheet popup-mission-sheet">
+            <div class="tn-header">
+              <div class="header-actions-left" v-if="isMobileScreen" @click="showMissionPopup = false">
+                <button class="icon-btn-back">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+              </div>
+              <div class="tn-title">ภารกิจวันที่ {{ formatDate(selectedDate) }}</div>
+              <button class="tn-close" v-if="!isMobileScreen" @click="showMissionPopup = false" aria-label="ปิด">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            
+            <div class="tn-body popup-mission-body">
+              <div v-if="selectedDateMissions.length" class="mission-list popup-list">
+                <div v-for="m in paginatedPopupMissions" :key="m.id" class="mission-item popup-item">
+                  <div class="m-status-icon-new">
+                    <span v-if="m.status === 'approved' || m.status === 'pending'" class="m-emoji fire">🔥</span>
+                    <span v-else-if="m.status === 'upcoming'" class="m-emoji upcoming">🕗</span>
+                    <span v-else-if="m.status === 'missed'" class="m-emoji missed">✕</span>
+                    <span v-else-if="m.status === 'active'" class="m-emoji fire">🕗</span>
+                    <span v-else class="m-emoji">📋</span>
+                  </div>
+                  <div class="m-info">
+                    <div class="m-title">{{ m.task?.note || 'ภารกิจ' }}</div>
+                    <div class="m-meta">{{ m.event?.title }}</div>
+                  </div>
+                  <div class="m-badge" :class="m.status">
+                    {{ 
+                      m.status === 'approved' ? 'ส่งแล้ว' : 
+                      m.status === 'pending' ? 'รอตรวจสอบ' : 
+                      m.status === 'rejected' ? 'ปฏิเสธ' :
+                      m.status === 'missed' ? 'ไม่ส่ง' : 
+                      m.status === 'active' ? 'รอส่ง' : 'ยังไม่ถึง'
+                    }}
+                  </div>
+                </div>
+              </div>
+              <div v-else class="empty-mini py-12">
+                <VenetianMask :size="32" class="opacity-20 mb-2" />
+                <span class="text-gray-500 font-medium">ไม่มีกิจกรรมในวันนี้</span>
+              </div>
+            </div>
+
+            <!-- Popup Footer Pagination -->
+            <div v-if="selectedDateMissions.length > itemsPerPage" class="popup-pagination-footer">
+              <div class="pagination-buttons">
+                <button 
+                  class="btn-pagination-prev" 
+                  :disabled="currentPopupPage === 1" 
+                  @click="currentPopupPage--"
+                >
+                  ย้อนกลับ
+                </button>
+                <span class="pagination-indicator">
+                  หน้า {{ currentPopupPage }} / {{ totalPopupPages }}
+                </span>
+                <button 
+                  class="btn-pagination-next" 
+                  :disabled="currentPopupPage === totalPopupPages" 
+                  @click="currentPopupPage++"
+                >
+                  ถัดไป
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 <script setup>
@@ -767,7 +922,8 @@ import {
   Camera, ChevronRight, MapPin, Pencil, LogOut, Award, HeartPulse, Activity, 
   LayoutDashboard, Loader2, User, Users, Calendar, Target, Mail, Phone, IdCard, 
   Scale, Ruler, Stethoscope, School, GraduationCap, Building2, Briefcase, VenetianMask,
-  Heart, ImageIcon, Droplets, Lock, LayoutGrid, Medal, Check, PanelLeft, PanelLeftClose, ChevronLeft, X, Clock
+  Heart, ImageIcon, Droplets, Lock, LayoutGrid, Medal, Check, PanelLeft, PanelLeftClose, ChevronLeft, X, Clock,
+  BookOpen
 } from 'lucide-vue-next'
 import Swal from 'sweetalert2'
 import { authStore } from '../store/auth'
@@ -888,6 +1044,65 @@ watch(() => user.value?.activity_level, (na) => { if (na) dashboardActivity.valu
 const {
   insightSweetSpot, insightProtein, insightBodyType, insightVisceral, insightHydration, insightWeightGap
 } = useTanitaInsights(tanita, user, { latestWeight, latestHeight, profileBMI, recommendedCalories, accurateAge }, dashboardGoal, dashboardActivity)
+
+const recommendedWater = computed(() => {
+  const w = parseFloat(String(latestWeight.value))
+  if (isNaN(w) || w <= 0) return '2.0 - 3.0 ลิตร'
+  return (Math.round(w * 33 / 100) / 10).toFixed(1) + ' ลิตร'
+})
+
+const genderLabel = computed(() => {
+  const g = (user.value?.gender || '').toLowerCase()
+  return g.includes('หญิง') || g.includes('female') ? 'female' : 'male'
+})
+
+const weightRecommendation = computed(() => {
+  const w = parseFloat(String(latestWeight.value))
+  const ideal = parseFloat(String(idealWeight.value))
+  if (isNaN(w) || isNaN(ideal) || w <= 0) return '–'
+  const diff = w - ideal
+  if (diff > 0) {
+    return `ลดไขมันอีก ${diff.toFixed(1)} กก. (เป้าหมาย: ${ideal.toFixed(1)} กก.)`
+  } else if (diff < 0) {
+    return `เพิ่มกล้ามเนื้ออีก ${Math.abs(diff).toFixed(1)} กก. (เป้าหมาย: ${ideal.toFixed(1)} กก.)`
+  }
+  return 'น้ำหนักเหมาะสมดีเยี่ยม!'
+})
+
+const fatRecommendation = computed(() => {
+  const fat = parseFloat(String(tanita.value?.fat_pc))
+  if (isNaN(fat) || fat <= 0) return '–'
+  const isFemale = genderLabel.value === 'female'
+  const maxNormal = isFemale ? 30 : 20
+  const minNormal = isFemale ? 20 : 10
+  if (fat > maxNormal) {
+    return `ควรลดไขมันลงอีก ${(fat - maxNormal).toFixed(1)}% (ช่วงปกติ: ${minNormal}-${maxNormal}%)`
+  } else if (fat < minNormal) {
+    return `ควรเพิ่มไขมันขึ้นอีก ${(minNormal - fat).toFixed(1)}% (ช่วงปกติ: ${minNormal}-${maxNormal}%)`
+  }
+  return `อยู่ในเกณฑ์ดีเยี่ยม! (เกณฑ์ปกติ: ${minNormal}-${maxNormal}%)`
+})
+
+const visceralRecommendation = computed(() => {
+  const vis = parseFloat(String(tanita.value?.visceral_fat))
+  if (isNaN(vis) || vis <= 0) return '–'
+  if (vis >= 10) {
+    return `ควรลดลงอีก ${(vis - 9)} ระดับ (เป้าหมายปลอดภัย: < 9)`
+  }
+  return 'ดีเยี่ยม! ปลอดภัยจากโรค NCDs (ระดับ < 9)'
+})
+
+const waterRecommendation = computed(() => {
+  const tbw = parseFloat(String(tanita.value?.tbw_pc))
+  if (isNaN(tbw) || tbw <= 0) return '–'
+  const isFemale = genderLabel.value === 'female'
+  const minNormal = isFemale ? 45 : 55
+  const maxNormal = isFemale ? 60 : 65
+  if (tbw < minNormal) {
+    return `ดื่มน้ำเพิ่มอีกเพื่อเพิ่ม ${(minNormal - tbw).toFixed(1)}% (เป้าหมาย: ${minNormal}-${maxNormal}%)`
+  }
+  return `สมบูรณ์ดีมาก! (เกณฑ์ปกติ: ${minNormal}-${maxNormal}%)`
+})
 const {
   registrations, userSubmissions, team, memberCount, teamProgress, teamGoal,
   isEventsLoaded, isTeamLoaded, eventsPerPage, eventsCurrentPage, eventsTotalPages,
@@ -904,6 +1119,27 @@ const maxBarValue = computed(() => {
 const selectedDateMissions = computed(() => {
   return getMissionsForDate(selectedDate.value)
 })
+
+// Popup Modal for Calendar Missions
+const showMissionPopup = ref(false)
+const currentPopupPage = ref(1)
+const itemsPerPage = ref(3)
+
+const totalPopupPages = computed(() => {
+  return Math.ceil(selectedDateMissions.value.length / itemsPerPage.value) || 1
+})
+
+const paginatedPopupMissions = computed(() => {
+  const start = (currentPopupPage.value - 1) * itemsPerPage.value
+  const end = start + itemsPerPage.value
+  return selectedDateMissions.value.slice(start, end)
+})
+
+const handleSelectDay = (day) => {
+  selectedDate.value = day.date
+  currentPopupPage.value = 1
+  showMissionPopup.value = true
+}
 
 const isCalDropdownOpen = ref(false)
 const calActivitySearch = ref('')
@@ -1065,6 +1301,7 @@ onUnmounted(() => {
 }
 .nav-sidebar {
   background: transparent;
+  width: 100%;
 }
 .menu-list.mobile-grid {
   background: #fff;
@@ -1077,16 +1314,20 @@ onUnmounted(() => {
 }
 .menu-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
 .menu-items-container.horizontal-scroll {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  gap: 20px;
-  padding: 8px 20px 16px;
-  overflow-x: auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px 10px;
+  padding: 8px 16px 16px;
   width: 100%;
-  max-width: 100vw;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+}
+.menu-items-container.horizontal-scroll .menu-item {
+  min-width: unset;
+  width: 100%;
+}
+.menu-items-container.horizontal-scroll .menu-label {
+  width: 100%;
+  max-width: 90px;
+  font-size: 0.78rem;
 }
 .menu-items-container.horizontal-scroll::-webkit-scrollbar { display: none; }
 .menu-title { padding: 0 20px; }
@@ -1356,7 +1597,7 @@ onUnmounted(() => {
   font-size: 16px;
 }
 
-.streak-cool-header .streak-label {
+.streak-cool-header {
   font-size: 9px;
 }
 
@@ -1413,13 +1654,6 @@ onUnmounted(() => {
   line-height: 1;
 }
 
-.streak-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
 
 @keyframes fire-vibe {
   from { transform: scale(1) rotate(-2deg); }
@@ -1572,11 +1806,11 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
 }
-.legend-icon {
-  font-size: 16px;
-  font-weight: 800;
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
 }
-.legend-icon.missed { color: #ef4444; }
 .legend-text {
   font-size: 0.85rem;
   font-weight: 600;
@@ -2044,9 +2278,14 @@ onUnmounted(() => {
 .m-val { font-size: 0.9rem; font-weight: 800; color: #334155; }
 .m-val.success { color: #16a34a; }
 .m-val.danger { color: #dc2626; }
+/* Mission Stats – always horizontal; on mobile make text smaller & tighter */
 @media (max-width: 640px) {
-  .stat-row { flex-direction: column; align-items: flex-start; gap: 12px; }
-  .stat-metrics { width: 100%; justify-content: space-between; }
+  .stat-row { padding: 12px; gap: 8px; align-items: center; }
+  .stat-t-name { font-size: 0.82rem; }
+  .stat-e-name { font-size: 0.68rem; }
+  .stat-metrics { gap: 12px; flex-shrink: 0; }
+  .m-label { font-size: 0.6rem; }
+  .m-val { font-size: 0.85rem; }
 }
 
 
@@ -2089,5 +2328,416 @@ onUnmounted(() => {
 }
 .calendar-tab { font-family: 'Sarabun', sans-serif !important; }
 .cal-trigger-text, .item-name, .item-sub, .m-label, .m-val, .stat-t-name { font-family: 'Sarabun', sans-serif !important; }
+
+/* Mission Popup Modal Styles */
+.popup-mission-sheet {
+  min-height: 100dvh !important;
+  width: 100% !important;
+  border-radius: 0 !important;
+  overflow: hidden;
+  box-shadow: none !important;
+  border: none !important;
+}
+@media (min-width: 640px) {
+  .popup-mission-sheet {
+    min-height: auto !important;
+    max-width: 520px !important;
+    border-radius: 20px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
+    border: 1px solid #f0f0f0 !important;
+  }
+}
+.popup-mission-body {
+  padding: 24px 20px !important;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #fdfdfd;
+  flex: 1; /* Pushes the footer to the bottom on full-screen mobile */
+}
+.popup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+.popup-item {
+  background: #fff;
+  border: 1.5px solid #f1f5f9;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.popup-item:hover {
+  transform: translateY(-2px);
+  border-color: #fef0eb;
+  box-shadow: 0 8px 20px rgba(240, 90, 35, 0.05);
+}
+.popup-pagination-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #f1f5f9;
+  background: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); /* Safe area support */
+}
+.pagination-buttons {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.btn-pagination-prev,
+.btn-pagination-next {
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Sarabun', sans-serif !important;
+}
+.btn-pagination-prev:hover:not(:disabled),
+.btn-pagination-next:hover:not(:disabled) {
+  border-color: #F05A23;
+  color: #F05A23;
+  background: #fef0eb;
+}
+.btn-pagination-prev:disabled,
+.btn-pagination-next:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f8fafc;
+  color: #cbd5e1;
+}
+.pagination-indicator {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #334155;
+  font-family: 'Sarabun', sans-serif !important;
+}
+
+/* ── New Tanita Responsive 2-Column Styles ── */
+.tanita-wrap-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+.tanita-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 12px;
+}
+.btn-outline-tanita-v2 {
+  background: #fff;
+  border: 1.5px solid #F05A23;
+  color: #F05A23;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+  font-family: 'Sarabun', sans-serif !important;
+}
+.btn-outline-tanita-v2:hover {
+  background: #fef0eb;
+  transform: translateY(-1px);
+}
+.tanita-layout-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+@media (min-width: 1024px) {
+  .tanita-layout-grid {
+    grid-template-columns: 1.15fr 0.85fr;
+  }
+}
+.section-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  font-family: 'Sarabun', sans-serif !important;
+}
+
+/* Bento Targets Grid */
+.bento-fitness-targets {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 640px) {
+  .bento-fitness-targets {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.bento-card {
+  background: #fff;
+  border: 1.5px solid #f1f5f9;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.015);
+  transition: all 0.2s ease;
+}
+.bento-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04);
+  border-color: #e2e8f0;
+}
+.bento-icon-bg {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bento-calories .bento-icon-bg { background: #fff7ed; }
+.bento-water .bento-icon-bg { background: #eff6ff; }
+.bento-protein .bento-icon-bg { background: #faf5ff; }
+
+.bento-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: 'Sarabun', sans-serif !important;
+}
+.bento-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-family: 'Sarabun', sans-serif !important;
+}
+.bento-sub {
+  font-size: 0.72rem;
+  color: #64748b;
+  line-height: 1.4;
+  font-family: 'Sarabun', sans-serif !important;
+}
+
+/* Simulator Card */
+.simulator-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+}
+.sim-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 6px;
+  font-family: 'Sarabun', sans-serif !important;
+}
+.sim-desc {
+  font-family: 'Sarabun', sans-serif !important;
+}
+.sim-controls-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 640px) {
+  .sim-controls-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.sim-select :deep(.select-trigger) {
+  min-height: 38px;
+  padding: 8px 10px 0px;
+  background: #fff;
+  border-color: #cbd5e1;
+  font-size: 0.82rem;
+  border-radius: 8px;
+}
+.sim-select :deep(label) {
+  display: none !important;
+}
+.sim-select :deep(.select-caret) {
+  top: 18px;
+  border-top-color: #64748b;
+}
+
+/* Metrics Grid Right Column */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.metric-coach-card {
+  background: #fff;
+  border: 1.2px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.01);
+}
+.metric-coach-card:hover {
+  transform: translateY(-1px);
+  border-color: #cbd5e1;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.03);
+}
+.m-title-mini {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  font-family: 'Sarabun', sans-serif !important;
+}
+.m-val-mini {
+  font-size: 1.08rem;
+  font-weight: 800;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-family: 'Sarabun', sans-serif !important;
+}
+.m-unit-mini {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #94a3b8;
+}
+.m-coach-rec {
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: #475569;
+  border-top: 1px dashed #f1f5f9;
+  padding-top: 6px;
+  font-family: 'Sarabun', sans-serif !important;
+}
+.m-status-badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-family: 'Sarabun', sans-serif !important;
+}
+.m-status-badge.ปกติ, .m-status-badge.success { background: #dcfce7; color: #15803d; }
+.m-status-badge.เฝ้าระวัง { background: #fef9c3; color: #a16207; }
+.m-status-badge.สูง, .m-status-badge.danger { background: #fee2e2; color: #b91c1c; }
+.m-status-badge.ต่ำ { background: #e0f2fe; color: #0369a1; }
+.m-status-badge.ควรดื่มเพิ่ม { background: #fee2e2; color: #b91c1c; }
+
+/* BMI Compact Style */
+.bmi-compact-card {
+  background: #fff;
+  border: 1.2px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+}
+.bmi-compact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.bmi-compact-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #475569;
+  font-family: 'Sarabun', sans-serif !important;
+}
+.bmi-compact-value-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bmi-compact-badge {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: 'Sarabun', sans-serif !important;
+}
+.bmi-compact-num {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #1e293b;
+  font-family: 'Sarabun', sans-serif !important;
+}
+.bmi-compact-desc {
+  font-size: 0.75rem;
+  padding: 10px;
+  border-radius: 8px;
+  line-height: 1.5;
+  font-family: 'Sarabun', sans-serif !important;
+}
+
+/* Scoped BMI Scale Custom Overrides inside Tanita */
+.tanita-wrap-v2 .bmi-scale-line {
+  height: 8px !important;
+  border-radius: 4px !important;
+  background: linear-gradient(90deg, #10b981 0%, #ca8a04 35%, #ea580c 70%, #dc2626 100%) !important;
+}
+.tanita-wrap-v2 .bmi-marker {
+  position: absolute !important;
+  top: 1px !important;
+  width: 14px !important;
+  height: 14px !important;
+  background: #fff !important;
+  border: 3px solid #1e293b !important;
+  border-radius: 50% !important;
+  transform: translateX(-50%) !important;
+  transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+  z-index: 2;
+}
+
+/* Scientific References Card */
+.references-card {
+  background: #fff;
+  border: 1.2px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.015);
+}
+.ref-title {
+  font-family: 'Sarabun', sans-serif !important;
+}
+.ref-badge {
+  font-family: 'Sarabun', sans-serif !important;
+}
+.ref-text {
+  font-family: 'Sarabun', sans-serif !important;
+}
+.ref-link {
+  transition: color 0.15s ease;
+  font-family: 'Sarabun', sans-serif !important;
+}
 </style>
 

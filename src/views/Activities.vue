@@ -141,6 +141,36 @@ onMounted(() => {
 onUnmounted(() => {
   stopAutoSlide();
 });
+// ==========================================
+// 🌟 Filter Chips Scroll Logic 🌟
+// ==========================================
+const chipsScrollEl = ref<HTMLElement | null>(null);
+const chipsCanScrollLeft = ref(false);
+const chipsCanScrollRight = ref(false);
+
+const updateChipsScroll = () => {
+  const el = chipsScrollEl.value;
+  if (!el) return;
+  chipsCanScrollLeft.value = el.scrollLeft > 2;
+  chipsCanScrollRight.value = el.scrollLeft < el.scrollWidth - el.clientWidth - 2;
+};
+
+const scrollChipsLeft = () => {
+  if (chipsScrollEl.value) {
+    chipsScrollEl.value.scrollBy({ left: -200, behavior: 'smooth' });
+  }
+};
+
+const scrollChipsRight = () => {
+  if (chipsScrollEl.value) {
+    chipsScrollEl.value.scrollBy({ left: 200, behavior: 'smooth' });
+  }
+};
+
+onMounted(() => {
+  startAutoSlide();
+  setTimeout(updateChipsScroll, 100);
+});
 </script>
 <template>
   <div class="shop-layout">
@@ -164,15 +194,38 @@ onUnmounted(() => {
         </div>
       </div>
       <div class="filter-chips-wrapper">
-        <div class="chips-scroll-main">
+        <div class="chips-scroll-container">
           <button 
-            v-for="opt in filterOptions" 
-            :key="opt.id"
-            class="flat-chip"
-            :class="{ 'active': selectedFilterIds.includes(opt.id) }"
-            @click="selectedFilterIds = selectedFilterIds.includes(opt.id) ? selectedFilterIds.filter(id => id !== opt.id) : [...selectedFilterIds, opt.id]"
+            v-if="chipsCanScrollLeft" 
+            class="chips-nav-arrow chips-nav-left" 
+            @click="scrollChipsLeft"
           >
-            {{ opt.label }}
+            <ChevronLeft :size="18" />
+          </button>
+          
+          <div 
+            class="chips-scroll-main"
+            ref="chipsScrollEl"
+            @scroll="updateChipsScroll"
+          >
+            <button 
+              v-for="opt in filterOptions" 
+              :key="opt.id"
+              class="flat-chip"
+              :class="{ 'active': selectedFilterIds.includes(opt.id) }"
+              @click="selectedFilterIds = selectedFilterIds.includes(opt.id) ? selectedFilterIds.filter(id => id !== opt.id) : [...selectedFilterIds, opt.id]"
+            >
+              {{ opt.label }}
+            </button>
+            <span class="chips-end-spacer" aria-hidden="true"></span>
+          </div>
+
+          <button 
+            v-if="chipsCanScrollRight" 
+            class="chips-nav-arrow chips-nav-right" 
+            @click="scrollChipsRight"
+          >
+            <ChevronRight :size="18" />
           </button>
         </div>
       </div>
@@ -421,41 +474,72 @@ onUnmounted(() => {
 }
 .filter-chips-wrapper {
   width: 100%;
-  margin-top: 16px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+.chips-scroll-container {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+}
+.chips-nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  aspect-ratio: 1 / 1;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: white;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-dark);
+  transition: all 0.2s;
+}
+.chips-nav-arrow:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+.chips-nav-left {
+  left: 8px;
+}
+.chips-nav-right {
+  right: 8px;
 }
 .chips-scroll-main {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   overflow-x: auto;
-  padding: 4px 24px;
-  justify-content: center;
+  /* Left padding aligns with search bar; right padding intentionally small
+     so the last chip peeks ~30px — the universal "swipe to see more" cue */
+  padding: 6px 24px 6px 24px;
+  scroll-padding-left: 24px;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
-.chips-scroll-main::-webkit-scrollbar {
-  display: none;
-}
-.filter-controls {
-  display: flex;
-  gap: 12px;
-  flex-shrink: 0;
-}
+.chips-scroll-main::-webkit-scrollbar { display: none; }
+/* Invisible spacer ensures ~30px of peek at the end without overflow */
+.chips-end-spacer { flex: 0 0 8px; min-width: 8px; }
 @media (max-width: 768px) {
-  .search-pill-container {
-    height: 38px;
-  }
-  .flat-chip {
-    height: 38px;
-    padding: 0 16px;
-    font-size: 13px;
-  }
-  .search-and-sort {
-    padding: 0 16px;
-  }
   .chips-scroll-main {
-    padding: 4px 16px;
-    justify-content: flex-start;
+    padding: 6px 16px;
+    scroll-padding-left: 16px;
   }
+  .chips-end-spacer { flex: 0 0 6px; min-width: 6px; }
+  /* Notice: chips-nav-arrow is now explicitly shown on mobile per user request */
 }
 /* =====================================
    3. 🌟 HERO BANNER CAROUSEL (GRAB TO SCROLL) 🌟

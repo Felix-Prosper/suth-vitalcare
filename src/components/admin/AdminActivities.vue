@@ -487,34 +487,55 @@ const toggleMenu = (id: string | number, event?: MouseEvent) => {
   if (event) {
     const btn = event.currentTarget as HTMLElement;
     const rect = btn.getBoundingClientRect();
-    const menuHeight = 280; // Estimated height with padding
+    const menuHeight = 380; // Estimated height
     const menuWidth = 256;  // w-64 is 256px
-    // 1. Vertical Positioning (Above or Below)
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const spaceAbove = rect.top;
-    if (spaceBelow < menuHeight && spaceAbove > menuHeight) {
-      // Not enough space below, but enough above
-      menuPos.value.top = rect.top - menuHeight - 4;
+
+    const spaceOnRight = window.innerWidth - rect.right - 8;
+    const spaceOnLeft = rect.left - 8;
+    const spaceBelow = window.innerHeight - rect.bottom - 8;
+    const spaceAbove = rect.top - 8;
+
+    // 1. Check if we can do Side Positioning (Desktop)
+    if (spaceOnRight >= menuWidth || spaceOnLeft >= menuWidth) {
+      let top = rect.top;
+      if (top + menuHeight > window.innerHeight - 16) {
+        top = Math.max(16, window.innerHeight - menuHeight - 16);
+      }
+      menuPos.value.top = top;
+      
+      if (spaceOnRight >= menuWidth) {
+        menuPos.value.left = rect.right + 8;
+        menuPos.value.right = null;
+      } else {
+        menuPos.value.left = null;
+        menuPos.value.right = window.innerWidth - rect.left + 8;
+      }
     } else {
-      // Default to below, but ensure it doesn't go off the bottom of the screen
-      menuPos.value.top = Math.min(rect.bottom + 4, window.innerHeight - menuHeight - 8);
+      // 2. Mobile / Narrow Screen: Not enough space on sides. Place Below or Above.
+      if (spaceBelow >= menuHeight || spaceBelow > spaceAbove) {
+        menuPos.value.top = rect.bottom + 8;
+      } else {
+        menuPos.value.top = Math.max(16, rect.top - menuHeight - 8);
+      }
+      
+      // Horizontal alignment: Align right edge with button's right edge
+      menuPos.value.left = null;
+      let rightPos = window.innerWidth - rect.right;
+      
+      // Prevent overflowing the left side of the screen
+      if (window.innerWidth - rightPos < menuWidth + 16) {
+        rightPos = window.innerWidth - menuWidth - 16;
+      }
+      // Prevent overflowing the right side of the screen
+      if (rightPos < 16) rightPos = 16;
+      
+      menuPos.value.right = rightPos;
     }
-    // 2. Horizontal Positioning (Smart Alignment)
-    // Default: Try to align the right edge of the menu with the right edge of the button
-    let right = window.innerWidth - rect.right;
-    // Check if right-aligning makes it overflow the LEFT side of the screen
-    // Left position = window.innerWidth - right - menuWidth
-    if (window.innerWidth - right - menuWidth < 8) {
-      // If it overflows left, shift it to the right so its left edge is at 8px
-      right = window.innerWidth - menuWidth - 8;
-    }
-    // Also ensure it doesn't overflow the RIGHT side (right margin at least 8px)
-    if (right < 8) right = 8;
-    menuPos.value.right = right;
+    
     menuPos.value.transform = 'none';
   }
 };
-const menuPos = ref({ top: 0, right: 8, transform: 'none' });
+const menuPos = ref({ top: 0, left: null as number | null, right: null as number | null, transform: 'none' });
 const activeMenuAct = computed(() => paginatedActivities.value.find(a => a.id === activeMenuId.value) || null);
 // Lifecycle Hooks
 onMounted(() => {
@@ -838,9 +859,18 @@ const visiblePages = computed(() => {
           <div
             v-for="act in paginatedActivities"
             :key="act.id"
-            class="preview-card"
+            class="preview-card relative"
             :class="{ 'is-draft': act.is_active === false || act.status === 'draft' }"
           >
+            <!-- Top Right Admin Action Button -->
+            <div class="absolute top-2 right-2 z-30">
+              <button @click.stop="toggleMenu(act.id, $event)" 
+                class="rounded-full bg-white flex items-center justify-center text-slate-500 hover:text-orange-500 hover:bg-orange-50 hover:border-orange-200 transition-all border border-slate-200 shadow-sm flex-shrink-0"
+                style="width: 36px; height: 36px; min-width: 36px; min-height: 36px; padding: 0;">
+                <Pencil :size="16" />
+              </button>
+            </div>
+
             <!-- Image Box — identical to user view -->
             <div class="preview-img-box" @click="previewActivity(act)">
               <img v-if="act.poster" :src="act.poster" :alt="act.title" />
@@ -851,7 +881,6 @@ const visiblePages = computed(() => {
               <div class="preview-dark-badge" :class="getActivityStatus(act).class">
                 {{ getActivityStatus(act).label }}
               </div>
-              <!-- Admin quick actions (top-right) removed as requested -->
               <!-- Draft overlay -->
               <div v-if="act.is_active === false || act.status === 'draft'" class="preview-draft-overlay">
                 <span class="preview-draft-label">DRAFT — ผู้ใช้ไม่เห็น</span>
@@ -872,13 +901,6 @@ const visiblePages = computed(() => {
                 <Users2 :size="13" />
                 <span v-if="act.is_unlimited_max_slots">รับจำนวนไม่จำกัด</span>
                 <span v-else>เข้าร่วมแล้ว {{ act.registration_count || 0 }} / {{ act.max_slots || 0 }} คน</span>
-              </div>
-              <div class="preview-admin-bar flex items-center justify-end relative z-20">
-                <button @click.stop="toggleMenu(act.id, $event)" 
-                  class="rounded-full bg-white flex items-center justify-center text-slate-400 hover:text-orange-500 hover:bg-orange-50 transition-all border border-slate-200 shadow-sm flex-shrink-0"
-                  style="width: 42px; height: 42px; min-width: 42px; min-height: 42px; padding: 0;">
-                  <Pencil :size="18" />
-                </button>
               </div>
             </div>
           </div>
@@ -918,7 +940,12 @@ const visiblePages = computed(() => {
           <div @click="activeMenuId = null" class="fixed inset-0 z-[9998]"></div>
           <div 
             class="fixed z-[9999] w-64 bg-white border border-slate-200 shadow-2xl rounded-2xl flex flex-col overflow-hidden transition-all duration-200 animate-in fade-in zoom-in-95"
-            :style="{ top: menuPos.top + 'px', right: menuPos.right + 'px', transform: menuPos.transform }"
+            :style="{ 
+              top: menuPos.top + 'px', 
+              ...(menuPos.left !== null ? { left: menuPos.left + 'px' } : {}),
+              ...(menuPos.right !== null ? { right: menuPos.right + 'px' } : {}),
+              transform: menuPos.transform 
+            }"
             @click.stop>
             <!-- เพิ่มความสูง max-h นิดหน่อยเพื่อให้แสดงหมวดหมู่ได้ครอบคลุมขึ้น -->
             <div class="overflow-y-auto max-h-[380px] custom-scrollbar py-2">
@@ -1235,6 +1262,25 @@ transition-all text-center" placeholder="ระบุจำนวนคนสู
                    </div>
                     </div>
                   </div>
+                  <!-- Option for OCR Verification -->
+                  <transition name="fade">
+                    <div v-if="form.tasks[activeTaskIdx].submission_type === 'photo' || form.tasks[activeTaskIdx].submission_type === 'both'" 
+                      class="p-4 bg-orange-50/50 border border-orange-100 rounded-2xl flex items-center justify-between gap-4 animate-in slide-in-from-top-1 mb-4">
+                      <div class="flex items-center gap-3">
+                        <div class="p-2 bg-orange-100 rounded-xl text-orange-600">
+                          <Eye :size="18" />
+                        </div>
+                        <div>
+                          <p class="text-xs font-black text-slate-700">ใช้ OCR ในการตรวจสอบภาพภารกิจ</p>
+                          <p class="text-[10px] text-slate-400 mt-0.5">ระบบจะใช้ AI ตรวจจับวิเคราะห์ตัวเลขและตัวอักษรในภาพ (เช่น รูปหน้าจอแอปวิ่ง/ผลการออกกำลังกาย)</p>
+                        </div>
+                      </div>
+                      <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" v-model="form.tasks[activeTaskIdx].use_ocr" class="sr-only peer" />
+                        <div class="w-12 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0 after:left-0 after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all after:shadow-sm peer-checked:bg-orange-500"></div>
+                      </label>
+                    </div>
+                  </transition>
                   <div class="pt-2">
                     <label class="text-[13px] font-bold text-slate-600 block mb-3">วันที่อนุญาตให้ส่งผล (Allowed Days)</label>
                     <div class="flex flex-wrap gap-2">

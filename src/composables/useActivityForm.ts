@@ -22,6 +22,7 @@ export interface Task {
   submission_type: string;
   is_active?: boolean;
   allowed_days: number[];
+  use_ocr?: boolean;
 }
 export interface GoalConfig {
   enabled: boolean;
@@ -103,6 +104,7 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         submission_type: "photo",
         is_active: true,
         allowed_days: [0, 1, 2, 3, 4, 5, 6],
+        use_ocr: false,
       },
     ] as Task[],
     is_active: true,
@@ -446,6 +448,7 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
       submission_type: "manual",
       is_active: true,
       allowed_days: [0, 1, 2, 3, 4, 5, 6],
+      use_ocr: false,
     };
     if (template === "exercise") {
       newTask = {
@@ -456,6 +459,7 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         metric_type: "distance",
         metric_unit: "km",
         submission_type: "photo",
+        use_ocr: true,
       };
     } else if (template === "food") {
       newTask = {
@@ -466,6 +470,7 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         metric_type: "nutrition",
         metric_unit: "meal",
         submission_type: "photo",
+        use_ocr: false,
       };
     } else if (template === "mood") {
       newTask = {
@@ -476,6 +481,7 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         metric_type: "mood_level",
         metric_unit: "level",
         submission_type: "manual",
+        use_ocr: false,
       };
     } else if (template === "photo") {
       newTask = {
@@ -486,6 +492,7 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
         metric_type: "count",
         metric_unit: "times",
         submission_type: "photo",
+        use_ocr: false,
       };
     }
     form.value.tasks.push(newTask);
@@ -818,6 +825,7 @@ export function useActivityForm(fetchActivitiesCallback: () => Promise<void>) {
           note: t.note || t.title || "ภารกิจ",
           type: t.type || "exercise",
           allowed_days: ad,
+          use_ocr: t.use_ocr === 1 || t.use_ocr === true,
         };
       }),
       location_name: act.location_name || "",
